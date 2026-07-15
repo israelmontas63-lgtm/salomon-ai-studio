@@ -199,14 +199,6 @@ body,
   background: linear-gradient(145deg, #FFD700, #D4AF37) !important;
   color: #1A1A1A !important;
   box-shadow: 0 4px 24px rgba(212, 175, 55, 0.4) !important;
-  border-radius: 50% !important;
-  overflow: hidden !important;
-  transform: none !important;
-}
-
-.control-btn--main:active,
-.controls-row .control-btn--main:active {
-  transform: none !important;
 }
 
 .chat-body {
