@@ -1,0 +1,87 @@
+﻿# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+.eggs/
+build/
+pip-wheel-metadata/
+# dist/ de Python (eggs); NO ignorar studio/dist (UI servida por FastAPI)
+
+# Entornos virtuales
+.venv/
+venv/
+ENV/
+env/
+.env/
+
+# Tests / cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# ── Secretos y configuración personal ───────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.media.example
+*.pem
+*.key
+secrets/
+credentials.json
+service-account*.json
+
+# IDEs y SO
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Cursor local (no subir preferencias personales del agente)
+.cursor/
+
+# ── Datos generados / runtime (no necesarios en el repo) ─────────────────────
+data/audio/
+data/media/generadas/
+data/media/editados/
+data/media/uploads/
+data/memoria_chroma/
+data/agente_backups/
+data/seguridad_backups/
+data/bca/
+data/*.db
+*.mp3
+*.wav
+
+# Modelos pesados locales (descargar/configurar en despliegue)
+data/modelos/
+*.pt
+*.onnx
+*.bin
+
+# ── Frontend (studio) ───────────────────────────────────────────────────────
+studio/node_modules/
+studio/dist-ssr/
+studio/*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Logs y temporales
+*.log
+tmp/
+temp/
+*.tmp
+.cache/

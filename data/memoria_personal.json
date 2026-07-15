@@ -1,0 +1,28 @@
+{
+  "hechos": {
+    "usuario": {
+      "valor": "Israel",
+      "capa": "preferencias"
+    },
+    "persona_cercana": {
+      "valor": "Melanie",
+      "capa": "preferencias"
+    },
+    "marca_visual": {
+      "valor": "negro y oro con monograma",
+      "capa": "preferencias"
+    },
+    "voz": {
+      "valor": "ElevenLabs Multilingual v2, tono juvenil y enérgico",
+      "capa": "preferencias"
+    },
+    "enfoque": {
+      "valor": "monetización de marca, guiones y contenido motivacional",
+      "capa": "proyecto"
+    },
+    "preferencia_edicion": {
+      "valor": "que me hables sobre el planeta tierra lo más fácil que tú puedas",
+      "capa": "preferencias"
+    }
+  }
+}

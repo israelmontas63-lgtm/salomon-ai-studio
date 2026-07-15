@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "marca": "Salomón",
+  "propietario": "Israel",
+  "actualizado": "2026-07-14",
+  "nota": "Catálogo de temas a monetizar. Editable. Aún no cableado al LLM.",
+  "temas": [
+    {
+      "id": "educacion_ciencias",
+      "nombre": "Educación en ciencias",
+      "prioridad": 1,
+      "descripcion": "Explicaciones claras y elegantes de ciencia (planeta Tierra, biología, física, curiosidades) pensadas para audio y redes.",
+      "audiencia": "Personas que quieren aprender sin complicarse; padres, curiosos, estudiantes.",
+      "formatos": ["clip_corto", "guion_60s", "serie_educativa", "pack_guiones"],
+      "angulos_venta": [
+        "Aprende ciencia en minutos, sin tecnicismos",
+        "Guiones listos para narrar con voz premium",
+        "Series temáticas (Tierra, clima, espacio, cuerpo humano)"
+      ],
+      "preferencia_israel": "Explicar el planeta Tierra lo más fácil posible",
+      "estado": "activo"
+    },
+    {
+      "id": "guiones_audio",
+      "nombre": "Guiones de audio",
+      "prioridad": 1,
+      "descripcion": "Guiones para voz (ElevenLabs Liam): motivacional de marca, educativo y comercial, con ritmo Salomón.",
+      "audiencia": "Creadores, marcas personales, Israel como productor de contenido.",
+      "formatos": ["gancho_reel", "guion_completo", "cta_comercial", "bienvenida_marca"],
+      "angulos_venta": [
+        "Guiones listos para TTS Liam",
+        "Tono elegante negro y oro",
+        "Paquete: guion + voz + entrega"
+      ],
+      "estado": "activo"
+    },
+    {
+      "id": "paquetes_comerciales",
+      "nombre": "Paquetes comerciales",
+      "prioridad": 2,
+      "descripcion": "Ofertas empaquetadas que combinan educación + guion + voz para monetizar de forma repetible.",
+      "audiencia": "Clientes que quieren contenido listo, no solo ideas.",
+      "formatos": ["pack_basico", "pack_serie", "pack_marca"],
+      "angulos_venta": [
+        "De la idea al audio en un solo flujo",
+        "Consistencia de marca en cada pieza",
+        "Escalable: mismos pilares, nuevos temas"
+      ],
+      "estado": "borrador"
+    }
+  ],
+  "metricas_deseadas": [
+    "guiones_entregados_por_semana",
+    "clips_publicados",
+    "paquetes_vendidos",
+    "retencion_escucha"
+  ]
+}

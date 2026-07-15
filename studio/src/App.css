@@ -1,0 +1,59 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  max-width: 100vw;
+  margin: 0;
+  position: relative;
+  transition: background 1.2s ease;
+  overflow: hidden;
+}
+
+.app-shell--day {
+  background: radial-gradient(ellipse 120% 80% at 50% -20%, #2C2C2C 0%, #1A1A1A 55%, #0D0D0D 100%);
+}
+
+.app-shell--night {
+  background: radial-gradient(ellipse 100% 70% at 50% -10%, #2C2C2C 0%, #1A1A1A 60%, #0A0A0A 100%);
+}
+
+.app-shell--a11y {
+  font-size: 1.12rem;
+}
+
+.app-shell--a11y .bubble--a11y {
+  font-size: 1.05rem;
+  font-weight: 500;
+  border: 2px solid var(--gold);
+}
+
+.app-shell--a11y .bubble--user {
+  background: #fff;
+  color: #000;
+  border: 2px solid #000;
+}
+
+.voice-hint {
+  position: fixed;
+  bottom: calc(110px + var(--safe-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(12, 12, 14, 0.92);
+  border: 1px solid rgba(201, 169, 98, 0.35);
+  color: var(--gold-light);
+  font-size: 0.78rem;
+  padding: 8px 16px;
+  border-radius: 20px;
+  z-index: 50;
+  pointer-events: none;
+  animation: fadeHint 0.25s ease;
+  max-width: 90vw;
+  text-align: center;
+}
+
+@keyframes fadeHint {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

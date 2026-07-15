@@ -1,0 +1,58 @@
+:root {
+  --black: #1A1A1A;
+  --black-metal: #2C2C2C;
+  --gold: #D4AF37;
+  --gold-light: #FFD700;
+  --gold-champagne: #E8C547;
+  --silver: #C0C0C0;
+  --silver-soft: #8A8A8A;
+  --ai-bubble: #D4AF37;
+  --ai-text: #1A1A1A;
+  --user-bubble: #2C2C2C;
+  --user-text: #F2F2F2;
+  --glass-bg: rgba(26, 26, 26, 0.88);
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--black);
+  color: #fff;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 169, 98, 0.35);
+  border-radius: 4px;
+}
