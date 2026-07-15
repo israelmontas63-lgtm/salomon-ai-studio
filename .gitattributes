@@ -1,0 +1,4 @@
+requirements.txt text eol=lf
+Procfile text eol=lf
+render.yaml text eol=lf
+*.py text eol=lf
