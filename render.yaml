@@ -4,8 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    # FastAPI es ASGI: gunicorn necesita el worker de Uvicorn.
-    # El comando "gunicorn app:app" solo (sin -k) provoca fallo / status 127 si falta gunicorn.
+    # Start Command (ASGI): gunicorn + UvicornWorker
     startCommand: gunicorn app:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
