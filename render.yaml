@@ -4,10 +4,10 @@ services:
     runtime: python
     plan: free
     rootDir: .
-    # Mismo entorno virtual de Render: build + start comparten el venv del servicio.
-    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && python -c "import numpy,fastapi,uvicorn,gunicorn; print('deps_ok', numpy.__version__)"
-    # USAR $PORT (Render lo inyecta). Puerto fijo 10000 provoca 503 si PORT != 10000.
-    startCommand: gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile -
+    buildCommand: pip install -r requirements.txt && python -c "import numpy; print(numpy.__version__)"
+    # Reinstala deps en el venv del runtime justo antes de gunicorn.
+    # Bind a $PORT (Render). Puerto fijo 10000 falla si PORT es distinto.
+    startCommand: pip install -r requirements.txt && gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
     healthCheckPath: /api/salud
     envVars:
       - key: PYTHON_VERSION

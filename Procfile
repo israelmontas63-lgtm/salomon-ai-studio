@@ -1,1 +1,1 @@
-web: gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile -
+web: pip install -r requirements.txt && gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT

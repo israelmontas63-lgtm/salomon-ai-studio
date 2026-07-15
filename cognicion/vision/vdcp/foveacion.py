@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "Falta numpy. En Render Shell: pip install numpy && python -c \"import numpy; print(numpy.__file__)\""
+    ) from exc
 
 
 def _clamp_bbox(

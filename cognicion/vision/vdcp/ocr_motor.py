@@ -5,7 +5,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "Falta numpy. En Render Shell: pip install numpy && python -c \"import numpy; print(numpy.__file__)\""
+    ) from exc
 
 
 def _estimado_pt(altura_px: int, factor_zoom: float, dpi_ref: float = 96.0) -> float:

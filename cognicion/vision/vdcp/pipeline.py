@@ -9,7 +9,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "Falta numpy. En Render Shell ejecuta: pip install numpy && python -c \"import numpy; print(numpy.__file__)\""
+    ) from exc
 
 from cognicion.vision.vdcp.adquisicion import adquisicion_global
 from cognicion.vision.vdcp.enfoque import enfoque_por_contraste
