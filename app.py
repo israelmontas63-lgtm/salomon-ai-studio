@@ -1437,11 +1437,13 @@ if __name__ == "__main__":
     from cognicion.red.tunel import iniciar_tunel_si_habilitado
     from settings import COLSUB_HOST, COLSUB_PORT
 
-    # Túnel en paralelo para acceso móvil (npx localtunnel --port 8000)
-    iniciar_tunel_si_habilitado(COLSUB_PORT)
+    # Render inyecta PORT; local usa COLSUB_PORT o 10000
+    port = int(os.environ.get("PORT", COLSUB_PORT or 10000))
+    host = os.environ.get("HOST", COLSUB_HOST or "0.0.0.0")
+    iniciar_tunel_si_habilitado(port)
     uvicorn.run(
         "app:app",
-        host=COLSUB_HOST or "0.0.0.0",
-        port=COLSUB_PORT,
-        reload=True,
+        host=host,
+        port=port,
+        reload=os.environ.get("RELOAD", "").lower() in ("1", "true", "yes"),
     )

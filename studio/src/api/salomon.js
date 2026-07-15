@@ -13,6 +13,7 @@ function headers(extra = {}) {
 
 async function api(path, options = {}) {
   const url = `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  console.log("[Salomón API] fetch →", url, options.method || "GET");
   const res = await fetch(url, {
     ...options,
     headers: { ...headers(), ...(options.headers || {}) },
@@ -25,9 +26,12 @@ async function api(path, options = {}) {
     } catch {
       err.body = null;
     }
+    console.error("[Salomón API] error", url, err.status, err.body);
     throw err;
   }
-  return res.json();
+  const data = await res.json();
+  console.log("[Salomón API] ok", url, data && typeof data === "object" ? Object.keys(data) : typeof data);
+  return data;
 }
 
 export function checkSalud() {

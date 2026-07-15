@@ -1,13 +1,13 @@
 /**
  * Splash + boot PWA — Salomón AI
- * Nunca se queda bloqueado: timeout global y rutas relativas (/api/...).
- * Producción: https://salomon-ai-studio-1.onrender.com
+ * Rutas relativas (/api/...). Logs en consola para diagnosticar conexión.
  */
 (function () {
   const MIN_MS = 600;
   const MAX_BOOT_MS = 6500;
-  const PING_MS = 3500;
+  const PING_MS = 4000;
   const t0 = performance.now();
+  const TAG = "[Salomón Boot]";
 
   function isStandalone() {
     return (
@@ -20,6 +20,7 @@
   function setStep(msg) {
     const el = document.getElementById("splash-step");
     if (el) el.textContent = msg;
+    console.log(TAG, "paso:", msg);
   }
 
   function setDots(n) {
@@ -36,20 +37,43 @@
     splash.classList.add("hide");
     setTimeout(() => splash.remove(), 480);
     document.documentElement.classList.add("salomon-booted");
+    console.log(TAG, "splash oculto");
   }
 
   async function ping(path) {
+    const url = path; // relativa — nunca localhost
+    const absolute = new URL(path, window.location.origin).href;
+    console.log(TAG, "fetch →", absolute);
+
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), PING_MS);
     try {
-      // Ruta relativa: funciona en Render y en PWA (nunca localhost)
-      const r = await fetch(path, {
+      const r = await fetch(url, {
         cache: "no-store",
         signal: ctrl.signal,
         credentials: "same-origin",
       });
+      let bodyPreview = "";
+      try {
+        bodyPreview = (await r.clone().text()).slice(0, 180);
+      } catch (_) {}
+      console.log(TAG, "respuesta", {
+        url: absolute,
+        status: r.status,
+        ok: r.ok,
+        body: bodyPreview,
+      });
+      if (!r.ok) {
+        console.error(TAG, "error HTTP", r.status, bodyPreview || r.statusText);
+      }
       return r.ok;
-    } catch {
+    } catch (err) {
+      console.error(TAG, "fallo de conexión", {
+        url: absolute,
+        name: err && err.name,
+        message: err && err.message,
+        error: err,
+      });
       return false;
     } finally {
       clearTimeout(t);
@@ -57,11 +81,19 @@
   }
 
   async function boot() {
+    console.log(TAG, "inicio", {
+      origin: window.location.origin,
+      href: window.location.href,
+      standalone: isStandalone(),
+      online: navigator.onLine,
+    });
+
     document.documentElement.classList.add(
       isStandalone() ? "salomon-standalone" : "salomon-browser"
     );
 
     const forceTimer = setTimeout(() => {
+      console.warn(TAG, "timeout global — forzando entrada a la UI");
       setStep("Entrando…");
       hideSplash();
     }, MAX_BOOT_MS);
@@ -85,7 +117,6 @@
       setStep(salud ? "Núcleo en línea" : "Modo degradado — entrando…");
       setDots(3);
 
-      // No bloquear por visión/túnel
       ping("/api/cognicion/vdcp/estado");
       ping("/api/tunel/estado");
 
@@ -95,7 +126,6 @@
       const waitUi = Math.max(0, MIN_MS - (performance.now() - t0));
       await new Promise((r) => setTimeout(r, waitUi));
 
-      // Esperar React breve (no eterno)
       await new Promise((resolve) => {
         const start = performance.now();
         const tick = () => {
@@ -104,6 +134,9 @@
             (root && root.childElementCount > 0) ||
             performance.now() - start > 2500
           ) {
+            console.log(TAG, "UI root", {
+              children: root ? root.childElementCount : 0,
+            });
             resolve();
             return;
           }
