@@ -1,11 +1,15 @@
 /* Service worker PWA — no bloquea API ni el boot */
-const CACHE = "salomon-v4";
+const CACHE = "salomon-v6-icon-v2";
 const PRECACHE = [
   "/manifest.json",
   "/manifest.webmanifest",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/icon.svg",
+  "/icon-192-v2.png",
+  "/icon-512-v2.png",
+  "/icon-192-maskable-v2.png",
+  "/icon-512-maskable-v2.png",
+  "/icon-v2.svg",
+  "/apple-touch-icon-v2.png",
+  "/favicon-v2.ico",
   "/salomon-theme.css",
   "/splash.css",
 ];

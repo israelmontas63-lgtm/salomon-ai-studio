@@ -1,21 +1,17 @@
-/* Service worker PWA — instalable en Android (Chrome) */
-const CACHE = "salomon-v3";
+/* Service worker PWA — no bloquea API ni el boot */
+const CACHE = "salomon-v6-icon-v2";
 const PRECACHE = [
-  "/",
   "/manifest.json",
   "/manifest.webmanifest",
-  "/icon.svg",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/apple-touch-icon.png",
+  "/icon-192-v2.png",
+  "/icon-512-v2.png",
+  "/icon-192-maskable-v2.png",
+  "/icon-512-maskable-v2.png",
+  "/icon-v2.svg",
+  "/apple-touch-icon-v2.png",
+  "/favicon-v2.ico",
   "/salomon-theme.css",
   "/splash.css",
-  "/drawers.css",
-  "/standalone-boot.js",
-  "/drawers.js",
-  "/vision-overlay.js",
-  "/media-panel.js",
-  "/bca-indicator.js",
 ];
 
 self.addEventListener("install", (event) => {
@@ -36,10 +32,18 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  if (url.pathname.startsWith("/api/")) {
+
+  // API y boot: siempre red (rutas relativas /api/...)
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.endsWith("standalone-boot.js") ||
+    url.pathname === "/" ||
+    url.pathname.endsWith("index.html")
+  ) {
     event.respondWith(fetch(req));
     return;
   }
+
   event.respondWith(
     caches.match(req).then((hit) => hit || fetch(req).catch(() => caches.match("/")))
   );

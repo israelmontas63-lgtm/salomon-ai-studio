@@ -31,6 +31,12 @@ _RUTAS_PUBLICAS = frozenset({
     "/api/nucleo/estado",
     "/manifest.webmanifest",
     "/favicon.svg",
+    "/favicon-v2.ico",
+    "/favicon-v2.svg",
+    "/icon-v2.svg",
+    "/icon-192-v2.png",
+    "/icon-512-v2.png",
+    "/apple-touch-icon-v2.png",
     "/icons.svg",
     "/media-panel.js",
 })

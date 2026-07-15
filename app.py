@@ -1343,33 +1343,74 @@ def manifest_web() -> FileResponse:
     return _archivo_studio("manifest.webmanifest", "application/manifest+json")
 
 
+@app.get("/favicon-v2.ico")
+def favicon_v2_ico() -> FileResponse:
+    return _archivo_studio("favicon-v2.ico", "image/x-icon")
+
+
+@app.get("/favicon-v2.svg")
+def favicon_v2_svg() -> FileResponse:
+    return _archivo_studio("favicon-v2.svg", "image/svg+xml")
+
+
 @app.get("/favicon.svg")
 def favicon() -> FileResponse:
-    # Preferir identidad Salomón
-    ruta = STUDIO_DIR / "icon.svg"
+    # Preferir identidad Salomón (v2)
+    ruta = STUDIO_DIR / "icon-v2.svg"
     if ruta.is_file():
         return FileResponse(ruta, media_type="image/svg+xml")
-    return _archivo_studio("favicon.svg", "image/svg+xml")
+    return _archivo_studio("favicon-v2.svg", "image/svg+xml")
+
+
+@app.get("/icon-v2.svg")
+def icon_v2_svg() -> FileResponse:
+    return _archivo_studio("icon-v2.svg", "image/svg+xml")
 
 
 @app.get("/icon.svg")
 def icon_svg() -> FileResponse:
-    return _archivo_studio("icon.svg", "image/svg+xml")
+    # Compat: redirige al asset con cache-bust
+    return _archivo_studio("icon-v2.svg", "image/svg+xml")
+
+
+@app.get("/icon-192-v2.png")
+def icon_192_v2() -> FileResponse:
+    return _archivo_studio("icon-192-v2.png", "image/png")
+
+
+@app.get("/icon-512-v2.png")
+def icon_512_v2() -> FileResponse:
+    return _archivo_studio("icon-512-v2.png", "image/png")
+
+
+@app.get("/icon-192-maskable-v2.png")
+def icon_192_maskable_v2() -> FileResponse:
+    return _archivo_studio("icon-192-maskable-v2.png", "image/png")
+
+
+@app.get("/icon-512-maskable-v2.png")
+def icon_512_maskable_v2() -> FileResponse:
+    return _archivo_studio("icon-512-maskable-v2.png", "image/png")
 
 
 @app.get("/icon-192.png")
 def icon_192() -> FileResponse:
-    return _archivo_studio("icon-192.png", "image/png")
+    return _archivo_studio("icon-192-v2.png", "image/png")
 
 
 @app.get("/icon-512.png")
 def icon_512() -> FileResponse:
-    return _archivo_studio("icon-512.png", "image/png")
+    return _archivo_studio("icon-512-v2.png", "image/png")
+
+
+@app.get("/apple-touch-icon-v2.png")
+def apple_touch_icon_v2() -> FileResponse:
+    return _archivo_studio("apple-touch-icon-v2.png", "image/png")
 
 
 @app.get("/apple-touch-icon.png")
 def apple_touch_icon() -> FileResponse:
-    return _archivo_studio("apple-touch-icon.png", "image/png")
+    return _archivo_studio("apple-touch-icon-v2.png", "image/png")
 
 
 @app.get("/salomon-theme.css")
