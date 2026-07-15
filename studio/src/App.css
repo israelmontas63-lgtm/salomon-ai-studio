@@ -35,6 +35,28 @@
   border: 2px solid #000;
 }
 
+.bottom-bar__meta {
+  display: flex;
+  justify-content: center;
+  padding: 0 12px 6px;
+}
+
+.hands-free-toggle {
+  border: 1px solid rgba(209, 179, 119, 0.35);
+  background: transparent;
+  color: rgba(232, 212, 168, 0.85);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.hands-free-toggle.is-on {
+  border-color: rgba(209, 179, 119, 0.75);
+  color: #e8d4a8;
+  background: rgba(209, 179, 119, 0.12);
+}
+
 .voice-hint {
   position: fixed;
   bottom: calc(110px + var(--safe-bottom, 0px));

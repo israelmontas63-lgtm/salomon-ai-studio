@@ -6,11 +6,12 @@ import GlassPanel from "./components/GlassPanel";
 import CameraModal from "./components/CameraModal";
 import MediaPanel from "./components/MediaPanel";
 import { useDayNight } from "./hooks/useTypewriter";
+import { useSalomonOrchestrator } from "./hooks/useSalomonOrchestrator";
 import { WELCOME_MESSAGES, TOOLS_MENU, ACCOUNT_MENU } from "./data/constants";
 import { pickRandom, skeletonAlert, hapticPulse } from "./utils/helpers";
 import { playSalomonAudio } from "./utils/audio";
 import { getCachedGeo, initGeo } from "./utils/geo";
-import { checkSalud, enviarMensaje, iniciarSesion, obtenerHistorial, sintetizarVoz, herramientaAyuda, herramientaAnaliticas, herramientaPlanes, herramientaSolar, herramientaOptimizar, herramientaSeguridad, herramientaCorregir, herramientaTraducir, herramientaCli, herramientaBackupExport } from "./api/salomon";
+import { checkSalud, iniciarSesion, obtenerHistorial, sintetizarVoz, herramientaAyuda, herramientaAnaliticas, herramientaPlanes, herramientaSolar, herramientaOptimizar, herramientaSeguridad, herramientaCorregir, herramientaTraducir, herramientaCli, herramientaBackupExport } from "./api/salomon";
 import "./App.css";
 
 let msgId = 0;
@@ -28,7 +29,6 @@ export default function App() {
     () => localStorage.getItem(SESSION_KEY) || null
   );
   const [appStatus, setAppStatus] = useState("ready");
-  const [voiceMode, setVoiceMode] = useState(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -171,55 +171,65 @@ export default function App() {
     localStorage.setItem(SESSION_KEY, id);
   }, []);
 
+  const showVoiceHint = useCallback((msg) => {
+    setVoiceHint(typeof msg === "string" ? msg : String(msg || ""));
+    window.setTimeout(() => setVoiceHint(""), 3200);
+  }, []);
+
+  const pushAiMessageRef = useRef(null);
+  const attachAudioRef = useRef(null);
+
+  const orchestrator = useSalomonOrchestrator({
+    sessionId,
+    onSession: persistSession,
+    onUserText: (text, { autoSend } = {}) => {
+      if (autoSend === false) {
+        setInputValue(text);
+        setKeyboardVisible(true);
+        return;
+      }
+      setMessages((prev) => [...prev, { id: nextId(), role: "user", text }]);
+    },
+    onAiText: (text, data) => {
+      const id = pushAiMessageRef.current?.(text);
+      if (id && data) attachAudioRef.current?.(id, data);
+      if (data?.resultado?.imagen_base64) {
+        showVoiceHint("Imagen lista");
+      }
+    },
+    onNotify: showVoiceHint,
+  });
+
+  useEffect(() => {
+    setAppStatus(orchestrator.appStatus);
+  }, [orchestrator.appStatus]);
+
+  useEffect(() => {
+    pushAiMessageRef.current = pushAiMessage;
+    attachAudioRef.current = attachAudioInBackground;
+  }, [pushAiMessage, attachAudioInBackground]);
+
+  const voiceMode = orchestrator.voiceMode;
+
   const sendMessage = useCallback(
     async (textOverride, extras = {}) => {
       const text = (textOverride ?? inputValue).trim();
       if (!text || sending) return;
 
-      const payload = { ...extras };
-      const err = consoleErrorRef.current;
-      if (err && Date.now() - err.at < 120_000) {
-        payload.error_consola = err.text;
-        const permitirAgente = window.confirm(
-          "Salomón detectó un error en la consola.\n\n" +
-            "¿Permites que el agente autónomo intente corregir archivos del proyecto?\n\n" +
-            "Cancelar = solo explicación, sin editar archivos."
-        );
-        payload.autonomo = permitirAgente;
-        consoleErrorRef.current = null;
-      }
-
       setSending(true);
-      setMessages((prev) => [...prev, { id: nextId(), role: "user", text }]);
       if (!textOverride) setInputValue("");
-      setAppStatus("thinking");
 
       try {
-        const data = await enviarMensaje(text, sessionId, getCachedGeo(), payload);
-        persistSession(data.session_id);
-        // Render inmediato del JSON (texto), sin esperar ElevenLabs
-        const texto = data.texto || data.respuesta || "";
-        const msgId = pushAiMessage(texto);
-        attachAudioInBackground(msgId, data);
-      } catch (err) {
-        setAppStatus("offline");
-        const msg =
-          err?.status === 401
-            ? "Acceso denegado. Ejecuta scripts/sincronizar_api_key.py, reconstruye el frontend (npm run build) y reinicia el servidor."
-            : "Disculpa, no pude conectar con el cerebro de Salomón. Reintenta en unos segundos.";
-        pushAiMessage(msg);
+        await orchestrator.dispatchIntent(text, {
+          fromVoice: false,
+          autoSend: true,
+          meta: extras,
+        });
       } finally {
         setSending(false);
       }
     },
-    [
-      inputValue,
-      sending,
-      sessionId,
-      persistSession,
-      pushAiMessage,
-      attachAudioInBackground,
-    ]
+    [inputValue, sending, orchestrator]
   );
 
   useEffect(() => {
@@ -390,11 +400,6 @@ export default function App() {
     });
   };
 
-  const showVoiceHint = useCallback((msg) => {
-    setVoiceHint(msg);
-    window.setTimeout(() => setVoiceHint(""), 3200);
-  }, []);
-
   const formatToolData = (data) => {
     if (typeof data === "string") return data;
     if (data?.mensaje) return String(data.mensaje);
@@ -406,7 +411,7 @@ export default function App() {
     async (item) => {
       if (item === "Nuevo Chat") {
         try {
-          const data = await iniciarSesion(sessionId, true);
+          const data = await iniciarSesion(sessionId);
           persistSession(data.session_id);
           const welcomeId = nextId();
           setMessages([
@@ -574,27 +579,18 @@ export default function App() {
     [pushAiMessage, showVoiceHint]
   );
 
-  const handleVoiceTranscript = (text, autoSend) => {
-    if (!text.trim()) return;
-    if (autoSend) {
-      sendMessage(text);
-    } else {
-      setInputValue(text);
-      setKeyboardVisible(true);
-    }
-  };
-
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") {
         setToolsOpen(false);
         setAccountOpen(false);
         setCameraOpen(false);
+        orchestrator.cancelAll("user");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [orchestrator]);
 
   return (
     <div
@@ -622,19 +618,17 @@ export default function App() {
       />
 
       <BottomBar
-        voiceMode={voiceMode}
-        appStatus={appStatus}
+        orchestrator={orchestrator}
         keyboardVisible={keyboardVisible}
         inputValue={inputValue}
         sending={sending}
         onInputChange={setInputValue}
         onSend={() => sendMessage()}
-        onTranscript={handleVoiceTranscript}
-        onModeChange={setVoiceMode}
-        onStatusChange={setAppStatus}
         onOpenCamera={() => setCameraOpen(true)}
         onToggleKeyboard={() => setKeyboardVisible((v) => !v)}
         onNotify={showVoiceHint}
+        onOpenMedia={() => setMediaOpen(true)}
+        onToggleHandsFree={orchestrator.toggleHandsFree}
       />
 
       {voiceHint && <div className="voice-hint" role="status">{voiceHint}</div>}

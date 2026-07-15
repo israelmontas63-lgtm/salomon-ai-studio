@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon-v2.ico" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/icon-v2.svg" />
+    <link rel="icon" type="image/png" href="/icon-192-v2.png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#C5A059" />
@@ -11,13 +12,24 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Salomón" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="description" content="Salomón — asistente con memoria, voz y visión. Negro plateado y oro." />
+    <link rel="manifest" href="/manifest.json?v=icon-v2" />
+    <link rel="manifest" href="/manifest.webmanifest?v=icon-v2" />
     <title>Salomón AI</title>
-    <link rel="stylesheet" href="/salomon-theme.css" />
+    <link rel="stylesheet" href="/salomon-theme.css?v=icon-v2" />
+    <link rel="stylesheet" href="/splash.css?v=icon-v2" />
+    <link rel="stylesheet" href="/drawers.css?v=voice1" />
   </head>
   <body>
+    <div id="salomon-splash" aria-live="polite">
+      <div class="splash-icon" role="img" aria-label="Salomón"></div>
+      <div class="splash-title">SALOMÓN</div>
+      <div id="splash-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="splash-step" id="splash-step">Iniciando…</div>
+    </div>
     <div id="root"></div>
+    <script src="/standalone-boot.js?v=7" data-salomon-boot="1"></script>
     <script type="module" src="/src/main.jsx"></script>
+    <script src="/drawers.js?v=4" defer></script>
   </body>
 </html>

@@ -34,22 +34,23 @@ async function api(path, options = {}) {
   return data;
 }
 
-export function checkSalud() {
-  return api("/api/salud");
+export function checkSalud(fetchOpts = {}) {
+  return api("/api/salud", fetchOpts);
 }
 
-export function iniciarSesion(sessionId) {
+export function iniciarSesion(sessionId, fetchOpts = {}) {
   return api("/api/sesion", {
     method: "POST",
     body: JSON.stringify({ session_id: sessionId || null }),
+    ...fetchOpts,
   });
 }
 
-export function obtenerHistorial(sessionId) {
-  return api(`/api/sesion/${encodeURIComponent(sessionId)}/mensajes`);
+export function obtenerHistorial(sessionId, fetchOpts = {}) {
+  return api(`/api/sesion/${encodeURIComponent(sessionId)}/mensajes`, fetchOpts);
 }
 
-export function enviarMensaje(mensaje, sessionId, meta = {}) {
+export function enviarMensaje(mensaje, sessionId, meta = {}, fetchOpts = {}) {
   return api("/api/chat", {
     method: "POST",
     body: JSON.stringify({
@@ -57,13 +58,15 @@ export function enviarMensaje(mensaje, sessionId, meta = {}) {
       session_id: sessionId || null,
       ...meta,
     }),
+    ...fetchOpts,
   });
 }
 
-export function sintetizarVoz(texto, sessionId) {
+export function sintetizarVoz(texto, sessionId, fetchOpts = {}) {
   return api("/api/tts", {
     method: "POST",
     body: JSON.stringify({ texto, session_id: sessionId || null }),
+    ...fetchOpts,
   });
 }
 

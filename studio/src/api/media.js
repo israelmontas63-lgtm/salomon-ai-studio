@@ -15,11 +15,12 @@ export async function estadoMedia() {
   return res.json();
 }
 
-export async function generarImagen(payload) {
+export async function generarImagen(payload, fetchOpts = {}) {
   const res = await fetch(`${API_BASE}/api/media/generar_imagen`, {
     method: "POST",
     headers: headers(true),
     body: JSON.stringify(payload),
+    ...fetchOpts,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
