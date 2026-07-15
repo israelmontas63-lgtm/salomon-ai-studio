@@ -4,7 +4,9 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install --upgrade pip && pip install numpy==1.26.4 && pip install -r requirements.txt && python -c "import numpy; print('numpy', numpy.__version__)"
-    startCommand: gunicorn app:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    # ASGI + 1 worker (plan free). Health check en /api/salud evita falsos 503 de la UI.
+    startCommand: gunicorn app:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile -
+    healthCheckPath: /api/salud
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"

@@ -8,7 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist se versiona: FastAPI sirve studio/dist en Render (sin build Node en el servidor)
 dist-ssr
 *.local
 

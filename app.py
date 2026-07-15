@@ -1252,12 +1252,19 @@ def api_backup_import(body: BackupImportRequest) -> dict:
 
 
 @app.get("/")
-def index() -> FileResponse:
+def index():
+    """Raíz pública — nunca 503 (Render hace health check en / por defecto)."""
     if STUDIO_DIR.exists() and (STUDIO_DIR / "index.html").exists():
         return FileResponse(STUDIO_DIR / "index.html")
-    raise HTTPException(
-        status_code=503,
-        detail="UI no compilada. Ejecuta: cd studio && npm run build",
+    return JSONResponse(
+        status_code=200,
+        content={
+            "estado": "ok",
+            "servicio": "Salomón AI",
+            "ui": "pendiente",
+            "mensaje": "API activa. Compila la UI con: cd studio && npm run build",
+            "salud": "/api/salud",
+        },
     )
 
 

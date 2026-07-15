@@ -1,0 +1,208 @@
+/* Salomón AI — Drawers Glassmorphism final */
+
+html,
+body,
+#root {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden;
+}
+
+.app-shell {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+}
+
+/* Chat se ve debajo, distorsionado */
+.glass-backdrop {
+  z-index: 200 !important;
+  background: rgba(10, 10, 10, 0.28) !important;
+  -webkit-backdrop-filter: blur(15px) saturate(1.15) !important;
+  backdrop-filter: blur(15px) saturate(1.15) !important;
+  animation: drawerBackdropIn 0.3s ease !important;
+}
+
+@keyframes drawerBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Panel cristal metálico negro-dorado */
+.glass-panel {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  width: min(320px, 88vw) !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: linear-gradient(
+    165deg,
+    rgba(44, 44, 44, 0.55) 0%,
+    rgba(26, 26, 26, 0.72) 45%,
+    rgba(18, 18, 18, 0.78) 100%
+  ) !important;
+  -webkit-backdrop-filter: blur(15px) saturate(1.25) !important;
+  backdrop-filter: blur(15px) saturate(1.25) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(212, 175, 55, 0.35),
+    inset 0 1px 0 rgba(255, 215, 0, 0.12),
+    0 0 48px rgba(0, 0, 0, 0.45) !important;
+  border: none !important;
+  transform: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.glass-panel--left {
+  left: 0 !important;
+  right: auto !important;
+  border-right: 1px solid rgba(212, 175, 55, 0.45) !important;
+  animation: drawerSlideInLeft 0.36s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.glass-panel--right {
+  right: 0 !important;
+  left: auto !important;
+  border-left: 1px solid rgba(212, 175, 55, 0.45) !important;
+  animation: drawerSlideInRight 0.36s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+@keyframes drawerSlideInLeft {
+  from { transform: translateX(-100%); opacity: 0.8; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes drawerSlideInRight {
+  from { transform: translateX(100%); opacity: 0.8; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.glass-panel__header {
+  border-bottom: 1px solid rgba(212, 175, 55, 0.28) !important;
+}
+
+.glass-panel__header h2 {
+  color: #FFD700 !important;
+  letter-spacing: 0.14em !important;
+  font-family: "Cormorant Garamond", Georgia, serif !important;
+  font-weight: 400 !important;
+  text-transform: uppercase !important;
+}
+
+.glass-panel__close {
+  color: #D4AF37 !important;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Placeholder vacío */
+.glass-panel__list {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px 18px !important;
+}
+
+.glass-panel__item {
+  display: none !important; /* menús vacíos por ahora */
+}
+
+.drawer-placeholder {
+  text-align: center;
+  color: rgba(232, 197, 71, 0.72);
+  font: 400 0.85rem/1.45 Inter, system-ui, sans-serif;
+  max-width: 220px;
+  letter-spacing: 0.02em;
+}
+
+.drawer-placeholder strong {
+  display: block;
+  color: #FFD700;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* Header con etiquetas Correo / Herramientas */
+.studio-header {
+  align-items: center !important;
+}
+
+.header-menu-btn {
+  width: auto !important;
+  min-width: 56px !important;
+  height: auto !important;
+  min-height: 52px !important;
+  padding: 6px 8px !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.header-menu-btn .menu-label {
+  font: 500 9px/1 Inter, system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #D4AF37;
+  opacity: 0.92;
+}
+
+.header-menu-btn:active {
+  background: rgba(212, 175, 55, 0.15) !important;
+}
+
+.dots-icon i,
+.lines-icon i {
+  background: linear-gradient(90deg, #D4AF37, #FFD700) !important;
+}
+
+/* Bottom bar metálica */
+.bottom-bar {
+  position: relative !important;
+  z-index: 40 !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+  background: linear-gradient(transparent, rgba(26, 26, 26, 0.98) 28%) !important;
+  border-top: 1px solid rgba(212, 175, 55, 0.22) !important;
+}
+
+.control-btn {
+  width: 52px !important;
+  height: 52px !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.55) !important;
+  color: #E8C547 !important;
+  background: #1A1A1A !important;
+}
+
+.control-btn--main,
+.controls-row .control-btn--main {
+  width: 64px !important;
+  height: 64px !important;
+  border: 2px solid #D4AF37 !important;
+  background: linear-gradient(145deg, #FFD700, #D4AF37) !important;
+  color: #1A1A1A !important;
+  box-shadow: 0 4px 24px rgba(212, 175, 55, 0.4) !important;
+}
+
+.chat-body {
+  flex: 1 !important;
+  min-height: 0 !important;
+  width: 100% !important;
+}

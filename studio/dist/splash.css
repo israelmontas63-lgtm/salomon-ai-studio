@@ -1,0 +1,84 @@
+/* Splash Screen — Salomón Standalone */
+#salomon-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 30%, #2C2C2C 0%, #1A1A1A 55%, #0A0A0A 100%);
+  color: #FFD700;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+#salomon-splash.hide {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+#salomon-splash .splash-icon {
+  width: min(148px, 36vw);
+  height: min(148px, 36vw);
+  border-radius: 50%;
+  background: url("/icon.svg") center / cover no-repeat;
+  box-shadow:
+    0 0 0 2px rgba(212, 175, 55, 0.45),
+    0 0 40px rgba(212, 175, 55, 0.25),
+    0 12px 40px rgba(0, 0, 0, 0.55);
+  animation: splashPulse 1.8s ease-in-out infinite;
+}
+#salomon-splash .splash-title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  font-size: 1.35rem;
+  color: #FFD700;
+}
+#salomon-splash .splash-step {
+  font: 500 12px/1.4 Inter, system-ui, sans-serif;
+  color: rgba(232, 197, 71, 0.85);
+  min-height: 1.2em;
+}
+#splash-dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+#splash-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.25);
+  display: block;
+  transition: background 0.25s, transform 0.25s, box-shadow 0.25s;
+}
+#splash-dots i.on {
+  background: #FFD700;
+  transform: scale(1.15);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.65);
+}
+@keyframes splashPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.04); filter: brightness(1.12); }
+}
+
+/* Standalone: safe areas + sin overscroll */
+html.salomon-standalone,
+html.salomon-standalone body {
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+html.salomon-standalone #root {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+html:not(.salomon-booted) #root {
+  visibility: hidden;
+}
+html.salomon-booted #root {
+  visibility: visible;
+}
