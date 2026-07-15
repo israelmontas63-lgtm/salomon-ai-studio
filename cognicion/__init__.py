@@ -1,16 +1,11 @@
 """
-Módulo de cognición avanzada de Salomón AI.
+Cognicion — exports diferidos.
 
-Pilares:
-- memoria: RAG vectorial con ChromaDB
-- razonamiento: Chain of Thought para tareas técnicas
-- vision: análisis de capturas con Gemini
-- autocorreccion: ciclo proactivo ante errores de consola
-- agente: correcciones autónomas en archivos del proyecto
+IMPORTANTE (Render): no importar orquestador/vision aqui.
+Cualquier import pesado en este archivo obliga a cargar numpy al arrancar.
 """
 
-from cognicion.agente import AgenteAutonomo, ResultadoAgente
-from cognicion.orquestador import MotorCognicion, OrquestadorCognitivo
+from __future__ import annotations
 
 __all__ = [
     "MotorCognicion",
@@ -18,3 +13,15 @@ __all__ = [
     "AgenteAutonomo",
     "ResultadoAgente",
 ]
+
+
+def __getattr__(name: str):
+    if name in ("MotorCognicion", "OrquestadorCognitivo"):
+        from cognicion.orquestador import MotorCognicion, OrquestadorCognitivo
+
+        return MotorCognicion if name == "MotorCognicion" else OrquestadorCognitivo
+    if name in ("AgenteAutonomo", "ResultadoAgente"):
+        from cognicion.agente import AgenteAutonomo, ResultadoAgente
+
+        return AgenteAutonomo if name == "AgenteAutonomo" else ResultadoAgente
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

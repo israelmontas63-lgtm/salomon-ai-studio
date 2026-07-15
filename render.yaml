@@ -4,9 +4,7 @@ services:
     runtime: python
     plan: free
     rootDir: .
-    buildCommand: pip install -r requirements.txt && python -c "import numpy; print(numpy.__version__)"
-    # Reinstala deps en el venv del runtime justo antes de gunicorn.
-    # Bind a $PORT (Render). Puerto fijo 10000 falla si PORT es distinto.
+    buildCommand: pip install -r requirements.txt && python -c "import numpy; print('numpy_ok', numpy.__version__)"
     startCommand: pip install -r requirements.txt && gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
     healthCheckPath: /api/salud
     envVars:
