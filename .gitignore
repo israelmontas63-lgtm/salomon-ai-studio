@@ -5,16 +5,22 @@ __pycache__/
 .python-version
 .env
 
-# Extra protecciones (no subir basura a Render/GitHub)
+# Extra protecciones
 **/__pycache__/
 *.py[cod]
+*$py.class
 .env.*
 !.env.example
 !.env.*.example
 !.env.media.example
 .cursor/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 studio/node_modules/
+*.local
+.txt.txt
+*.txt.txt
 data/audio/
 data/media/generadas/
 data/media/editados/
@@ -26,5 +32,9 @@ data/bca/
 data/*.db
 data/modelos/
 *.pt
+*.onnx
 *.mp3
 *.wav
+*.log
+tmp/
+temp/

@@ -1,4 +1,10 @@
+* text=auto eol=lf
 requirements.txt text eol=lf
 Procfile text eol=lf
 render.yaml text eol=lf
+runtime.txt text eol=lf
+.gitignore text eol=lf
 *.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
