@@ -50,25 +50,32 @@ RUTAS_API_PUBLICAS = frozenset({"/api/salud", "/api/bca/estado", "/api/tunel/est
 
 @app.on_event("startup")
 def _iniciar_nucleo_os() -> None:
-    from cognicion.nucleo import obtener_nucleo
-    from cognicion.seguridad import obtener_motor
-    from cognicion.seguridad.recuperacion import crear_snapshot
-    from cognicion.capas.loader import inicializar_capas
-    from cognicion.orquesta.colas import obtener_orquestador_carga
+    """Inicialización tolerante: un fallo parcial no tumba el proceso en Render."""
+    try:
+        from cognicion.nucleo import obtener_nucleo
+        from cognicion.seguridad import obtener_motor
+        from cognicion.seguridad.recuperacion import crear_snapshot
+        from cognicion.capas.loader import inicializar_capas
+        from cognicion.orquesta.colas import obtener_orquestador_carga
 
-    obtener_nucleo()
-    obtener_motor()
-    crear_snapshot(motivo="inicio_sistema")
-    inicializar_capas(app)
-    # Despertar Orquestador de Carga (arquitectura de colas Colsub)
-    orq = obtener_orquestador_carga()
-    evento(
-        _log,
-        "colsub_orquestador_activo",
-        activo=orq.activo,
-        arquitectura="colas",
-    )
-    evento(_log, "nucleo_iniciado")
+        obtener_nucleo()
+        obtener_motor()
+        try:
+            crear_snapshot(motivo="inicio_sistema")
+        except Exception as exc:
+            _log.warning("snapshot_inicio_omitido: %s", exc)
+        inicializar_capas(app)
+        orq = obtener_orquestador_carga()
+        evento(
+            _log,
+            "colsub_orquestador_activo",
+            activo=orq.activo,
+            arquitectura="colas",
+        )
+        evento(_log, "nucleo_iniciado")
+    except Exception as exc:
+        _log.exception("startup_parcial_fallo: %s", exc)
+        evento(_log, "nucleo_inicio_degradado", error=str(exc))
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,8 +85,8 @@ app.add_middleware(
         "http://127.0.0.1:8000",
         "http://localhost:8000",
     ],
-    # Acceso móvil vía localtunnel / localtunnel.me
-    allow_origin_regex=r"https://.*\.(loca\.lt|localtunnel\.me)",
+    # Acceso móvil (localtunnel) y producción (Render)
+    allow_origin_regex=r"https://.*\.(loca\.lt|localtunnel\.me|onrender\.com)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -330,6 +337,17 @@ class AgenteRequest(BaseModel):
 # ── Salud ──────────────────────────────────────────────────────────────────
 @app.get("/api/salud")
 def salud() -> dict:
+    """Health check rápido para Render (no bloquea por Chroma/LLM)."""
+    return {
+        "estado": "ok",
+        "servicio": "Salomón AI",
+        "version": "1.0.0",
+        "live": True,
+    }
+
+
+@app.get("/api/salud/detalle")
+def salud_detalle() -> dict:
     memoria_ok = False
     try:
         from cognicion.memoria.vectorial import obtener_memoria
