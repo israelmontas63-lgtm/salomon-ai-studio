@@ -1,4 +1,3 @@
-numpy
 fastapi
 uvicorn[standard]
 gunicorn
@@ -9,3 +8,4 @@ python-multipart
 langgraph
 psutil
 Pillow
+numpy
