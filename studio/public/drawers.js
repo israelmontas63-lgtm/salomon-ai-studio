@@ -1,10 +1,11 @@
 /**
- * Menús Salomón — sin MutationObserver recursivo (causaba freeze del navegador).
+ * Menús Salomón — solo DOM tras carga segura (sin MutationObserver).
  */
 (function () {
   const LABEL_LEFT = "Correo";
   const LABEL_RIGHT = "Herramientas";
   let applied = false;
+  let intervalId = null;
 
   function haptic() {
     try {
@@ -12,7 +13,15 @@
     } catch (_) {}
   }
 
+  function domReady() {
+    return (
+      !!document.body &&
+      (document.readyState === "interactive" || document.readyState === "complete")
+    );
+  }
+
   function ensureLabel(btn, text) {
+    if (!btn) return;
     let lab = btn.querySelector(".menu-label");
     if (!lab) {
       lab = document.createElement("span");
@@ -23,7 +32,7 @@
   }
 
   function setIcon(btn, kind) {
-    if (btn.dataset.iconKind === kind) return;
+    if (!btn || btn.dataset.iconKind === kind) return;
     btn.dataset.iconKind = kind;
     const html =
       kind === "dots"
@@ -35,29 +44,32 @@
   }
 
   function styleHeader() {
+    if (!domReady()) return false;
     const header = document.querySelector(".studio-header");
     if (!header) return false;
     const btns = header.querySelectorAll(".header-menu-btn");
     if (btns.length < 2) return false;
 
-    const left = btns[0];
-    const right = btns[1];
-    setIcon(left, "lines");
-    ensureLabel(left, LABEL_LEFT);
-    left.setAttribute("aria-label", LABEL_LEFT);
-    left.title = LABEL_LEFT;
+    setIcon(btns[0], "lines");
+    ensureLabel(btns[0], LABEL_LEFT);
+    btns[0].setAttribute("aria-label", LABEL_LEFT);
+    btns[0].title = LABEL_LEFT;
 
-    setIcon(right, "dots");
-    ensureLabel(right, LABEL_RIGHT);
-    right.setAttribute("aria-label", LABEL_RIGHT);
-    right.title = LABEL_RIGHT;
+    setIcon(btns[1], "dots");
+    ensureLabel(btns[1], LABEL_RIGHT);
+    btns[1].setAttribute("aria-label", LABEL_RIGHT);
+    btns[1].title = LABEL_RIGHT;
 
     if (!header.dataset.drawerBound) {
       header.dataset.drawerBound = "1";
       btns.forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          haptic();
-        }, { passive: true });
+        btn.addEventListener(
+          "click",
+          function () {
+            haptic();
+          },
+          { passive: true }
+        );
       });
     }
     return true;
@@ -85,11 +97,16 @@
   }
 
   function applyOnce() {
+    if (!domReady()) return;
     styleHeader();
     document.querySelectorAll(".glass-panel").forEach(emptyPanel);
   }
 
   function boot() {
+    if (!domReady()) {
+      document.addEventListener("DOMContentLoaded", boot, { once: true });
+      return;
+    }
     if (applied) {
       applyOnce();
       return;
@@ -98,13 +115,16 @@
     document.documentElement.classList.add("salomon-drawers");
     applyOnce();
 
-    // Reintentos acotados (máx 10) — NO MutationObserver (provocaba bucle infinito)
     var tries = 0;
-    var id = setInterval(function () {
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(function () {
       tries += 1;
       var ok = styleHeader();
       document.querySelectorAll(".glass-panel").forEach(emptyPanel);
-      if (ok || tries >= 10) clearInterval(id);
+      if (ok || tries >= 10) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
     }, 500);
   }
 
