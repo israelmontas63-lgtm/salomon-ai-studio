@@ -1423,6 +1423,18 @@ def splash_css() -> FileResponse:
     return _archivo_studio("splash.css", "text/css")
 
 
+@app.get("/voice-orchestrator.css")
+def voice_orchestrator_css() -> FileResponse:
+    """Capa 1 Bridge: solo animaciones del botón (no toca layout)."""
+    return _archivo_studio("voice-orchestrator.css", "text/css")
+
+
+@app.get("/salomon-orchestrator-bridge.js")
+def salomon_orchestrator_bridge_js() -> FileResponse:
+    """Capa 1 Bridge: estados + cancelación sobre UI estable."""
+    return _archivo_studio("salomon-orchestrator-bridge.js", "application/javascript")
+
+
 @app.get("/standalone-boot.js")
 def standalone_boot_js() -> FileResponse:
     return _archivo_studio("standalone-boot.js", "application/javascript")

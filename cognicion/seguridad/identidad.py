@@ -39,6 +39,8 @@ _RUTAS_PUBLICAS = frozenset({
     "/apple-touch-icon-v2.png",
     "/icons.svg",
     "/media-panel.js",
+    "/voice-orchestrator.css",
+    "/salomon-orchestrator-bridge.js",
 })
 
 
