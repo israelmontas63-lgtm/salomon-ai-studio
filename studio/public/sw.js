@@ -36,7 +36,6 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // Nunca cachear API — siempre red (rutas relativas /api/...)
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(fetch(req));
     return;

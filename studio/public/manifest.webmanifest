@@ -1,5 +1,6 @@
 {
-  "name": "Salomón",
+  "id": "/",
+  "name": "Salomón AI",
   "short_name": "Salomón",
   "description": "Asistente de inteligencia artificial — negro plateado y oro.",
   "start_url": "/",
@@ -7,8 +8,9 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#1A1A1A",
-  "theme_color": "#1A1A1A",
+  "theme_color": "#C5A059",
   "lang": "es",
+  "dir": "ltr",
   "categories": ["productivity", "utilities"],
   "icons": [
     {

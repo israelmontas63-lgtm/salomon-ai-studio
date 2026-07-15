@@ -1271,9 +1271,13 @@ def api_backup_import(body: BackupImportRequest) -> dict:
 
 @app.get("/")
 def index():
-    """Raíz pública — nunca 503 (Render hace health check en / por defecto)."""
+    """Raíz pública — sirve la PWA (nunca 503 por UI faltante)."""
     if STUDIO_DIR.exists() and (STUDIO_DIR / "index.html").exists():
-        return FileResponse(STUDIO_DIR / "index.html")
+        return FileResponse(
+            STUDIO_DIR / "index.html",
+            media_type="text/html; charset=utf-8",
+            headers={"Cache-Control": "no-cache"},
+        )
     return JSONResponse(
         status_code=200,
         content={
@@ -1286,11 +1290,28 @@ def index():
     )
 
 
-def _archivo_studio(nombre: str, media_type: str | None = None) -> FileResponse:
+def _archivo_studio(
+    nombre: str,
+    media_type: str | None = None,
+    *,
+    cache: str = "public, max-age=86400",
+) -> FileResponse:
     ruta = STUDIO_DIR / nombre
     if not ruta.is_file():
+        # Fallback: manifest en raíz del repo
+        alt = BASE_DIR / nombre
+        if alt.is_file():
+            return FileResponse(
+                alt,
+                media_type=media_type,
+                headers={"Cache-Control": cache},
+            )
         raise HTTPException(status_code=404, detail="No encontrado")
-    return FileResponse(ruta, media_type=media_type)
+    return FileResponse(
+        ruta,
+        media_type=media_type,
+        headers={"Cache-Control": cache},
+    )
 
 
 @app.get("/media-panel.js")
@@ -1301,6 +1322,12 @@ def media_panel_js() -> FileResponse:
 @app.get("/bca-indicator.js")
 def bca_indicator_js() -> FileResponse:
     return _archivo_studio("bca-indicator.js", "application/javascript")
+
+
+@app.get("/manifest.json")
+def manifest_json() -> FileResponse:
+    """PWA manifest (Android Chrome / Install App)."""
+    return _archivo_studio("manifest.json", "application/manifest+json")
 
 
 @app.get("/manifest.webmanifest")
