@@ -1,4 +1,4 @@
-# Runtime web (Render)
+# Runtime web (Render) — rebuild cache if ModuleNotFoundError
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 gunicorn>=22.0.0
