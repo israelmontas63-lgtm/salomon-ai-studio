@@ -206,7 +206,7 @@ export default function App() {
         const msg =
           err?.status === 401
             ? "Acceso denegado. Ejecuta scripts/sincronizar_api_key.py, reconstruye el frontend (npm run build) y reinicia el servidor."
-            : "Disculpa, no pude conectar con el cerebro de Salomón. Verifica que el servidor esté activo en el puerto 8000.";
+            : "Disculpa, no pude conectar con el cerebro de Salomón. Reintenta en unos segundos.";
         pushAiMessage(msg);
       } finally {
         setSending(false);
@@ -284,7 +284,7 @@ export default function App() {
           {
             id: nextId(),
             role: "ai",
-            text: `${fallback} (Modo sin conexión — inicia el backend con: python -m uvicorn app:app --port 8000)`,
+            text: `${fallback} (Modo sin conexión — el backend aún no responde. Espera el arranque en Render.)`,
             typing: true,
             saved: false,
           },
