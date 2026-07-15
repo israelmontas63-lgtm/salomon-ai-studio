@@ -45,7 +45,15 @@ STUDIO_DIR = BASE_DIR / "studio" / "dist"
 
 app = FastAPI(title="Salomón AI", version="1.0.0")
 _log = obtener_logger("api")
-RUTAS_API_PUBLICAS = frozenset({"/api/salud", "/api/bca/estado", "/api/tunel/estado"})
+RUTAS_API_PUBLICAS = frozenset(
+    {
+        "/api/salud",
+        "/api/salud/detalle",
+        "/api/bca/estado",
+        "/api/tunel/estado",
+        "/api/cognicion/vdcp/estado",
+    }
+)
 
 
 @app.on_event("startup")
@@ -79,15 +87,10 @@ def _iniciar_nucleo_os() -> None:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-    ],
-    # Acceso móvil (localtunnel) y producción (Render)
-    allow_origin_regex=r"https://.*\.(loca\.lt|localtunnel\.me|onrender\.com)",
-    allow_credentials=True,
+    # PWA / Render / local — mismo origen no necesita CORS, pero el móvil
+    # a veces abre variantes de host; permitimos amplio para no bloquear.
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -153,24 +156,29 @@ async def motor_ciberseguridad_middleware(request: Request, call_next):
                         },
                     )
 
-            permitir, amenaza, motivo = motor.evaluar_peticion_entrante(
-                path,
-                request.method,
-                ip,
-                api_key=api_key,
-                query=query,
-                user_agent=user_agent,
-            )
-            if not permitir:
-                status = 403
-                if motivo == "requiere_autenticacion":
-                    status = 401
-                elif amenaza and amenaza.accion == AccionSeguridad.BLOQUEAR:
-                    status = 403
-                return JSONResponse(
-                    status_code=status,
-                    content={"detail": motivo, "seguridad": amenaza.tipo.value if amenaza else None},
+            # Rutas públicas (salud/boot PWA): no aplicar bloqueos de intrusión
+            if path not in RUTAS_API_PUBLICAS:
+                permitir, amenaza, motivo = motor.evaluar_peticion_entrante(
+                    path,
+                    request.method,
+                    ip,
+                    api_key=api_key,
+                    query=query,
+                    user_agent=user_agent,
                 )
+                if not permitir:
+                    status = 403
+                    if motivo == "requiere_autenticacion":
+                        status = 401
+                    elif amenaza and amenaza.accion == AccionSeguridad.BLOQUEAR:
+                        status = 403
+                    return JSONResponse(
+                        status_code=status,
+                        content={
+                            "detail": motivo,
+                            "seguridad": amenaza.tipo.value if amenaza else None,
+                        },
+                    )
 
         response = await call_next(request)
         duracion_ms = round((time.perf_counter() - inicio) * 1000, 1)

@@ -1,7 +1,5 @@
 /**
- * Splash + boot PWA — Salomón AI
- * Nunca se queda bloqueado: timeout global y rutas relativas (/api/...).
- * Producción: https://salomon-ai-studio-1.onrender.com
+ * Splash + boot PWA — Salomón AI (fuente public)
  */
 (function () {
   const MIN_MS = 600;
@@ -42,7 +40,6 @@
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), PING_MS);
     try {
-      // Ruta relativa: funciona en Render y en PWA (nunca localhost)
       const r = await fetch(path, {
         cache: "no-store",
         signal: ctrl.signal,
@@ -69,33 +66,24 @@
     try {
       setStep("Conectando con Salomón…");
       setDots(1);
-
       let salud = await ping("/api/salud");
       setDots(2);
-
       if (!salud) {
-        setStep("Reintentando servidor…");
         for (let i = 0; i < 4 && !salud; i++) {
           setStep("Esperando servidor (" + (i + 1) + ")…");
           await new Promise((r) => setTimeout(r, 500));
           salud = await ping("/api/salud");
         }
       }
-
       setStep(salud ? "Núcleo en línea" : "Modo degradado — entrando…");
       setDots(3);
-
-      // No bloquear por visión/túnel
       ping("/api/cognicion/vdcp/estado");
       ping("/api/tunel/estado");
-
       setDots(4);
       setStep("Preparando interfaz…");
-
-      const waitUi = Math.max(0, MIN_MS - (performance.now() - t0));
-      await new Promise((r) => setTimeout(r, waitUi));
-
-      // Esperar React breve (no eterno)
+      await new Promise((r) =>
+        setTimeout(r, Math.max(0, MIN_MS - (performance.now() - t0)))
+      );
       await new Promise((resolve) => {
         const start = performance.now();
         const tick = () => {
@@ -111,18 +99,12 @@
         };
         tick();
       });
-
       setDots(5);
       setStep("Listo");
       hideSplash();
-
       window.dispatchEvent(
         new CustomEvent("salomon:ready", {
-          detail: {
-            standalone: isStandalone(),
-            salud,
-            origin: window.location.origin,
-          },
+          detail: { standalone: isStandalone(), salud, origin: location.origin },
         })
       );
     } finally {
