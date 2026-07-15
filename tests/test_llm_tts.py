@@ -74,7 +74,7 @@ def test_salud_incluye_tts_async():
     from app import app
 
     client = TestClient(app)
-    res = client.get("/api/salud")
+    res = client.get("/api/salud/detalle")
     assert res.status_code == 200
     assert "tts_async" in res.json()["cognicion"]
 
