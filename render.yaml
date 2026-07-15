@@ -3,12 +3,11 @@ services:
     name: salomon-ai
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-    # Start Command (ASGI): gunicorn + UvicornWorker
+    buildCommand: pip install --upgrade pip && pip install numpy==1.26.4 && pip install -r requirements.txt && python -c "import numpy; print('numpy', numpy.__version__)"
     startCommand: gunicorn app:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
-        value: "3.11.0"
+        value: "3.11.9"
       - key: SALOMON_API_KEY
         sync: false
       - key: GEMINI_API_KEY
