@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "name": "Salomón AI — Interfaz blindada",
   "strict_mode": true,
   "validation_on_fail": "ABORT_AND_REVERT",
@@ -12,7 +12,9 @@
     "size": "32px",
     "margin_top": "10px",
     "margin_bottom": "9px",
-    "filter_effect": "drop-shadow(0 0 2px rgba(212, 175, 55, 0.5))"
+    "filter_effect": "drop-shadow(0 0 2px rgba(212, 175, 55, 0.5))",
+    "monogram": "SS",
+    "style": "negro_y_oro"
   },
   "animation_protocol": {
     "thinking_pulse": "ease-in-out",
@@ -23,9 +25,13 @@
     "header": "/header-logo-spec.css",
     "thinking": "/thinking-animation-spec.css",
     "voice": "/voice-orchestrator.css",
+    "ui_shield": "/salomon-ui-shield.css",
+    "ui_shield_js": "/salomon-ui-shield.js",
+    "bridge": "/salomon-orchestrator-bridge.js",
     "layout_css": "/assets/index-CJUgt2ya.css",
     "layout_js": "/assets/index-BdcDx9nN.js"
   },
   "validated_live": true,
-  "commit_label": "Interfaz blindada v1.0 - Protocolo visual exacto"
+  "live_url": "https://salomon-ai-studio-1.onrender.com",
+  "commit_label": "Interfaz blindada v1.1"
 }
