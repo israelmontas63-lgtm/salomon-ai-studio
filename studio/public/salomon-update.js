@@ -1,7 +1,6 @@
 /**
- * Salomón CI/CD — sincronización automática con Render.
- * Detecta nuevo build vía /api/version y fuerza descarga de activos.
- * No toca ELEVENLABS_* (viven en el servidor).
+ * Salomón CI/CD — botón Actualizar en header (maqueta aprobada).
+ * Estado 1: idle (borde oro). Estado 2: is-ready (relleno oro + badge).
  */
 (function () {
   "use strict";
@@ -9,10 +8,18 @@
   var STORAGE_BUILD = "salomon_build_id";
   var POLL_MS = 45000;
   var AUTO_RELOAD_DELAY_MS = 3500;
-  var VERSION = "cicd-1";
+  var VERSION = "mockup-header-1";
   var polling = false;
   var applying = false;
   var pendingBuild = null;
+  var mountTries = 0;
+
+  var SYNC_ICON =
+    '<svg class="salomon-update-btn__svg" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    'd="M20 12a8 8 0 1 1-2.2-5.4"/>' +
+    '<path fill="currentColor" d="M20 4v5h-5l5-5z"/>' +
+    "</svg>";
 
   function log() {
     try {
@@ -32,51 +39,66 @@
     }
   }
 
-  function ensureUi() {
-    if (document.getElementById("salomon-update-btn")) return;
-    var btn = document.createElement("button");
-    btn.id = "salomon-update-btn";
-    btn.type = "button";
-    btn.className = "salomon-update-btn";
-    btn.title = "Actualizar Salomón (nueva versión desde Render)";
-    btn.setAttribute("aria-label", "Actualizar aplicación");
-    btn.innerHTML =
-      '<span class="salomon-update-btn__icon" aria-hidden="true">↻</span>' +
-      '<span class="salomon-update-btn__badge" hidden>1</span>';
-    btn.addEventListener("click", function () {
-      applyUpdate({ reason: "manual", force: true });
-    });
-    document.body.appendChild(btn);
+  function ensureToast() {
+    if (document.getElementById("salomon-update-toast")) return;
+    var toast = document.createElement("div");
+    toast.id = "salomon-update-toast";
+    toast.setAttribute("role", "status");
+    document.body.appendChild(toast);
+  }
 
-    if (!document.getElementById("salomon-update-css")) {
-      var s = document.createElement("style");
-      s.id = "salomon-update-css";
-      s.textContent =
-        "#salomon-update-btn{position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top,0px));" +
-        "z-index:350000;width:42px;height:42px;border-radius:50%;border:1px solid rgba(212,175,55,.55);" +
-        "background:rgba(0,0,0,.72);color:#f0d78c;font-size:1.15rem;cursor:pointer;" +
-        "display:flex;align-items:center;justify-content:center;" +
-        "box-shadow:0 6px 18px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent}" +
-        "#salomon-update-btn.is-ready{border-color:#f0d78c;animation:salomonUpdatePulse 1.4s ease-in-out infinite}" +
-        "#salomon-update-btn.is-busy{opacity:.55;pointer-events:none}" +
-        ".salomon-update-btn__badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;" +
-        "border-radius:8px;background:#d4af37;color:#111;font:700 10px/16px Inter,system-ui,sans-serif;" +
-        "padding:0 4px}" +
-        "#salomon-update-toast{position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));" +
-        "transform:translateX(-50%);z-index:360000;max-width:92vw;padding:10px 14px;border-radius:12px;" +
-        "background:rgba(12,12,14,.9);border:1px solid rgba(212,175,55,.45);color:#f0d78c;" +
-        "font:500 12px/1.35 Inter,system-ui,sans-serif;text-align:center;display:none}" +
-        "#salomon-update-toast.show{display:block}" +
-        "@keyframes salomonUpdatePulse{0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,.45)}" +
-        "50%{box-shadow:0 0 0 8px rgba(212,175,55,0)}}";
-      document.head.appendChild(s);
+  function mountInHeader() {
+    var existing = document.getElementById("salomon-update-btn");
+    if (existing) {
+      // Migrar FAB antiguo al header si quedó suelto
+      if (!existing.closest(".studio-header")) {
+        existing.remove();
+      } else {
+        return true;
+      }
     }
 
-    if (!document.getElementById("salomon-update-toast")) {
-      var toast = document.createElement("div");
-      toast.id = "salomon-update-toast";
-      toast.setAttribute("role", "status");
-      document.body.appendChild(toast);
+    var header = document.querySelector(".studio-header");
+    if (!header) return false;
+
+    document.documentElement.classList.add("salomon-mockup-ui");
+
+    var slot = document.createElement("div");
+    slot.className = "salomon-update-slot";
+    slot.innerHTML =
+      '<button type="button" id="salomon-update-btn" class="salomon-update-btn" ' +
+      'title="Actualizar Salomón desde Render" aria-label="Actualizar">' +
+      '<span class="salomon-update-btn__icon">' +
+      SYNC_ICON +
+      "</span>" +
+      '<span class="salomon-update-btn__label">Actualizar</span>' +
+      '<span class="salomon-update-btn__badge" hidden aria-hidden="true"></span>' +
+      "</button>";
+
+    var btns = header.querySelectorAll(".header-menu-btn");
+    if (btns.length >= 2) {
+      btns[1].parentNode.insertBefore(slot, btns[1]);
+    } else {
+      header.appendChild(slot);
+    }
+
+    var btn = document.getElementById("salomon-update-btn");
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      applyUpdate({ reason: "manual", force: true });
+    });
+
+    ensureToast();
+    log("Actualizar montado en header");
+    return true;
+  }
+
+  function ensureUi() {
+    if (mountInHeader()) return;
+    mountTries += 1;
+    if (mountTries < 40) {
+      setTimeout(ensureUi, 250);
     }
   }
 
@@ -85,10 +107,12 @@
     if (!btn) return;
     var badge = btn.querySelector(".salomon-update-btn__badge");
     btn.classList.toggle("is-ready", !!on);
+    btn.setAttribute("data-state", on ? "2" : "1");
     if (badge) badge.hidden = !on;
   }
 
   function toast(msg) {
+    ensureToast();
     var el = document.getElementById("salomon-update-toast");
     if (!el) return;
     el.textContent = msg || "";
@@ -102,21 +126,19 @@
   async function clearCaches() {
     if (!("caches" in window)) return;
     var keys = await caches.keys();
-    await Promise.all(keys.map(function (k) {
-      return caches.delete(k);
-    }));
+    await Promise.all(
+      keys.map(function (k) {
+        return caches.delete(k);
+      })
+    );
   }
 
   async function notifySw(type) {
     if (!("serviceWorker" in navigator)) return;
     var reg = await navigator.serviceWorker.getRegistration();
     if (!reg) return;
-    if (reg.waiting) {
-      reg.waiting.postMessage({ type: type || "FORCE_UPDATE" });
-    }
-    if (reg.active) {
-      reg.active.postMessage({ type: type || "PURGE_AND_CLAIM" });
-    }
+    if (reg.waiting) reg.waiting.postMessage({ type: type || "FORCE_UPDATE" });
+    if (reg.active) reg.active.postMessage({ type: type || "PURGE_AND_CLAIM" });
     try {
       await reg.update();
     } catch (e) {}
@@ -140,10 +162,7 @@
     try {
       await notifySw("PURGE_AND_CLAIM");
       await clearCaches();
-      if (pendingBuild) {
-        localStorage.setItem(STORAGE_BUILD, pendingBuild);
-      }
-      // Reload duro: fuerza index + shield/vision/voz cliente desde red
+      if (pendingBuild) localStorage.setItem(STORAGE_BUILD, pendingBuild);
       var url = new URL(window.location.href);
       url.searchParams.set("_salomon_update", String(Date.now()));
       window.location.replace(url.toString());
@@ -172,12 +191,10 @@
       var known = localStorage.getItem(STORAGE_BUILD) || "";
       if (!known) {
         localStorage.setItem(STORAGE_BUILD, build);
-        log("build inicial", build);
         return;
       }
       if (known !== build) {
         pendingBuild = build;
-        log("nuevo build en Render", known, "→", build);
         setBadge(true);
         toast("Nueva versión en Render. Actualizando…");
         setTimeout(function () {
@@ -194,7 +211,6 @@
     polling = true;
     checkOnce();
     setInterval(checkOnce, POLL_MS);
-    // Cuando la pestaña vuelve al frente
     document.addEventListener("visibilitychange", function () {
       if (document.visibilityState === "visible") checkOnce();
     });
@@ -218,7 +234,6 @@
             }
           });
         });
-        // Pedir update al arrancar
         try {
           reg.update();
         } catch (e) {}
@@ -229,7 +244,6 @@
     navigator.serviceWorker.addEventListener("controllerchange", function () {
       if (refreshing) return;
       refreshing = true;
-      log("controllerchange → reload");
       window.location.reload();
     });
   }
@@ -244,8 +258,9 @@
       apply: function () {
         return applyUpdate({ reason: "api", force: true });
       },
+      setReady: setBadge,
     };
-    log("CI/CD activo", VERSION);
+    log("CI/CD header mockup", VERSION);
   }
 
   if (document.readyState === "loading") {
