@@ -1,0 +1,53 @@
+/**
+ * Animation protocol — thinking (strict)
+ * thinking_pulse: ease-in-out
+ * thinking_wave: linear
+ * duration: 2s
+ */
+
+/* Pulse = opacidad (ease-in-out); Wave = rotación (linear). Sin pelear por transform. */
+@keyframes thinkingPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes thinkingWave {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Status dot en header durante thinking */
+.status-dot--thinking {
+  animation: thinkingPulse 2s ease-in-out infinite !important;
+}
+
+/* Anillo de voz / busy = thinking */
+.voice-ring--thinking {
+  animation:
+    thinkingWave 2s linear infinite,
+    thinkingPulse 2s ease-in-out infinite !important;
+}
+
+/* Bridge / botón busy (PROCESSING) */
+.voice-btn--busy .voice-btn__fx,
+.control-btn--main.voice-btn--busy {
+  animation: thinkingPulse 2s ease-in-out infinite !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot--thinking,
+  .voice-ring--thinking,
+  .voice-btn--busy .voice-btn__fx,
+  .control-btn--main.voice-btn--busy {
+    animation: none !important;
+  }
+}

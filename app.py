@@ -1429,6 +1429,18 @@ def voice_orchestrator_css() -> FileResponse:
     return _archivo_studio("voice-orchestrator.css", "text/css")
 
 
+@app.get("/header-logo-spec.css")
+def header_logo_spec_css() -> FileResponse:
+    """Header/Logo PIXEL_PERFECT (aditivo)."""
+    return _archivo_studio("header-logo-spec.css", "text/css")
+
+
+@app.get("/thinking-animation-spec.css")
+def thinking_animation_spec_css() -> FileResponse:
+    """Thinking motion protocol (aditivo)."""
+    return _archivo_studio("thinking-animation-spec.css", "text/css")
+
+
 @app.get("/salomon-orchestrator-bridge.js")
 def salomon_orchestrator_bridge_js() -> FileResponse:
     """Capa 1 Bridge: estados + cancelación sobre UI estable."""

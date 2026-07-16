@@ -40,6 +40,8 @@ _RUTAS_PUBLICAS = frozenset({
     "/icons.svg",
     "/media-panel.js",
     "/voice-orchestrator.css",
+    "/header-logo-spec.css",
+    "/thinking-animation-spec.css",
     "/salomon-orchestrator-bridge.js",
 })
 
