@@ -61,12 +61,7 @@
     <!-- Shield ANTES que vision: evita race SalomonUIShield undefined -->
     <script src="/salomon-ui-shield.js?v=sync1" defer></script>
     <script src="/vision-overlay.js?v=sync1" defer></script>
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("/sw.js?v=7").catch(() => {});
-        });
-      }
-    </script>
+    <!-- CI/CD: SW + auto-update desde Render (única registración SW) -->
+    <script src="/salomon-update.js?v=cicd1" defer></script>
   </body>
 </html>

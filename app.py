@@ -49,6 +49,7 @@ RUTAS_API_PUBLICAS = frozenset(
     {
         "/api/salud",
         "/api/salud/detalle",
+        "/api/version",
         "/api/bca/estado",
         "/api/tunel/estado",
         "/api/cognicion/vdcp/estado",
@@ -342,14 +343,54 @@ class AgenteRequest(BaseModel):
     session_id: str | None = None
 
 
-# ── Salud ──────────────────────────────────────────────────────────────────
+def _build_id() -> str:
+    """Identificador de despliegue (Render git commit o override local)."""
+    raw = (
+        os.getenv("RENDER_GIT_COMMIT")
+        or os.getenv("SALOMON_BUILD_ID")
+        or os.getenv("GIT_COMMIT")
+        or ""
+    ).strip()
+    if not raw:
+        # Fallback estable por mtime de overlays (dev local)
+        try:
+            marker = STUDIO_DIR / "salomon-update.js"
+            if marker.is_file():
+                raw = f"local-{int(marker.stat().st_mtime)}"
+        except Exception:
+            raw = "dev"
+    return raw or "dev"
+
+
+# ── Salud / versión (CI/CD) ────────────────────────────────────────────────
+@app.get("/api/version")
+def api_version() -> dict:
+    """Build actual en Render — el cliente lo usa para auto-actualizar la PWA."""
+    from settings import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
+
+    build = _build_id()
+    short = build[:12] if len(build) > 12 else build
+    return {
+        "estado": "ok",
+        "servicio": "Salomón AI",
+        "build": short,
+        "build_full": build,
+        "version": "1.0.0",
+        "tts_env": "ELEVENLABS_API_KEY",
+        "tts_configurado": bool(ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID),
+        "live": True,
+    }
+
+
 @app.get("/api/salud")
 def salud() -> dict:
     """Health check rápido para Render (no bloquea por Chroma/LLM)."""
+    build = _build_id()
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
         "version": "1.0.0",
+        "build": build[:12] if len(build) > 12 else build,
         "live": True,
     }
 
@@ -1457,6 +1498,12 @@ def salomon_ui_shield_js() -> FileResponse:
 def salomon_orchestrator_bridge_js() -> FileResponse:
     """Capa 1 Bridge: estados + cancelación sobre UI estable."""
     return _archivo_studio("salomon-orchestrator-bridge.js", "application/javascript")
+
+
+@app.get("/salomon-update.js")
+def salomon_update_js() -> FileResponse:
+    """CI/CD: auto-actualización PWA desde Render."""
+    return _archivo_studio("salomon-update.js", "application/javascript")
 
 
 @app.get("/standalone-boot.js")
