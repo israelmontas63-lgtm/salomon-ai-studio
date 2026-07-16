@@ -1,5 +1,5 @@
 /* Service worker PWA — force-fresh: JS/CSS/API siempre desde Render */
-const CACHE = "salomon-v12-force";
+const CACHE = "salomon-v13-proactive";
 const PRECACHE = [
   "/manifest.json",
   "/manifest.webmanifest",
@@ -14,6 +14,7 @@ const PRECACHE = [
 
 function mustNetwork(path) {
   if (path.startsWith("/api/")) return true;
+  if (path.endsWith("version.json") || path === "/version.json") return true;
   if (path === "/" || path.endsWith("/index.html") || path.endsWith("index.html")) return true;
   // Nunca cachear scripts/estilos (Actualizar debe traer UI fresca al instante)
   if (path.endsWith(".js") || path.endsWith(".css") || path.endsWith(".mjs")) return true;

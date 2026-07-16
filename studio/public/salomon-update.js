@@ -1,17 +1,17 @@
 /**
- * Salomón CI/CD — Actualizar agresivo (force-reload desde Render).
- * Purga SW + caches + HTTP cache bust; no retiene UI antigua.
+ * Módulo de Actualización Proactiva — Salomón AI
+ * Compara /version.json del servidor vs localStorage.
+ * Si el servidor es más nuevo → force-reload invisible.
+ * Indicador discreto: "Versión: X.X"
  */
 (function () {
   "use strict";
 
-  var STORAGE_BUILD = "salomon_build_id";
-  var POLL_MS = 30000;
-  var AUTO_RELOAD_DELAY_MS = 2000;
-  var VERSION = "force-reload-2";
+  var STORAGE_KEY = "salomon_version_manifest";
+  var POLL_MS = 25000;
+  var VERSION_SCRIPT = "proactive-1";
   var polling = false;
   var applying = false;
-  var pendingBuild = null;
   var mountTries = 0;
 
   var SYNC_ICON =
@@ -27,16 +27,50 @@
     } catch (e) {}
   }
 
-  function isVoiceBusy() {
+  function readLocal() {
     try {
-      if (!window.SalomonBridge || typeof window.SalomonBridge.getState !== "function") {
-        return false;
-      }
-      var s = window.SalomonBridge.getState();
-      return s === "DICTATING" || s === "CONVERSATION" || s === "PROCESSING";
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
     } catch (e) {
-      return false;
+      return null;
     }
+  }
+
+  function writeLocal(manifest) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(manifest));
+    } catch (e) {}
+  }
+
+  function parseVer(v) {
+    return String(v || "0")
+      .split(/[.+-]/)
+      .map(function (n) {
+        var x = parseInt(n, 10);
+        return isNaN(x) ? 0 : x;
+      });
+  }
+
+  /** true si remote es más nuevo que local */
+  function isNewer(remote, local) {
+    if (!remote) return false;
+    if (!local) return false; // primera visita: solo guardar, no recargar en loop
+    var rt = Number(remote.timestamp) || 0;
+    var lt = Number(local.timestamp) || 0;
+    if (rt > 0 && lt > 0 && rt > lt) return true;
+    var rv = parseVer(remote.version);
+    var lv = parseVer(local.version);
+    var len = Math.max(rv.length, lv.length);
+    for (var i = 0; i < len; i++) {
+      var a = rv[i] || 0;
+      var b = lv[i] || 0;
+      if (a > b) return true;
+      if (a < b) return false;
+    }
+    var rb = String(remote.build || "");
+    var lb = String(local.build || "");
+    if (rb && lb && rb !== lb && rt >= lt) return true;
+    return false;
   }
 
   function ensureToast() {
@@ -47,12 +81,27 @@
     document.body.appendChild(toast);
   }
 
+  function ensureVersionBadge(manifest) {
+    var el = document.getElementById("salomon-version-badge");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "salomon-version-badge";
+      el.setAttribute("aria-live", "polite");
+      document.body.appendChild(el);
+    }
+    var ver = (manifest && manifest.version) || "—";
+    el.textContent = "Versión: " + ver;
+    el.title = manifest
+      ? "build " + (manifest.build || "?") + " · " + (manifest.timestamp_iso || "")
+      : "Salomón AI";
+  }
+
   function mountInHeader() {
     var existing = document.getElementById("salomon-update-btn");
     if (existing) {
-      if (!existing.closest(".studio-header")) {
-        existing.remove();
-      } else {
+      if (!existing.closest(".studio-header")) existing.remove();
+      else {
+        ensureVersionBadge(readLocal());
         return true;
       }
     }
@@ -66,7 +115,7 @@
     slot.className = "salomon-update-slot";
     slot.innerHTML =
       '<button type="button" id="salomon-update-btn" class="salomon-update-btn" ' +
-      'title="Forzar descarga desde Render" aria-label="Actualizar">' +
+      'title="Forzar actualización desde Render" aria-label="Actualizar">' +
       '<span class="salomon-update-btn__icon">' +
       SYNC_ICON +
       "</span>" +
@@ -75,20 +124,17 @@
       "</button>";
 
     var btns = header.querySelectorAll(".header-menu-btn");
-    if (btns.length >= 2) {
-      btns[1].parentNode.insertBefore(slot, btns[1]);
-    } else {
-      header.appendChild(slot);
-    }
+    if (btns.length >= 2) btns[1].parentNode.insertBefore(slot, btns[1]);
+    else header.appendChild(slot);
 
     document.getElementById("salomon-update-btn").addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      applyUpdate({ reason: "manual", force: true });
+      applyUpdate({ reason: "manual", force: true, silent: false });
     });
 
     ensureToast();
-    log("Actualizar montado (force-reload)");
+    ensureVersionBadge(readLocal());
     return true;
   }
 
@@ -103,53 +149,45 @@
     if (!btn) return;
     var badge = btn.querySelector(".salomon-update-btn__badge");
     btn.classList.toggle("is-ready", !!on);
-    btn.setAttribute("data-state", on ? "2" : "1");
     if (badge) badge.hidden = !on;
   }
 
   function toast(msg) {
+    if (!msg) return;
     ensureToast();
     var el = document.getElementById("salomon-update-toast");
     if (!el) return;
-    el.textContent = msg || "";
+    el.textContent = msg;
     el.classList.add("show");
     clearTimeout(toast._t);
     toast._t = setTimeout(function () {
       el.classList.remove("show");
-    }, 6000);
+    }, 5000);
   }
 
   async function clearCaches() {
     if (!("caches" in window)) return;
     var keys = await caches.keys();
-    await Promise.all(
-      keys.map(function (k) {
-        return caches.delete(k);
-      })
-    );
+    await Promise.all(keys.map(function (k) { return caches.delete(k); }));
   }
 
   async function unregisterAllSw() {
     if (!("serviceWorker" in navigator)) return;
     var regs = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(
-      regs.map(function (r) {
-        return r.unregister();
-      })
-    );
+    await Promise.all(regs.map(function (r) { return r.unregister(); }));
   }
 
   async function warmNetworkBust() {
     var stamp = String(Date.now());
     var urls = [
+      "/version.json?t=" + stamp,
       "/?_salomon_force=" + stamp,
-      "/salomon-ui-shield.css?v=force-" + stamp,
-      "/salomon-update.js?v=force-" + stamp,
-      "/salomon-ui-shield.js?v=force-" + stamp,
-      "/salomon-orchestrator-bridge.js?v=force-" + stamp,
-      "/vision-overlay.js?v=force-" + stamp,
-      "/header-logo-spec.css?v=force-" + stamp,
-      "/api/version?t=" + stamp,
+      "/salomon-ui-shield.css?v=p-" + stamp,
+      "/salomon-update.js?v=p-" + stamp,
+      "/salomon-ui-shield.js?v=p-" + stamp,
+      "/salomon-orchestrator-bridge.js?v=p-" + stamp,
+      "/vision-overlay.js?v=p-" + stamp,
+      "/header-logo-spec.css?v=p-" + stamp,
     ];
     await Promise.all(
       urls.map(function (u) {
@@ -161,111 +199,106 @@
   async function applyUpdate(opts) {
     opts = opts || {};
     if (applying) return;
-    if (!opts.force && isVoiceBusy()) {
-      toast("Nueva versión lista. Se aplicará al terminar…");
-      setBadge(true);
-      setTimeout(function () {
-        if (!isVoiceBusy()) applyUpdate({ reason: "retry-idle", force: true });
-      }, 6000);
-      return;
-    }
     applying = true;
     var btn = document.getElementById("salomon-update-btn");
     if (btn) btn.classList.add("is-busy");
-    toast("Descargando versión fresca desde Render…");
+    if (!opts.silent) toast("Actualizando Salomón…");
 
     try {
-      // 1) Avisar SW activo
       if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({ type: "FORCE_RELOAD_PREP" });
       }
-      // 2) Purga total: caches + unregister SW (evita HTML/JS viejo)
       await clearCaches();
       await unregisterAllSw();
       await clearCaches();
-      // 3) Romper caché HTTP del navegador
       await warmNetworkBust();
-      // 4) Reset build id
-      try {
-        localStorage.removeItem(STORAGE_BUILD);
-        if (pendingBuild) localStorage.setItem(STORAGE_BUILD, pendingBuild);
-      } catch (e) {}
-      // 5) Navegación dura (evita bfcache)
-      var dest = "/?_salomon_force=" + Date.now() + "&_v=" + encodeURIComponent(VERSION);
-      window.location.replace(dest);
+      if (opts.manifest) writeLocal(opts.manifest);
+      window.location.replace(
+        "/?_salomon_force=" + Date.now() + "&_v=" + encodeURIComponent(VERSION_SCRIPT)
+      );
     } catch (e) {
       log("apply fail", e && e.message);
       applying = false;
       if (btn) btn.classList.remove("is-busy");
-      toast("Fallo al actualizar. Reintentando…");
+      if (!opts.silent) toast("Reintentando actualización…");
       setTimeout(function () {
         window.location.href = "/?_salomon_force=" + Date.now();
-      }, 400);
+      }, 350);
     }
   }
 
-  async function fetchBuild() {
-    var res = await fetch("/api/version?t=" + Date.now(), {
+  async function fetchRemoteVersion() {
+    var res = await fetch("/version.json?t=" + Date.now(), {
       cache: "no-store",
       headers: { Accept: "application/json" },
     });
+    if (!res.ok) {
+      // Fallback API
+      res = await fetch("/api/version?t=" + Date.now(), { cache: "no-store" });
+    }
     if (!res.ok) throw new Error("version_http_" + res.status);
     return res.json();
   }
 
-  async function checkOnce() {
+  async function checkOnce(opts) {
+    opts = opts || {};
     try {
-      var data = await fetchBuild();
-      var build = String(data.build || data.build_id || "").trim();
-      if (!build) return;
-      var known = localStorage.getItem(STORAGE_BUILD) || "";
-      if (!known) {
-        localStorage.setItem(STORAGE_BUILD, build);
+      var remote = await fetchRemoteVersion();
+      if (!remote || !remote.version) return;
+      ensureVersionBadge(remote);
+
+      var local = readLocal();
+      if (!local) {
+        writeLocal(remote);
+        ensureVersionBadge(remote);
+        log("manifest inicial", remote.version, remote.build);
         return;
       }
-      if (known !== build) {
-        pendingBuild = build;
+
+      if (isNewer(remote, local)) {
+        log("servidor más nuevo → reload invisible", local.version, "→", remote.version);
         setBadge(true);
-        toast("Nueva versión en Render…");
-        setTimeout(function () {
-          applyUpdate({ reason: "auto", force: false });
-        }, AUTO_RELOAD_DELAY_MS);
+        writeLocal(remote);
+        // Invisible: sin toast, force inmediato
+        applyUpdate({
+          reason: opts.reason || "proactive",
+          force: true,
+          silent: true,
+          manifest: remote,
+        });
+        return;
       }
+
+      // Misma versión: refrescar badge/build local
+      writeLocal(remote);
+      ensureVersionBadge(remote);
+      setBadge(false);
     } catch (e) {
       log("check", e && e.message);
+      ensureVersionBadge(readLocal());
     }
   }
 
   function startPolling() {
     if (polling) return;
     polling = true;
-    checkOnce();
-    setInterval(checkOnce, POLL_MS);
+    // Al abrir la app
+    checkOnce({ reason: "boot" });
+    setInterval(function () {
+      checkOnce({ reason: "poll" });
+    }, POLL_MS);
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState === "visible") checkOnce();
+      if (document.visibilityState === "visible") checkOnce({ reason: "focus" });
     });
   }
 
   function registerSw() {
     if (!("serviceWorker" in navigator)) return;
-    // Tras force-reload: volver a registrar SW limpio
-    navigator.serviceWorker
-      .register("/sw.js?v=12")
-      .then(function (reg) {
-        try {
-          reg.update();
-        } catch (e) {}
-        reg.addEventListener("updatefound", function () {
-          var nw = reg.installing;
-          if (!nw) return;
-          nw.addEventListener("statechange", function () {
-            if (nw.state === "installed" && navigator.serviceWorker.controller) {
-              setBadge(true);
-            }
-          });
-        });
-      })
-      .catch(function () {});
+    navigator.serviceWorker.register("/sw.js?v=13").then(function (reg) {
+      try {
+        reg.update();
+      } catch (e) {}
+    }).catch(function () {});
   }
 
   function boot() {
@@ -273,14 +306,15 @@
     registerSw();
     startPolling();
     window.SalomonUpdate = {
-      version: VERSION,
-      check: checkOnce,
-      apply: function () {
-        return applyUpdate({ reason: "api", force: true });
+      version: VERSION_SCRIPT,
+      check: function () {
+        return checkOnce({ reason: "api" });
       },
-      setReady: setBadge,
+      apply: function () {
+        return applyUpdate({ reason: "api", force: true, silent: false });
+      },
     };
-    log("force-reload activo", VERSION);
+    log("actualización proactiva activa", VERSION_SCRIPT);
   }
 
   if (document.readyState === "loading") {

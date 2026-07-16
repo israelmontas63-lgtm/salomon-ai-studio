@@ -363,19 +363,55 @@ def _build_id() -> str:
 
 
 # ── Salud / versión (CI/CD) ────────────────────────────────────────────────
+def _leer_version_json() -> dict:
+    """Lee version.json de la raíz del repo (despliegue continuo)."""
+    import json
+    import time as _time
+
+    ruta = BASE_DIR / "version.json"
+    data: dict = {
+        "version": "1.0.0",
+        "timestamp": 0,
+        "channel": "main",
+    }
+    try:
+        if ruta.is_file():
+            raw = json.loads(ruta.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                data.update(raw)
+    except Exception:
+        pass
+    build = _build_id()
+    data["build"] = build[:12] if len(build) > 12 else build
+    data["build_full"] = build
+    data["served_at"] = int(_time.time())
+    return data
+
+
+@app.get("/version.json")
+def version_json_file():
+    """Manifiesto de versión para actualización proactiva del cliente."""
+    return JSONResponse(
+        content=_leer_version_json(),
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
+
+
 @app.get("/api/version")
 def api_version() -> dict:
     """Build actual en Render — el cliente lo usa para auto-actualizar la PWA."""
     from settings import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
 
-    build = _build_id()
-    short = build[:12] if len(build) > 12 else build
+    data = _leer_version_json()
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
-        "build": short,
-        "build_full": build,
-        "version": "1.0.0",
+        "version": data.get("version") or "1.0.0",
+        "timestamp": data.get("timestamp") or 0,
+        "timestamp_iso": data.get("timestamp_iso"),
+        "build": data.get("build"),
+        "build_full": data.get("build_full"),
+        "channel": data.get("channel") or "main",
         "tts_env": "ELEVENLABS_API_KEY",
         "tts_configurado": bool(ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID),
         "live": True,
@@ -385,12 +421,13 @@ def api_version() -> dict:
 @app.get("/api/salud")
 def salud() -> dict:
     """Health check rápido para Render (no bloquea por Chroma/LLM)."""
-    build = _build_id()
+    ver = _leer_version_json()
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
-        "version": "1.0.0",
-        "build": build[:12] if len(build) > 12 else build,
+        "version": ver.get("version") or "1.0.0",
+        "build": ver.get("build"),
+        "timestamp": ver.get("timestamp") or 0,
         "live": True,
     }
 
