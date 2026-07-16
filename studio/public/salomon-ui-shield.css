@@ -50,8 +50,25 @@ html.salomon-ui-shield .bubble.bubble--user {
 }
 
 html.salomon-ui-shield .bottom-bar {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
   background: linear-gradient(180deg, transparent, #000 28%) !important;
   border-top: 1px solid rgba(212, 175, 55, 0.18) !important;
+}
+
+/* Panel escritura encima de los 3 botones (maqueta) */
+html.salomon-ui-shield .bottom-bar form.chat-input,
+html.salomon-ui-shield .bottom-bar .chat-input {
+  order: 1;
+}
+
+html.salomon-ui-shield .bottom-bar .controls-row {
+  order: 2;
+}
+
+html.salomon-ui-shield .bottom-bar__meta {
+  order: 3;
 }
 
 /*
@@ -463,11 +480,12 @@ html.salomon-mockup-ui .studio-header .header-brand::after {
   max-width: 520px;
   margin: 0 auto 10px !important;
   padding: 6px 6px 6px 14px;
-  background: #000 !important;
-  border: 1px solid rgba(212, 175, 55, 0.45) !important;
+  background: #0a0a0a !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.72) !important;
   border-radius: 22px !important;
   animation: inputSlideUp 250ms ease-out;
   box-sizing: border-box;
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.12), 0 8px 28px rgba(0, 0, 0, 0.45);
 }
 
 @keyframes inputSlideUp {
@@ -572,7 +590,7 @@ html.salomon-ui-shield .controls-row .control-btn--main {
   position: relative;
 }
 
-/* Cámara profesional minimalista (UI-Smart en barra) */
+/* Cámara profesional minimalista (UI-Smart en barra) — Inactivo: line-art */
 .controls-row .control-btn[aria-label="Cámara"]::before,
 .controls-row .control-btn[aria-label*="ámara"]::before,
 .ui-smart-cam-btn::before {
@@ -585,7 +603,8 @@ html.salomon-ui-shield .controls-row .control-btn--main {
   border: 1.7px solid var(--s-gold);
   border-radius: 5px;
   box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
-  background: linear-gradient(180deg, rgba(212, 175, 55, 0.08), transparent);
+  background: transparent;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
 }
 
 .controls-row .control-btn[aria-label="Cámara"]::after,
@@ -601,12 +620,62 @@ html.salomon-ui-shield .controls-row .control-btn--main {
   border: 1.7px solid var(--s-gold);
   border-radius: 50%;
   box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.55);
+  background: transparent;
+  transition: background 0.18s ease;
 }
 
-/* Texto (teclado) */
+/* Activo: relleno oro + anillo */
+.controls-row .control-btn.ui-smart-cam-btn.is-cam-active,
+.controls-row .control-btn[aria-label="Cámara"].is-cam-active {
+  background: rgba(212, 175, 55, 0.28) !important;
+  border-color: var(--s-gold) !important;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.55);
+}
+
+.controls-row .control-btn.ui-smart-cam-btn.is-cam-active::before,
+.controls-row .control-btn[aria-label="Cámara"].is-cam-active::before {
+  background: rgba(212, 175, 55, 0.55);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.65);
+}
+
+.controls-row .control-btn.ui-smart-cam-btn.is-cam-active::after,
+.controls-row .control-btn[aria-label="Cámara"].is-cam-active::after {
+  background: rgba(212, 175, 55, 0.85);
+  box-shadow: none;
+}
+
+/* Modo cámara: footer fijo por encima del overlay (ciclo + disparo) */
+html.salomon-cam-mode .bottom-bar {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 400020 !important;
+  background: linear-gradient(180deg, transparent, #000 40%) !important;
+}
+
+html.salomon-cam-mode .controls-row .control-btn--main.is-cam-shutter {
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.65), 0 0 18px rgba(212, 175, 55, 0.4);
+}
+
+/* Preview no tapa la franja del footer */
+html.salomon-cam-mode .ui-camera-overlay {
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+}
+
+html.salomon-cam-mode .ui-smart-button {
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+html.salomon-cam-mode .ui-camera-hint {
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Texto / Escritura (Aa) — line-art inactivo */
 .controls-row .control-btn[aria-label*="teclado"]::before,
 .controls-row .control-btn[aria-label*="Texto"]::before,
-.controls-row .control-btn[aria-label*="Mensaje"]::before {
+.controls-row .control-btn[aria-label*="Mensaje"]::before,
+.controls-row .ui-write-btn::before {
   content: "Aa";
   position: absolute;
   inset: 0;
@@ -618,6 +687,42 @@ html.salomon-ui-shield .controls-row .control-btn--main {
   letter-spacing: 0.04em;
   color: var(--s-gold);
   text-shadow: 0 0 6px rgba(212, 175, 55, 0.45);
+  transition: color 0.18s ease, text-shadow 0.18s ease;
+}
+
+/* Escritura activa: relleno oro (simétrico a cámara) */
+.controls-row .control-btn.ui-write-btn.is-write-active,
+.controls-row .control-btn[aria-label="Texto"].is-write-active {
+  background: linear-gradient(145deg, #f0d78c, #d4af37) !important;
+  border-color: #f0d78c !important;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.55);
+}
+
+.controls-row .control-btn.ui-write-btn.is-write-active::before {
+  color: #1a1508;
+  text-shadow: none;
+  font-weight: 700;
+}
+
+/* Indicador CÁMARA ACTIVA (maqueta) */
+.ui-camera-active-badge {
+  position: absolute;
+  z-index: 9;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border: 1px solid rgba(212, 175, 55, 0.65);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #f0d78c;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px #000;
 }
 
 /* Central: sin micrófono fijo */

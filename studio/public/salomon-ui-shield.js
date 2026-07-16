@@ -25,8 +25,11 @@
   };
   var audio = { ctx: null, analyser: null, src: null, raf: 0, stream: null };
   var swapLock = false;
+  var writeLock = false;
   var lastTap = 0;
+  var lastCamTap = 0;
   var HOLD_CAPTURE_MS = 500;
+  var CAPTURE_OPTS = { capture: true, passive: false };
 
   function log() {
     try {
@@ -129,32 +132,40 @@
     var main = row.querySelector(".control-btn--main") || btns[1];
     var textBtn = btns[btns.length - 1];
 
-    // Cámara (UI-Smart-Button en barra: abre unidad neuronal; no toca voz)
+    // Cámara: toque = abrir/cerrar | flip solo dentro del overlay
     if (cam.dataset.uiCam !== "1") {
       cam.dataset.uiCam = "1";
       cam.classList.add("ui-smart-cam-btn");
       cam.setAttribute("aria-label", "Cámara");
-      cam.title = "Cámara — toque: abrir · en vista: nodo de control";
       cam.addEventListener(
         "click",
         function (e) {
           e.preventDefault();
           e.stopImmediatePropagation();
-          if (camera.open) return;
-          openNeuralCamera({ mode: "photo" });
+          onFooterCameraTap();
         },
         true
       );
     }
 
-    // Texto
+    // Escritura (Aa): React togglea el panel; shield cierra cámara y sincroniza activo
     if (textBtn.dataset.uiText !== "1") {
       textBtn.dataset.uiText = "1";
+      textBtn.classList.add("ui-write-btn");
       textBtn.setAttribute("aria-label", "Texto");
-      textBtn.title = "Escribe tu mensaje";
+      textBtn.addEventListener(
+        "click",
+        function () {
+          if (writeLock) return;
+          if (camera.open) closeCamera();
+          setTimeout(syncWritingUiState, 0);
+          setTimeout(syncWritingUiState, 80);
+        },
+        true
+      );
     }
 
-    // Voz central: órbita + nube + audio
+    // Voz central: órbita + nube + audio (shutter si cámara abierta)
     if (main && main.dataset.uiVoice !== "1") {
       main.dataset.uiVoice = "1";
       ensureVoiceFx(main);
@@ -164,7 +175,46 @@
     }
 
     polishInput();
+    syncCameraUiState();
+    syncWritingUiState();
     return true;
+  }
+
+  function getTextBtn() {
+    var row = document.querySelector(".controls-row");
+    if (!row) return null;
+    var btns = row.querySelectorAll(".control-btn");
+    return btns.length ? btns[btns.length - 1] : null;
+  }
+
+  function isWritingOpen() {
+    return !!document.querySelector(".bottom-bar form.chat-input");
+  }
+
+  function closeWritingIfOpen() {
+    if (!isWritingOpen()) return;
+    var btn = getTextBtn();
+    if (!btn) return;
+    writeLock = true;
+    try {
+      btn.click();
+    } catch (e) {}
+    writeLock = false;
+    syncWritingUiState();
+  }
+
+  function syncWritingUiState() {
+    var open = isWritingOpen();
+    document.documentElement.classList.toggle("salomon-write-mode", open);
+    var textBtn = getTextBtn();
+    if (textBtn) {
+      textBtn.classList.add("ui-write-btn");
+      textBtn.classList.toggle("is-write-active", open);
+      textBtn.setAttribute("aria-label", "Texto");
+      textBtn.title = open ? "Cerrar escritura" : "Escribe tu mensaje";
+    }
+    if (open && camera.open) closeCamera();
+    polishInput();
   }
 
   function ensureVoiceFx(btn) {
@@ -183,9 +233,30 @@
   }
 
   function wireVoiceGestures(btn) {
+    // Modo cámara activo: botón central = disparador (no voz)
+    function shutterFromVoice(e) {
+      if (!camera.open) return;
+      if (e.cancelable) e.preventDefault();
+      e.stopImmediatePropagation();
+      capturePhoto();
+    }
+    btn.addEventListener("touchstart", shutterFromVoice, CAPTURE_OPTS);
+    btn.addEventListener(
+      "pointerdown",
+      function (e) {
+        if (e.pointerType === "touch") return;
+        shutterFromVoice(e);
+      },
+      true
+    );
     btn.addEventListener(
       "click",
-      function () {
+      function (e) {
+        if (camera.open) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          return;
+        }
         var now = Date.now();
         var dbl = now - lastTap < 320;
         lastTap = now;
@@ -206,7 +277,7 @@
           }, 300);
         }
       },
-      false
+      true
     );
   }
 
@@ -281,6 +352,7 @@
     if (input.placeholder !== "Escribe tu mensaje...") {
       input.placeholder = "Escribe tu mensaje...";
     }
+    input.setAttribute("aria-label", "Escribe tu mensaje");
     // Quitar íconos extra a la derecha del texto (salvo send)
     var form = input.closest("form, .input-row, .chat-input");
     if (form) {
@@ -298,7 +370,46 @@
   }
 
   /* ——— Unidad neuronal de cámara — latencia ultra-baja ——— */
-  var CAPTURE_OPTS = { capture: true, passive: false };
+
+  function onFooterCameraTap() {
+    var now = Date.now();
+    if (now - lastCamTap < 380) return;
+    lastCamTap = now;
+    if (camera.flipping || camera.capturing) return;
+    // Toggle: abierto → cerrar al instante; cerrado → abrir trasera
+    if (camera.open) {
+      closeCamera();
+      return;
+    }
+    closeWritingIfOpen();
+    openNeuralCamera({ mode: "photo" });
+  }
+
+  function updateCamActiveBadge() {
+    var badge = document.getElementById("ui-camera-active-badge");
+    if (!badge) return;
+    var face = camera.facing === "user" ? "frontal" : "trasera";
+    badge.textContent = "CÁMARA ACTIVA — " + face;
+  }
+
+  function syncCameraUiState() {
+    var cam =
+      document.querySelector(".controls-row .ui-smart-cam-btn") ||
+      document.querySelector('.controls-row .control-btn[aria-label="Cámara"]');
+    var active = !!camera.open;
+    document.documentElement.classList.toggle("salomon-cam-mode", active);
+    if (cam) {
+      cam.classList.toggle("is-cam-active", active);
+      cam.dataset.facing = camera.facing || "environment";
+      cam.title = active ? "Cerrar cámara" : "Cámara — toque: abrir";
+    }
+    var main = document.querySelector(".controls-row .control-btn--main");
+    if (main) {
+      main.classList.toggle("is-cam-shutter", active);
+      if (active) main.title = "Disparar foto";
+    }
+    updateCamActiveBadge();
+  }
 
   function toggleCameraDirection() {
     if (!camera.open) {
@@ -311,6 +422,7 @@
     camera.facing = next;
     log("facing →", camera.facing);
     haptic(8);
+    syncCameraUiState();
     swapFacingInPlace(prevFacing);
   }
 
@@ -365,6 +477,7 @@
       .then(function () {
         if (seq === camera.flipSeq) camera.flipping = false;
         if (smart) smart.dataset.flip = "0";
+        syncCameraUiState();
       });
   }
 
@@ -496,6 +609,7 @@
       e.stopImmediatePropagation();
       var wasHeld = held;
       viaTouch = false;
+      // Toque corto = ciclo trasera/frontal · mantener = disparo
       if (wasHeld) return;
       toggleCameraDirection();
     }
@@ -605,12 +719,19 @@
         smart.type = "button";
         smart.className = "ui-smart-button";
         smart.id = "ui-smart-button";
-        smart.setAttribute("aria-label", "Control de cámara");
-        smart.title = "Toque: voltear · Mantener: capturar";
+        smart.setAttribute("aria-label", "Voltear cámara");
+        smart.title = "Toque: voltear · Mantener: disparar";
         smart.innerHTML =
           '<span class="ui-smart-button__ring" aria-hidden="true"></span>' +
           '<span class="ui-smart-button__core" aria-hidden="true"></span>';
         wireSmartButton(smart);
+
+        var badge = document.createElement("div");
+        badge.id = "ui-camera-active-badge";
+        badge.className = "ui-camera-active-badge";
+        badge.setAttribute("aria-live", "polite");
+        badge.textContent =
+          "CÁMARA ACTIVA — " + (camera.facing === "user" ? "frontal" : "trasera");
 
         var closeBtn = document.createElement("button");
         closeBtn.type = "button";
@@ -639,16 +760,17 @@
         var hint = document.createElement("div");
         hint.className = "ui-camera-hint";
         hint.textContent =
-          camera.mode === "vdcp"
-            ? "Tap = capturar VDCP · botón = voltear · hold = disparo"
-            : "Tap = disparar · botón = voltear · hold = disparo";
+          "Tap pantalla o voz = disparar · nodo = voltear · icono cámara = cerrar";
 
         overlay.appendChild(stage);
         overlay.appendChild(flash);
+        overlay.appendChild(badge);
         overlay.appendChild(smart);
         overlay.appendChild(closeBtn);
         overlay.appendChild(hint);
         document.body.appendChild(overlay);
+        syncCameraUiState();
+        syncWritingUiState();
 
         // Sin delay artificial: ocultar modal React en microtask
         queueMicrotask(function () {
@@ -668,6 +790,7 @@
         log("cámara error", err && err.message);
         camera.open = false;
         camera.videoEl = null;
+        syncCameraUiState();
       });
   }
 
@@ -688,6 +811,7 @@
     camera.capturing = false;
     camera.flipping = false;
     camera.videoEl = null;
+    syncCameraUiState();
     if (!silent) {
       window.dispatchEvent(new CustomEvent("salomon:camera-close"));
     }
@@ -843,6 +967,7 @@
     wireBubbles();
     polishDrawers();
     syncLogoState();
+    syncWritingUiState();
   }
 
   function boot() {
@@ -859,9 +984,20 @@
     });
     window.addEventListener("salomon:ready", tick);
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && camera.open) closeCamera();
+      if (e.key === "Escape") {
+        if (camera.open) closeCamera();
+        else if (isWritingOpen()) closeWritingIfOpen();
+      }
     });
-    log("activo neural-cam-1");
+    // Observa montaje/desmontaje del panel de escritura (React)
+    try {
+      var root = document.getElementById("root") || document.body;
+      var mo = new MutationObserver(function () {
+        syncWritingUiState();
+      });
+      mo.observe(root, { childList: true, subtree: true });
+    } catch (e) {}
+    log("activo ui-final-1");
   }
 
   if (document.readyState === "loading") {
@@ -871,11 +1007,15 @@
   }
 
   window.SalomonUIShield = {
-    version: "neural-sync-1",
+    version: "ui-final-1",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,
     toggleCameraDirection: toggleCameraDirection,
     capturePhoto: capturePhoto,
+    syncCameraUiState: syncCameraUiState,
+    syncWritingUiState: syncWritingUiState,
   };
 })();
+
+

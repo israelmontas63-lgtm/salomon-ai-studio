@@ -1,7 +1,7 @@
 {
-  "version": "1.5.0",
-  "timestamp": 1752706800,
-  "timestamp_iso": "2026-07-16T22:20:00Z",
+  "version": "1.5.2",
+  "timestamp": 1752709200,
+  "timestamp_iso": "2026-07-16T23:00:00Z",
   "channel": "main",
-  "label": "proactive-update"
+  "label": "ui-final-cam-write"
 }
