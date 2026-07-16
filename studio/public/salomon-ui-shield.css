@@ -54,12 +54,26 @@ html.salomon-ui-shield .bottom-bar {
   border-top: 1px solid rgba(212, 175, 55, 0.18) !important;
 }
 
-/* Header grid: H | marca | Actualizar | perfil */
+/* Header grid: H | marca | Actualizar | perfil — sin solapes */
 html.salomon-mockup-ui .studio-header {
-  grid-template-columns: 44px 1fr auto 40px !important;
-  column-gap: 6px !important;
-  padding-left: 10px !important;
-  padding-right: 8px !important;
+  grid-template-columns: 40px minmax(0, 1fr) auto 36px !important;
+  column-gap: 4px !important;
+  padding-left: 8px !important;
+  padding-right: 6px !important;
+  overflow: hidden !important;
+}
+
+html.salomon-mockup-ui .studio-header .header-brand {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+html.salomon-mockup-ui .studio-header .header-menu-btn {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 40px !important;
+  justify-self: center !important;
 }
 
 /* ——— Actualizar (maqueta) ——— */
@@ -68,7 +82,9 @@ html.salomon-mockup-ui .studio-header {
   align-items: center !important;
   justify-content: flex-end !important;
   height: 56px !important;
+  max-width: min(42vw, 148px);
   z-index: 5;
+  flex-shrink: 0;
 }
 
 .salomon-update-btn {
@@ -78,6 +94,7 @@ html.salomon-mockup-ui .studio-header {
   justify-content: center;
   gap: 6px;
   height: 34px;
+  max-width: 100%;
   padding: 0 12px 0 10px;
   border-radius: 999px;
   border: 1.5px solid rgba(212, 175, 55, 0.65);
@@ -85,12 +102,35 @@ html.salomon-mockup-ui .studio-header {
   color: #f0d78c;
   cursor: pointer;
   font-family: Inter, system-ui, sans-serif;
+  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
   transition:
     background 180ms ease,
     border-color 180ms ease,
     box-shadow 180ms ease,
     color 180ms ease;
+}
+
+/* Pantallas muy estrechas: solo icono sync (sigue siendo Actualizar) */
+@media (max-width: 360px) {
+  .salomon-update-btn {
+    width: 34px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .salomon-update-btn__label {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+  }
+
+  html.salomon-mockup-ui .studio-header .header-brand::after {
+    letter-spacing: 0.12em;
+    font-size: 0.5rem;
+  }
 }
 
 /* Estado 1 — idle */
