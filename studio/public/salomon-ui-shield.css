@@ -483,6 +483,25 @@ html.salomon-mockup-ui .studio-header .header-brand::after {
 }
 
 /* ——— 5) Controles inferiores: solo 3 ——— */
+/* Centro óptico del botón de acción (maqueta aprobada) */
+html.salomon-ui-shield .controls-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  gap: 0 !important;
+  position: relative !important;
+  padding: 0 12px 4px !important;
+  box-sizing: border-box !important;
+}
+
+html.salomon-ui-shield .controls-row .control-btn--main {
+  position: absolute !important;
+  left: 50% !important;
+  margin-left: -32px !important; /* mitad de 64px; sin transform (bridge lo anula) */
+  z-index: 6;
+}
+
 .controls-row {
   gap: 36px !important;
   padding-bottom: 4px;
