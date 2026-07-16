@@ -12,36 +12,59 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Salomón" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="description" content="Salomón — asistente con memoria, voz y visión." />
+    <meta name="description" content="Salomón — asistente con memoria, voz y visión. Negro plateado y oro." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Salomón AI" />
+    <meta property="og:description" content="Asistente de inteligencia artificial — negro plateado y oro." />
+    <meta property="og:site_name" content="Salomón AI" />
     <link rel="manifest" href="/manifest.json?v=icon-v2" />
     <link rel="manifest" href="/manifest.webmanifest?v=icon-v2" />
     <title>Salomón AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+    <!-- Estilos identidad + splash (carga inmediata) -->
     <link rel="stylesheet" href="/salomon-theme.css?v=icon-v2" />
     <link rel="stylesheet" href="/splash.css?v=icon-v2" />
-    <link rel="stylesheet" href="/drawers.css?v=voice2" />
-    <script type="module" crossorigin src="/assets/index-b9y8wXPO.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-s83TwR6_.css" />
+    <link rel="stylesheet" href="/drawers.css?v=2" />
+    <link rel="stylesheet" crossorigin href="/assets/index-CJUgt2ya.css" />
+    <!-- Header/Logo PIXEL_PERFECT (aditivo; no sustituye layout) -->
+    <link rel="stylesheet" href="/header-logo-spec.css?v=1" />
+    <!-- Capa 1 Bridge: animaciones del núcleo (NO sustituye el CSS de layout) -->
+    <link rel="stylesheet" href="/voice-orchestrator.css?v=capa1" />
+    <!-- Thinking motion protocol (2s pulse ease-in-out + wave linear) -->
+    <link rel="stylesheet" href="/thinking-animation-spec.css?v=1" />
+    <!-- UI Shield: rediseño visual aditivo -->
+    <link rel="stylesheet" href="/salomon-ui-shield.css?v=1" />
   </head>
   <body>
+    <!-- Splash Screen nativo -->
     <div id="salomon-splash" aria-live="polite">
       <div class="splash-icon" role="img" aria-label="Salomón"></div>
       <div class="splash-title">SALOMÓN</div>
-      <div id="splash-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div id="splash-dots" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
       <div class="splash-step" id="splash-step">Iniciando…</div>
     </div>
+
     <div id="root"></div>
+
+    <!-- Boot standalone → conecta servidor / visión / UI -->
     <script src="/standalone-boot.js?v=7" data-salomon-boot="1"></script>
-    <script src="/drawers.js?v=4" defer></script>
+    <script type="module" crossorigin src="/assets/index-BdcDx9nN.js?v=texto-inmediato-1"></script>
+    <script src="/drawers.js?v=5" defer></script>
     <script src="/media-panel.js?v=2" defer></script>
     <script src="/vision-overlay.js?v=1" defer></script>
     <script src="/bca-indicator.js?v=1" defer></script>
+    <!-- Capa 1 Bridge: orquestador visual + cancelación (UI estable intacta) -->
+    <script src="/salomon-orchestrator-bridge.js?v=capa1" defer></script>
+    <!-- UI Shield: logo SS, H/perfil, cámara, voz reactiva, menú burbujas -->
+    <script src="/salomon-ui-shield.js?v=1" defer></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-          navigator.serviceWorker.register("/sw.js").catch(() => {});
+          navigator.serviceWorker.register("/sw.js?v=4").catch(() => {});
         });
       }
     </script>

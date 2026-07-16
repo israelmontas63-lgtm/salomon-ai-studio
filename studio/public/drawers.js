@@ -1,9 +1,10 @@
 /**
  * Menús Salomón — solo DOM tras carga segura (sin MutationObserver).
+ * UI Shield redefine iconos H / Perfil; aquí solo títulos glass y labels.
  */
 (function () {
-  const LABEL_LEFT = "Correo";
-  const LABEL_RIGHT = "Herramientas";
+  const LABEL_LEFT = "Herramientas";
+  const LABEL_RIGHT = "Cuenta y Planes";
   let applied = false;
   let intervalId = null;
 
@@ -31,18 +32,6 @@
     if (lab.textContent !== text) lab.textContent = text;
   }
 
-  function setIcon(btn, kind) {
-    if (!btn || btn.dataset.iconKind === kind) return;
-    btn.dataset.iconKind = kind;
-    const html =
-      kind === "dots"
-        ? '<span class="dots-icon" aria-hidden="true"><i></i><i></i><i></i></span>'
-        : '<span class="lines-icon" aria-hidden="true"><i></i><i></i></span>';
-    const oldIcon = btn.querySelector(".dots-icon, .lines-icon");
-    if (oldIcon) oldIcon.outerHTML = html;
-    else btn.insertAdjacentHTML("afterbegin", html);
-  }
-
   function styleHeader() {
     if (!domReady()) return false;
     const header = document.querySelector(".studio-header");
@@ -50,12 +39,11 @@
     const btns = header.querySelectorAll(".header-menu-btn");
     if (btns.length < 2) return false;
 
-    setIcon(btns[0], "lines");
+    // Labels (iconos los pone salomon-ui-shield.js)
     ensureLabel(btns[0], LABEL_LEFT);
     btns[0].setAttribute("aria-label", LABEL_LEFT);
     btns[0].title = LABEL_LEFT;
 
-    setIcon(btns[1], "dots");
     ensureLabel(btns[1], LABEL_RIGHT);
     btns[1].setAttribute("aria-label", LABEL_RIGHT);
     btns[1].title = LABEL_RIGHT;
@@ -78,15 +66,16 @@
   function emptyPanel(panel) {
     if (!panel || panel.dataset.placeholderReady === "1") return;
     const isLeft = panel.classList.contains("glass-panel--left");
-    const title = isLeft ? LABEL_LEFT : LABEL_RIGHT;
+    // React: left panel = cuenta, right = herramientas
+    const title = isLeft ? "Cuenta y Planes" : "Herramientas";
     const hint = isLeft
-      ? "Registro, correo y planes de servicio. Pronto aquí."
-      : "Herramientas de Salomón. Pronto aquí.";
+      ? "Perfil, correo y planes de servicio."
+      : "Herramientas de Salomón.";
     const h2 = panel.querySelector(".glass-panel__header h2");
     if (h2) h2.textContent = title;
     panel.setAttribute("aria-label", title);
     const nav = panel.querySelector(".glass-panel__list");
-    if (nav) {
+    if (nav && !nav.querySelector(".glass-panel__item") && !nav.querySelector(".drawer-placeholder")) {
       nav.innerHTML = "";
       const ph = document.createElement("div");
       ph.className = "drawer-placeholder";

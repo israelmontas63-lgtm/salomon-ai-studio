@@ -34,6 +34,8 @@
     <link rel="stylesheet" href="/voice-orchestrator.css?v=capa1" />
     <!-- Thinking motion protocol (2s pulse ease-in-out + wave linear) -->
     <link rel="stylesheet" href="/thinking-animation-spec.css?v=1" />
+    <!-- UI Shield: rediseño visual aditivo -->
+    <link rel="stylesheet" href="/salomon-ui-shield.css?v=1" />
   </head>
   <body>
     <!-- Splash Screen nativo -->
@@ -51,12 +53,14 @@
     <!-- Boot standalone → conecta servidor / visión / UI -->
     <script src="/standalone-boot.js?v=7" data-salomon-boot="1"></script>
     <script type="module" crossorigin src="/assets/index-BdcDx9nN.js?v=texto-inmediato-1"></script>
-    <script src="/drawers.js?v=4" defer></script>
+    <script src="/drawers.js?v=5" defer></script>
     <script src="/media-panel.js?v=2" defer></script>
     <script src="/vision-overlay.js?v=1" defer></script>
     <script src="/bca-indicator.js?v=1" defer></script>
     <!-- Capa 1 Bridge: orquestador visual + cancelación (UI estable intacta) -->
     <script src="/salomon-orchestrator-bridge.js?v=capa1" defer></script>
+    <!-- UI Shield: logo SS, H/perfil, cámara, voz reactiva, menú burbujas -->
+    <script src="/salomon-ui-shield.js?v=1" defer></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {

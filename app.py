@@ -1441,6 +1441,18 @@ def thinking_animation_spec_css() -> FileResponse:
     return _archivo_studio("thinking-animation-spec.css", "text/css")
 
 
+@app.get("/salomon-ui-shield.css")
+def salomon_ui_shield_css() -> FileResponse:
+    """UI Shield: rediseño visual aditivo."""
+    return _archivo_studio("salomon-ui-shield.css", "text/css")
+
+
+@app.get("/salomon-ui-shield.js")
+def salomon_ui_shield_js() -> FileResponse:
+    """UI Shield: interacciones (cámara/voz/burbujas)."""
+    return _archivo_studio("salomon-ui-shield.js", "application/javascript")
+
+
 @app.get("/salomon-orchestrator-bridge.js")
 def salomon_orchestrator_bridge_js() -> FileResponse:
     """Capa 1 Bridge: estados + cancelación sobre UI estable."""

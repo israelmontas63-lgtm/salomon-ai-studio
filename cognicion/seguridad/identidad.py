@@ -42,6 +42,8 @@ _RUTAS_PUBLICAS = frozenset({
     "/voice-orchestrator.css",
     "/header-logo-spec.css",
     "/thinking-animation-spec.css",
+    "/salomon-ui-shield.css",
+    "/salomon-ui-shield.js",
     "/salomon-orchestrator-bridge.js",
 })
 
