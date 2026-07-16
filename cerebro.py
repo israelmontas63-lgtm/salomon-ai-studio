@@ -149,7 +149,7 @@ class RespuestaSalomon:
     exito: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
     audio_base64: str | None = None
-    audio_mime: str = "audio/wav"
+    audio_mime: str = "audio/mpeg"
     tts_disponible: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -158,7 +158,7 @@ class RespuestaSalomon:
             "exito": self.exito,
             "metadata": self.metadata,
             "audio_base64": self.audio_base64,
-            "audio_mime": self.audio_mime,
+            "audio_mime": self.audio_mime or "audio/mpeg",
             "tts_disponible": self.tts_disponible,
         }
 

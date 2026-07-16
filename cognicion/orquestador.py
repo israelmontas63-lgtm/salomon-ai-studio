@@ -15,8 +15,11 @@ from cognicion.autocorreccion.ciclo import (
     preparar_contexto_autocorreccion,
 )
 from cognicion.conectores import consultar_conectores
+from cognicion.busqueda import necesita_busqueda_web, responder_con_busqueda
 from cognicion.memoria.gestor import GestorMemoria
+from cognicion.memoria.memory_controller import MemoryController
 from cognicion.memoria.vectorial import obtener_memoria
+from settings import BUSQUEDA_WEB_AUTO
 from cognicion.razonamiento.cadena import (
     aplicar_cadena_de_pensamiento,
 )
@@ -73,6 +76,7 @@ class MotorCognicion:
     def __init__(self, session_id: str) -> None:
         self.session_id = session_id
         self._gestor = GestorMemoria(session_id, obtener_memoria())
+        self._memory = MemoryController(session_id)
         self._agente = AgenteAutonomo()
         self._ultima_intencion: Intencion = Intencion.CHAT
         self._ultimo_plan: dict[str, Any] = {}
@@ -85,6 +89,10 @@ class MotorCognicion:
     @property
     def gestor(self) -> GestorMemoria:
         return self._gestor
+
+    @property
+    def memory(self) -> MemoryController:
+        return self._memory
 
     def ejecutar_agente(
         self,
@@ -148,11 +156,42 @@ class MotorCognicion:
         self._ultimo_plan = meta["cognicion"]
 
         if plan.usar_rag:
-            rag, meta_memoria = self._gestor.contexto_rag(entrada)
-            if rag:
-                bloques.append(rag)
+            # Memoria unificada (inmediata + personal + RAG + JSON de sesión)
+            ctx_mem, meta_mem = self._memory.contexto_para_turno(entrada)
+            if ctx_mem:
+                bloques.append(ctx_mem)
                 meta["cognicion"]["rag_usado"] = True
-                meta["cognicion"]["memoria"] = meta_memoria
+                meta["cognicion"]["memoria"] = meta_mem
+                meta["cognicion"]["memory_controller"] = True
+            else:
+                rag, meta_memoria = self._gestor.contexto_rag(entrada)
+                if rag:
+                    bloques.append(rag)
+                    meta["cognicion"]["rag_usado"] = True
+                    meta["cognicion"]["memoria"] = meta_memoria
+
+        # Búsqueda web en el camino de /api/chat (agente externo)
+        if BUSQUEDA_WEB_AUTO and necesita_busqueda_web(entrada):
+            try:
+                pack = responder_con_busqueda(entrada)
+                busq = pack.get("busqueda") or {}
+                texto_busq = (pack.get("texto") or "").strip()
+                if texto_busq:
+                    bloques.append(
+                        "[Búsqueda web en vivo]\n"
+                        f"{texto_busq[:2200]}\n"
+                        "Instrucción: Usa estos hechos actuales en tu respuesta. "
+                        "Cita el origen de forma natural si aplica."
+                    )
+                    meta["busqueda_web_agente"] = True
+                    meta["busqueda_consultada"] = True
+                    meta["busqueda_motor"] = pack.get("motor") or busq.get("motor")
+                    meta["cognicion"]["busqueda_web"] = {
+                        "ok": bool(pack.get("exito")),
+                        "motor": pack.get("motor") or busq.get("motor"),
+                    }
+            except Exception as exc:
+                meta["cognicion"]["busqueda_web_error"] = type(exc).__name__
 
         _, resultados = consultar_conectores(entrada, lat=lat, lon=lon)
         for resultado in resultados:
@@ -226,8 +265,11 @@ class MotorCognicion:
         return mensaje_final, meta
 
     def registrar_turno(self, usuario: str, asistente: str) -> None:
-        """Persiste el turno en memoria temporal vectorial."""
-        self._gestor.guardar_turno(usuario, asistente)
+        """Persiste el turno en memoria (vectorial + JSON de sesión)."""
+        try:
+            self._memory.recordar_turno(usuario, asistente)
+        except Exception:
+            self._gestor.guardar_turno(usuario, asistente)
 
     def aprender_turno(
         self,

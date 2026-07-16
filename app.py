@@ -270,7 +270,7 @@ class ChatResponse(BaseModel):
     session_id: str
     metadata: dict
     audio_base64: str | None = None
-    audio_mime: str = "audio/wav"
+    audio_mime: str = "audio/mpeg"
     tts_disponible: bool = False
 
 
@@ -278,7 +278,7 @@ class SessionResponse(BaseModel):
     session_id: str
     mensaje: str
     audio_base64: str | None = None
-    audio_mime: str = "audio/wav"
+    audio_mime: str = "audio/mpeg"
     tts_disponible: bool = False
 
 
@@ -443,7 +443,7 @@ def api_tunel_estado() -> dict:
 
 class TtsResponse(BaseModel):
     audio_base64: str | None = None
-    audio_mime: str = "audio/wav"
+    audio_mime: str = "audio/mpeg"
     tts_disponible: bool = False
     error: str | None = None
 

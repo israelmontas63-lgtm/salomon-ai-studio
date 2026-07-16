@@ -173,10 +173,68 @@
     }
   }
 
+  var _voiceAudio = null;
+  var _ttsInFlight = false;
+
+  function playB64(b64, mime) {
+    if (!b64) return;
+    try {
+      if (_voiceAudio) {
+        try { _voiceAudio.pause(); } catch (e) { /* noop */ }
+      }
+      var audio = new Audio("data:" + (mime || "audio/mpeg") + ";base64," + b64);
+      _voiceAudio = audio;
+      var p = audio.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(function () { log("audio play bloqueado"); });
+      }
+      log("voz emitida", mime || "audio/mpeg");
+    } catch (e) {
+      log("audio error", e && e.message);
+    }
+  }
+
+  function ensureVoiceOut(data) {
+    if (!data || typeof data !== "object") return;
+    if (data.audio_base64) {
+      // React ya puede reproducir; no duplicar
+      return;
+    }
+    var text = (data.texto || data.mensaje || "").trim();
+    if (!text || _ttsInFlight) return;
+    _ttsInFlight = true;
+    log("TTS fallback → /api/tts");
+    origFetchSafe("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto: text.slice(0, 4000) }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (tts) {
+        if (tts && tts.audio_base64) {
+          playB64(tts.audio_base64, tts.audio_mime || "audio/mpeg");
+        } else {
+          log("TTS sin audio", tts && tts.error);
+        }
+      })
+      .catch(function (e) {
+        log("TTS fallback error", e && e.message);
+      })
+      .then(function () {
+        _ttsInFlight = false;
+      });
+  }
+
+  var _rawFetch = null;
+  function origFetchSafe(input, init) {
+    return (_rawFetch || window.fetch.bind(window))(input, init);
+  }
+
   function wrapFetch() {
     if (window.__salomonFetchWrapped) return;
     window.__salomonFetchWrapped = true;
     var orig = window.fetch.bind(window);
+    _rawFetch = orig;
 
     window.fetch = function (input, init) {
       var url = typeof input === "string" ? input : (input && input.url) || "";
@@ -213,6 +271,16 @@
         function (res) {
           if (ac) abortControllers.delete(ac);
           if (state === STATE.PROCESSING) setState(STATE.IDLE, "fetch-done");
+          // Rehabilitación de voz: si el chat trae texto sin audio, completar TTS
+          if (
+            res &&
+            res.ok &&
+            (/\/api\/chat\b/.test(url) || /\/api\/media\//.test(url))
+          ) {
+            try {
+              res.clone().json().then(ensureVoiceOut).catch(function () {});
+            } catch (e) { /* noop */ }
+          }
           return res;
         },
         function (err) {
@@ -270,7 +338,8 @@
     getState: function () { return state; },
     STATES: STATE,
     cancelAll: cancelAll,
-    version: "capa1-blindado-1",
+    version: "nucleo-v1.3",
+    ensureVoiceOut: ensureVoiceOut,
   };
 
   if (document.readyState === "loading") {

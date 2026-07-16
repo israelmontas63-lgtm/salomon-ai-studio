@@ -26,6 +26,7 @@ data/media/generadas/
 data/media/editados/
 data/media/uploads/
 data/memoria_chroma/
+data/memoria_sesiones.json
 data/agente_backups/
 data/seguridad_backups/
 data/bca/
