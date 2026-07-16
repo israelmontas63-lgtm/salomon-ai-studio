@@ -26,8 +26,8 @@
     const s = document.createElement("style");
     s.id = "salomon-media-css";
     s.textContent = `
-      #salomon-media-fab{position:fixed;right:16px;bottom:96px;z-index:70;width:48px;height:48px;
-        border-radius:50%;border:1px solid #c9a962;background:#0c0c0e;color:#c9a962;font-size:20px;cursor:pointer}
+      /* FAB lateral eliminado — panel solo vía SalomonMedia.open() / menú */
+      #salomon-media-fab{display:none!important}
       #salomon-media-modal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.72);display:none;
         align-items:flex-end;justify-content:center;padding:16px}
       #salomon-media-modal.open{display:flex}
@@ -49,15 +49,12 @@
   }
 
   function mount() {
-    if (document.getElementById("salomon-media-fab")) return;
+    if (document.getElementById("salomon-media-modal")) return;
     ensureStyles();
 
-    const fab = document.createElement("button");
-    fab.id = "salomon-media-fab";
-    fab.title = "Multimedia";
-    fab.type = "button";
-    fab.textContent = "⧉";
-    document.body.appendChild(fab);
+    // Botón circular lateral (⧉) eliminado permanentemente de la UI.
+    const staleFab = document.getElementById("salomon-media-fab");
+    if (staleFab) staleFab.remove();
 
     const modal = document.createElement("div");
     modal.id = "salomon-media-modal";
@@ -101,7 +98,6 @@
       status().textContent = t || "";
     };
 
-    fab.onclick = () => modal.classList.add("open");
     document.getElementById("sm-close").onclick = () => modal.classList.remove("open");
     modal.addEventListener("click", (e) => {
       if (e.target === modal) modal.classList.remove("open");

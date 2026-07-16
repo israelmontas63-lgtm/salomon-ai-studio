@@ -156,6 +156,18 @@
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55) !important;
 }
 
+/* ——— FABs laterales (visión ◉ / multimedia ⧉) — fuera de la UI ——— */
+#vision-fab,
+#salomon-media-fab {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+}
+
 /* ——— 4) Campo de mensaje WhatsApp-like ——— */
 .bottom-bar__meta,
 .hands-free-toggle,
@@ -172,13 +184,14 @@
   align-items: center;
   gap: 8px;
   width: calc(100% - 28px);
-  max-width: 100%;
-  margin: 0 14px 10px;
+  max-width: 520px;
+  margin: 0 auto 10px !important;
   padding: 6px 6px 6px 14px;
   background: #000 !important;
   border: 1px solid rgba(212, 175, 55, 0.45) !important;
   border-radius: 22px !important;
   animation: inputSlideUp 250ms ease-out;
+  box-sizing: border-box;
 }
 
 @keyframes inputSlideUp {

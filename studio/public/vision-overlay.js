@@ -21,14 +21,13 @@
   }
 
   function ensureUi() {
-    if (document.getElementById("vision-fab")) return;
+    if (document.getElementById("vision-hud")) return;
 
     const style = document.createElement("style");
     style.id = "vision-overlay-css";
     style.textContent = `
-#vision-fab{position:fixed;left:16px;bottom:96px;z-index:72;width:48px;height:48px;border-radius:50%;
-  border:1px solid #D4AF37;background:#1A1A1A;color:#FFD700;font-size:18px;cursor:pointer;
-  box-shadow:0 4px 18px rgba(0,0,0,.45)}
+/* FAB lateral izquierdo eliminado — visión solo vía SalomonVision.open() / cámara */
+#vision-fab{display:none!important}
 #vision-hud{display:none;position:fixed;inset:0;z-index:95;background:#0a0a0a;flex-direction:column}
 #vision-hud.open{display:flex}
 #vision-stage{position:relative;flex:1;min-height:0;background:#000}
@@ -51,12 +50,9 @@
 `;
     document.head.appendChild(style);
 
-    const fab = document.createElement("button");
-    fab.id = "vision-fab";
-    fab.type = "button";
-    fab.title = "Visión VDCP";
-    fab.textContent = "◉";
-    document.body.appendChild(fab);
+    // Botón circular lateral (◉) eliminado permanentemente de la UI.
+    const staleFab = document.getElementById("vision-fab");
+    if (staleFab) staleFab.remove();
 
     const hud = document.createElement("div");
     hud.id = "vision-hud";
@@ -212,7 +208,6 @@
       }
     }
 
-    fab.onclick = () => openHud();
     document.getElementById("vision-close").onclick = () => closeHud();
     document.getElementById("vision-capture").onclick = () => capturarVdcp();
 
