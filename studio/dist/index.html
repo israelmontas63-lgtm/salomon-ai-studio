@@ -35,7 +35,7 @@
     <!-- Thinking motion protocol (2s pulse ease-in-out + wave linear) -->
     <link rel="stylesheet" href="/thinking-animation-spec.css?v=1" />
     <!-- UI Shield: rediseño visual aditivo -->
-    <link rel="stylesheet" href="/salomon-ui-shield.css?v=3" />
+    <link rel="stylesheet" href="/salomon-ui-shield.css?v=sync1" />
   </head>
   <body>
     <!-- Splash Screen nativo -->
@@ -55,16 +55,16 @@
     <script type="module" crossorigin src="/assets/index-BdcDx9nN.js?v=texto-inmediato-1"></script>
     <script src="/drawers.js?v=6" defer></script>
     <script src="/media-panel.js?v=3" defer></script>
-    <script src="/vision-overlay.js?v=3" defer></script>
     <script src="/bca-indicator.js?v=1" defer></script>
     <!-- Capa 1 Bridge: orquestador visual + cancelación (UI estable intacta) -->
     <script src="/salomon-orchestrator-bridge.js?v=nucleo13" defer></script>
-    <!-- UI Shield: logo SS, H/perfil, cámara, voz reactiva, menú burbujas -->
-    <script src="/salomon-ui-shield.js?v=2" defer></script>
+    <!-- Shield ANTES que vision: evita race SalomonUIShield undefined -->
+    <script src="/salomon-ui-shield.js?v=sync1" defer></script>
+    <script src="/vision-overlay.js?v=sync1" defer></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-          navigator.serviceWorker.register("/sw.js?v=4").catch(() => {});
+          navigator.serviceWorker.register("/sw.js?v=7").catch(() => {});
         });
       }
     </script>

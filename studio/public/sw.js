@@ -1,5 +1,5 @@
-/* Service worker PWA — no bloquea API ni el boot */
-const CACHE = "salomon-v7-icon-official";
+/* Service worker PWA — no bloquea API, boot ni eventos de cámara (DOM/main thread) */
+const CACHE = "salomon-v10-neural-sync";
 const PRECACHE = [
   "/manifest.json",
   "/manifest.webmanifest",
@@ -32,13 +32,18 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
+  const path = url.pathname;
 
-  // API y boot: siempre red (rutas relativas /api/...)
+  // Cámara/visión/UI interactiva: siempre red (evita lag por JS/CSS stale en cache)
+  // getUserMedia y touch* viven en el main thread; el SW nunca los intercepta.
   if (
-    url.pathname.startsWith("/api/") ||
-    url.pathname.endsWith("standalone-boot.js") ||
-    url.pathname === "/" ||
-    url.pathname.endsWith("index.html")
+    path.startsWith("/api/") ||
+    path.endsWith("standalone-boot.js") ||
+    path === "/" ||
+    path.endsWith("index.html") ||
+    path.includes("salomon-ui-shield") ||
+    path.includes("vision-overlay") ||
+    path.includes("salomon-orchestrator-bridge")
   ) {
     event.respondWith(fetch(req));
     return;

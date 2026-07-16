@@ -18,3 +18,10 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      # Voz TTS — valores solo en Dashboard Render (nunca hardcodear en repo)
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
+      - key: TTS_ASYNC
+        value: "false"

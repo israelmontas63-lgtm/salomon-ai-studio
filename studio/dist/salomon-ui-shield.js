@@ -12,10 +12,21 @@
     "</svg></span>";
   var ICON_H = '<span class="header-icon-h" aria-hidden="true">H</span>';
 
-  var camera = { stream: null, facing: "environment", open: false, step: 0 };
+  var camera = {
+    stream: null,
+    facing: "environment",
+    open: false,
+    capturing: false,
+    flipping: false,
+    mode: "photo", // photo | vdcp
+    videoEl: null,
+    openSeq: 0,
+    flipSeq: 0,
+  };
   var audio = { ctx: null, analyser: null, src: null, raf: 0, stream: null };
   var swapLock = false;
   var lastTap = 0;
+  var HOLD_CAPTURE_MS = 500;
 
   function log() {
     try {
@@ -118,16 +129,19 @@
     var main = row.querySelector(".control-btn--main") || btns[1];
     var textBtn = btns[btns.length - 1];
 
-    // Cámara
+    // Cámara (UI-Smart-Button en barra: abre unidad neuronal; no toca voz)
     if (cam.dataset.uiCam !== "1") {
       cam.dataset.uiCam = "1";
+      cam.classList.add("ui-smart-cam-btn");
       cam.setAttribute("aria-label", "Cámara");
+      cam.title = "Cámara — toque: abrir · en vista: nodo de control";
       cam.addEventListener(
         "click",
         function (e) {
           e.preventDefault();
           e.stopImmediatePropagation();
-          cycleCamera();
+          if (camera.open) return;
+          openNeuralCamera({ mode: "photo" });
         },
         true
       );
@@ -283,72 +297,383 @@
     }
   }
 
-  /* ——— Cámara: 1 trasera, 2 frontal, 3 cierra; tap preview = foto ——— */
-  function cycleCamera() {
-    haptic(12);
+  /* ——— Unidad neuronal de cámara — latencia ultra-baja ——— */
+  var CAPTURE_OPTS = { capture: true, passive: false };
+
+  function toggleCameraDirection() {
     if (!camera.open) {
-      camera.facing = "environment";
-      camera.step = 1;
-      openCamera();
+      openNeuralCamera({ mode: camera.mode || "photo" });
       return;
     }
-    if (camera.step === 1) {
-      camera.facing = "user";
-      camera.step = 2;
-      openCamera();
-      return;
-    }
-    closeCamera();
-    camera.step = 0;
+    if (camera.flipping || camera.capturing) return;
+    var next = camera.facing === "environment" ? "user" : "environment";
+    var prevFacing = camera.facing;
+    camera.facing = next;
+    log("facing →", camera.facing);
+    haptic(8);
+    swapFacingInPlace(prevFacing);
   }
 
-  function openCamera() {
+  function swapFacingInPlace(prevFacing) {
+    var video = camera.videoEl;
+    if (!video || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (prevFacing) camera.facing = prevFacing;
+      return;
+    }
+    camera.flipping = true;
+    var seq = ++camera.flipSeq;
+    var prev = camera.stream;
+    var smart = document.getElementById("ui-smart-button");
+    if (smart) smart.dataset.flip = "1";
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { facingMode: { exact: camera.facing } },
+        audio: false,
+      })
+      .catch(function () {
+        return navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: camera.facing } },
+          audio: false,
+        });
+      })
+      .then(function (stream) {
+        if (seq !== camera.flipSeq || !camera.open) {
+          try {
+            stream.getTracks().forEach(function (t) {
+              t.stop();
+            });
+          } catch (e) {}
+          return;
+        }
+        camera.stream = stream;
+        video.srcObject = stream;
+        var play = video.play();
+        if (play && typeof play.catch === "function") play.catch(function () {});
+        if (prev && prev !== stream) {
+          try {
+            prev.getTracks().forEach(function (t) {
+              t.stop();
+            });
+          } catch (e) {}
+        }
+      })
+      .catch(function (err) {
+        log("flip error", err && err.message);
+        // Sincronía: revertir facing si el hardware falló
+        if (prevFacing && seq === camera.flipSeq) camera.facing = prevFacing;
+      })
+      .then(function () {
+        if (seq === camera.flipSeq) camera.flipping = false;
+        if (smart) smart.dataset.flip = "0";
+      });
+  }
+
+  function flashShutter(overlay) {
+    if (!overlay) return;
+    var flash = overlay.querySelector(".ui-camera-flash");
+    if (!flash) {
+      flash = document.createElement("div");
+      flash.className = "ui-camera-flash";
+      flash.setAttribute("aria-hidden", "true");
+      overlay.appendChild(flash);
+    }
+    flash.classList.remove("is-on");
+    void flash.offsetWidth;
+    flash.classList.add("is-on");
+    // Limpieza no bloqueante (no atrasa el disparo)
+    queueMicrotask(function () {
+      setTimeout(function () {
+        flash.classList.remove("is-on");
+      }, 180);
+    });
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    try {
+      var parts = dataUrl.split(",");
+      var mime = (parts[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
+      var bin = atob(parts[1] || "");
+      var arr = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return new Blob([arr], { type: mime });
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function capturePhoto() {
+    if (!camera.open || camera.capturing || camera.flipping) return;
+    var video = camera.videoEl || document.querySelector("#ui-camera-overlay video");
+    var overlay = document.getElementById("ui-camera-overlay");
+    if (!video || video.readyState < 2) {
+      log("capture: video no listo");
+      return;
+    }
+    camera.capturing = true;
+    // Flash + frame en el mismo tick (sin debounce)
+    flashShutter(overlay);
+    haptic([6, 12, 6]);
+    try {
+      var canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 720;
+      canvas.height = video.videoHeight || 1280;
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Encode síncrono → evento inmediato (evita cola de toBlob)
+      var dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+      var blob = dataUrlToBlob(dataUrl);
+      camera.capturing = false;
+      if (!blob) return;
+      var detail = {
+        blob: blob,
+        facing: camera.facing,
+        mode: camera.mode || "photo",
+        width: canvas.width,
+        height: canvas.height,
+        dataUrl: dataUrl,
+      };
+      window.dispatchEvent(new CustomEvent("salomon:ui-photo", { detail: detail }));
+      log("foto capturada", detail.mode, detail.facing, detail.width + "x" + detail.height);
+      if (camera.mode !== "vdcp") {
+        closeCamera();
+      }
+    } catch (e) {
+      camera.capturing = false;
+      log("capture fail", e && e.message);
+    }
+  }
+
+  function wireSmartButton(btn) {
+    if (!btn || btn.dataset.neuralBound === "1") return;
+    btn.dataset.neuralBound = "1";
+    var holdTimer = null;
+    var held = false;
+    var tracking = false;
+    var viaTouch = false;
+    var startX = 0;
+    var startY = 0;
+
+    function clearHold() {
+      if (holdTimer) clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+
+    function onDown(e) {
+      if (e.type === "mousedown" && e.button !== 0) return;
+      // Evitar doble ruta touch + pointer en el mismo gesto
+      if (e.type === "pointerdown" && (e.pointerType === "touch" || viaTouch)) return;
+      if (tracking) return;
+      tracking = true;
+      viaTouch = e.type === "touchstart" || e.pointerType === "touch";
+      held = false;
+      startX = e.clientX != null ? e.clientX : (e.touches && e.touches[0] && e.touches[0].clientX) || 0;
+      startY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
+      try {
+        if (e.pointerId != null) btn.setPointerCapture(e.pointerId);
+      } catch (err) {}
+      clearHold();
+      holdTimer = setTimeout(function () {
+        held = true;
+        capturePhoto();
+      }, HOLD_CAPTURE_MS);
+      if (e.cancelable) e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+
+    function onMove(e) {
+      if (!tracking) return;
+      if (e.type === "pointermove" && viaTouch) return;
+      var x = e.clientX != null ? e.clientX : (e.touches && e.touches[0] && e.touches[0].clientX) || startX;
+      var y = e.clientY != null ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY) || startY;
+      if (Math.abs(x - startX) > 16 || Math.abs(y - startY) > 16) clearHold();
+    }
+
+    function onUp(e) {
+      if (!tracking) return;
+      if (e.type === "pointerup" && viaTouch) return;
+      tracking = false;
+      clearHold();
+      if (e.cancelable) e.preventDefault();
+      e.stopImmediatePropagation();
+      var wasHeld = held;
+      viaTouch = false;
+      if (wasHeld) return;
+      toggleCameraDirection();
+    }
+
+    function onCancel(e) {
+      if (e && e.type === "pointercancel" && viaTouch) return;
+      tracking = false;
+      viaTouch = false;
+      clearHold();
+    }
+
+    btn.addEventListener("touchstart", onDown, CAPTURE_OPTS);
+    btn.addEventListener("touchmove", onMove, CAPTURE_OPTS);
+    btn.addEventListener("touchend", onUp, CAPTURE_OPTS);
+    btn.addEventListener("touchcancel", onCancel, CAPTURE_OPTS);
+    btn.addEventListener("pointerdown", onDown, CAPTURE_OPTS);
+    btn.addEventListener("pointermove", onMove, CAPTURE_OPTS);
+    btn.addEventListener("pointerup", onUp, CAPTURE_OPTS);
+    btn.addEventListener("pointercancel", onCancel, CAPTURE_OPTS);
+    btn.addEventListener(
+      "click",
+      function (e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      },
+      CAPTURE_OPTS
+    );
+  }
+
+  function bindTapToShoot(stage) {
+    var lastTs = 0;
+    function shoot(ev) {
+      if (ev.target && ev.target.closest && ev.target.closest(".ui-smart-button, .ui-camera-close")) {
+        return;
+      }
+      // Dedup touchstart→pointerdown en el mismo gesto
+      var now = performance.now();
+      if (now - lastTs < 40) return;
+      lastTs = now;
+      if (ev.cancelable) ev.preventDefault();
+      ev.stopImmediatePropagation();
+      capturePhoto();
+    }
+    // Prioridad: touchstart (antes que click ~300ms en móvil)
+    stage.addEventListener("touchstart", shoot, CAPTURE_OPTS);
+    stage.addEventListener("pointerdown", function (ev) {
+      if (ev.pointerType === "touch") return; // ya manejado por touchstart
+      shoot(ev);
+    }, CAPTURE_OPTS);
+  }
+
+  function openNeuralCamera(opts) {
+    opts = opts || {};
+    if (opts.mode) camera.mode = opts.mode;
+    if (!opts.keepFacing && !camera.open) {
+      camera.facing = "environment";
+    }
     closeCamera(true);
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       log("cámara no disponible");
       return;
     }
+    var seq = ++camera.openSeq;
+    haptic(10);
     navigator.mediaDevices
       .getUserMedia({
         video: { facingMode: { ideal: camera.facing } },
         audio: false,
       })
       .then(function (stream) {
+        // Descartar streams huérfanos (apertura supersedida / cerrada)
+        if (seq !== camera.openSeq) {
+          try {
+            stream.getTracks().forEach(function (t) {
+              t.stop();
+            });
+          } catch (e) {}
+          return;
+        }
         camera.stream = stream;
         camera.open = true;
+        camera.flipping = false;
+
         var overlay = document.createElement("div");
-        overlay.className = "ui-camera-overlay";
+        overlay.className = "ui-camera-overlay neural-camera";
         overlay.id = "ui-camera-overlay";
+        overlay.dataset.mode = camera.mode || "photo";
+
         var video = document.createElement("video");
         video.playsInline = true;
         video.muted = true;
         video.autoplay = true;
         video.srcObject = stream;
         video.play().catch(function () {});
+        camera.videoEl = video;
+
+        var flash = document.createElement("div");
+        flash.className = "ui-camera-flash";
+        flash.setAttribute("aria-hidden", "true");
+
+        var stage = document.createElement("div");
+        stage.className = "ui-camera-stage";
+        stage.appendChild(video);
+        bindTapToShoot(stage);
+
+        var smart = document.createElement("button");
+        smart.type = "button";
+        smart.className = "ui-smart-button";
+        smart.id = "ui-smart-button";
+        smart.setAttribute("aria-label", "Control de cámara");
+        smart.title = "Toque: voltear · Mantener: capturar";
+        smart.innerHTML =
+          '<span class="ui-smart-button__ring" aria-hidden="true"></span>' +
+          '<span class="ui-smart-button__core" aria-hidden="true"></span>';
+        wireSmartButton(smart);
+
+        var closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "ui-camera-close";
+        closeBtn.setAttribute("aria-label", "Cerrar cámara");
+        closeBtn.textContent = "×";
+        closeBtn.addEventListener(
+          "touchstart",
+          function (e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            closeCamera();
+          },
+          CAPTURE_OPTS
+        );
+        closeBtn.addEventListener(
+          "click",
+          function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeCamera();
+          },
+          true
+        );
+
         var hint = document.createElement("div");
         hint.className = "ui-camera-hint";
-        hint.textContent = "Toca la vista para capturar · botón cámara para cambiar/cerrar";
-        overlay.appendChild(video);
+        hint.textContent =
+          camera.mode === "vdcp"
+            ? "Tap = capturar VDCP · botón = voltear · hold = disparo"
+            : "Tap = disparar · botón = voltear · hold = disparo";
+
+        overlay.appendChild(stage);
+        overlay.appendChild(flash);
+        overlay.appendChild(smart);
+        overlay.appendChild(closeBtn);
         overlay.appendChild(hint);
-        overlay.addEventListener("click", function (ev) {
-          if (ev.target === hint) return;
-          captureFromVideo(video);
-        });
         document.body.appendChild(overlay);
-        // Cerrar modal React de cámara si aparece
-        setTimeout(function () {
+
+        // Sin delay artificial: ocultar modal React en microtask
+        queueMicrotask(function () {
           document.querySelectorAll(".camera-modal, .camera-backdrop").forEach(function (n) {
             n.style.display = "none";
           });
-        }, 50);
+        });
+
+        window.dispatchEvent(
+          new CustomEvent("salomon:camera-open", {
+            detail: { facing: camera.facing, mode: camera.mode },
+          })
+        );
       })
       .catch(function (err) {
+        if (seq !== camera.openSeq) return;
         log("cámara error", err && err.message);
         camera.open = false;
+        camera.videoEl = null;
       });
   }
 
   function closeCamera(silent) {
+    camera.openSeq += 1; // invalida getUserMedia en vuelo
+    camera.flipSeq += 1;
     var overlay = document.getElementById("ui-camera-overlay");
     if (overlay) overlay.remove();
     if (camera.stream) {
@@ -360,35 +685,24 @@
     }
     camera.stream = null;
     camera.open = false;
-    if (!silent) camera.step = 0;
+    camera.capturing = false;
+    camera.flipping = false;
+    camera.videoEl = null;
+    if (!silent) {
+      window.dispatchEvent(new CustomEvent("salomon:camera-close"));
+    }
   }
 
-  function captureFromVideo(video) {
-    try {
-      var canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth || 720;
-      canvas.height = video.videoHeight || 1280;
-      var ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(function (blob) {
-        if (!blob) return;
-        haptic([8, 20, 8]);
-        // Disparar evento para que capas existentes puedan reaccionar
-        window.dispatchEvent(
-          new CustomEvent("salomon:ui-photo", { detail: { blob: blob, facing: camera.facing } })
-        );
-        // Intentar pegar en input file oculto o notificar
-        try {
-          var url = URL.createObjectURL(blob);
-          var img = new Image();
-          img.src = url;
-          log("foto capturada", camera.facing, canvas.width + "x" + canvas.height);
-        } catch (e) {}
-        closeCamera();
-      }, "image/jpeg", 0.92);
-    } catch (e) {
-      log("capture fail", e && e.message);
-    }
+  // Compat: nombres anteriores
+  function cycleCamera() {
+    if (!camera.open) openNeuralCamera({ mode: "photo" });
+    else toggleCameraDirection();
+  }
+  function openCamera() {
+    openNeuralCamera({ mode: "photo" });
+  }
+  function captureFromVideo() {
+    capturePhoto();
   }
 
   /* ——— Burbujas: long-press menú ——— */
@@ -544,7 +858,10 @@
       syncLogoState();
     });
     window.addEventListener("salomon:ready", tick);
-    log("activo v1");
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && camera.open) closeCamera();
+    });
+    log("activo neural-cam-1");
   }
 
   if (document.readyState === "loading") {
@@ -553,5 +870,12 @@
     boot();
   }
 
-  window.SalomonUIShield = { version: "ui-shield-1", cycleCamera: cycleCamera, closeCamera: closeCamera };
+  window.SalomonUIShield = {
+    version: "neural-sync-1",
+    cycleCamera: cycleCamera,
+    closeCamera: closeCamera,
+    openNeuralCamera: openNeuralCamera,
+    toggleCameraDirection: toggleCameraDirection,
+    capturePhoto: capturePhoto,
+  };
 })();
