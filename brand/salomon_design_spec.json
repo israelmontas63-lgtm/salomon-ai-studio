@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "name": "Salomón AI — Interfaz blindada",
+  "strict_mode": true,
+  "validation_on_fail": "ABORT_AND_REVERT",
+  "header_specs": {
+    "height": "56px",
+    "background_color": "#000000",
+    "positioning": "center_aligned"
+  },
+  "logo_specs": {
+    "size": "32px",
+    "margin_top": "10px",
+    "margin_bottom": "9px",
+    "filter_effect": "drop-shadow(0 0 2px rgba(212, 175, 55, 0.5))"
+  },
+  "animation_protocol": {
+    "thinking_pulse": "ease-in-out",
+    "thinking_wave": "linear",
+    "duration": "2s"
+  },
+  "layers": {
+    "header": "/header-logo-spec.css",
+    "thinking": "/thinking-animation-spec.css",
+    "voice": "/voice-orchestrator.css",
+    "layout_css": "/assets/index-CJUgt2ya.css",
+    "layout_js": "/assets/index-BdcDx9nN.js"
+  },
+  "validated_live": true,
+  "commit_label": "Interfaz blindada v1.0 - Protocolo visual exacto"
+}
