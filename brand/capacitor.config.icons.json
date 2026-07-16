@@ -1,0 +1,19 @@
+{
+  "appId": "ai.salomon.studio",
+  "appName": "Salomón AI",
+  "webDir": "studio/dist",
+  "plugins": {
+    "SplashScreen": {
+      "backgroundColor": "#0A0A0A",
+      "androidSplashResourceName": "splash",
+      "splashFullScreen": true
+    }
+  },
+  "iconPath": "brand/icons/capacitor/icon-512.png",
+  "android": {
+    "iconBackgroundColor": "#0A0A0A"
+  },
+  "ios": {
+    "icon": "brand/icons/ios/AppIcon.appiconset"
+  }
+}

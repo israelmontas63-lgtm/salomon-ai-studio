@@ -1,0 +1,10 @@
+{
+  "appName": "Salomón AI",
+  "appId": "ai.salomon.studio",
+  "plugins": {
+    "SplashScreen": {
+      "backgroundColor": "#0A0A0A"
+    }
+  },
+  "icon": "brand/icons/capacitor/icon-512.png"
+}

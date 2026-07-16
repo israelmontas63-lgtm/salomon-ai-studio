@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Salomón AI
+Comment=Asistente de inteligencia artificial
+Exec=salomon-ai
+Icon=salomon-ai
+Terminal=false
+Type=Application
+Categories=Utility;Office;

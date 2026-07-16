@@ -1,5 +1,5 @@
 /* Service worker PWA — no bloquea API ni el boot */
-const CACHE = "salomon-v6-icon-v2";
+const CACHE = "salomon-v7-icon-official";
 const PRECACHE = [
   "/manifest.json",
   "/manifest.webmanifest",
