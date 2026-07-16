@@ -1,14 +1,14 @@
 /**
- * Salomón CI/CD — botón Actualizar en header (maqueta aprobada).
- * Estado 1: idle (borde oro). Estado 2: is-ready (relleno oro + badge).
+ * Salomón CI/CD — Actualizar agresivo (force-reload desde Render).
+ * Purga SW + caches + HTTP cache bust; no retiene UI antigua.
  */
 (function () {
   "use strict";
 
   var STORAGE_BUILD = "salomon_build_id";
-  var POLL_MS = 45000;
-  var AUTO_RELOAD_DELAY_MS = 3500;
-  var VERSION = "mockup-header-1";
+  var POLL_MS = 30000;
+  var AUTO_RELOAD_DELAY_MS = 2000;
+  var VERSION = "force-reload-2";
   var polling = false;
   var applying = false;
   var pendingBuild = null;
@@ -50,7 +50,6 @@
   function mountInHeader() {
     var existing = document.getElementById("salomon-update-btn");
     if (existing) {
-      // Migrar FAB antiguo al header si quedó suelto
       if (!existing.closest(".studio-header")) {
         existing.remove();
       } else {
@@ -67,7 +66,7 @@
     slot.className = "salomon-update-slot";
     slot.innerHTML =
       '<button type="button" id="salomon-update-btn" class="salomon-update-btn" ' +
-      'title="Actualizar Salomón desde Render" aria-label="Actualizar">' +
+      'title="Forzar descarga desde Render" aria-label="Actualizar">' +
       '<span class="salomon-update-btn__icon">' +
       SYNC_ICON +
       "</span>" +
@@ -82,24 +81,21 @@
       header.appendChild(slot);
     }
 
-    var btn = document.getElementById("salomon-update-btn");
-    btn.addEventListener("click", function (e) {
+    document.getElementById("salomon-update-btn").addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
       applyUpdate({ reason: "manual", force: true });
     });
 
     ensureToast();
-    log("Actualizar montado en header");
+    log("Actualizar montado (force-reload)");
     return true;
   }
 
   function ensureUi() {
     if (mountInHeader()) return;
     mountTries += 1;
-    if (mountTries < 40) {
-      setTimeout(ensureUi, 250);
-    }
+    if (mountTries < 40) setTimeout(ensureUi, 250);
   }
 
   function setBadge(on) {
@@ -120,7 +116,7 @@
     clearTimeout(toast._t);
     toast._t = setTimeout(function () {
       el.classList.remove("show");
-    }, 5000);
+    }, 6000);
   }
 
   async function clearCaches() {
@@ -133,44 +129,78 @@
     );
   }
 
-  async function notifySw(type) {
+  async function unregisterAllSw() {
     if (!("serviceWorker" in navigator)) return;
-    var reg = await navigator.serviceWorker.getRegistration();
-    if (!reg) return;
-    if (reg.waiting) reg.waiting.postMessage({ type: type || "FORCE_UPDATE" });
-    if (reg.active) reg.active.postMessage({ type: type || "PURGE_AND_CLAIM" });
-    try {
-      await reg.update();
-    } catch (e) {}
+    var regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(
+      regs.map(function (r) {
+        return r.unregister();
+      })
+    );
+  }
+
+  async function warmNetworkBust() {
+    var stamp = String(Date.now());
+    var urls = [
+      "/?_salomon_force=" + stamp,
+      "/salomon-ui-shield.css?v=force-" + stamp,
+      "/salomon-update.js?v=force-" + stamp,
+      "/salomon-ui-shield.js?v=force-" + stamp,
+      "/salomon-orchestrator-bridge.js?v=force-" + stamp,
+      "/vision-overlay.js?v=force-" + stamp,
+      "/header-logo-spec.css?v=force-" + stamp,
+      "/api/version?t=" + stamp,
+    ];
+    await Promise.all(
+      urls.map(function (u) {
+        return fetch(u, { cache: "reload", credentials: "same-origin" }).catch(function () {});
+      })
+    );
   }
 
   async function applyUpdate(opts) {
     opts = opts || {};
     if (applying) return;
     if (!opts.force && isVoiceBusy()) {
-      toast("Nueva versión lista. Se aplicará al terminar la conversación…");
+      toast("Nueva versión lista. Se aplicará al terminar…");
       setBadge(true);
       setTimeout(function () {
         if (!isVoiceBusy()) applyUpdate({ reason: "retry-idle", force: true });
-      }, 8000);
+      }, 6000);
       return;
     }
     applying = true;
     var btn = document.getElementById("salomon-update-btn");
     if (btn) btn.classList.add("is-busy");
-    toast("Actualizando Salomón desde Render…");
+    toast("Descargando versión fresca desde Render…");
+
     try {
-      await notifySw("PURGE_AND_CLAIM");
+      // 1) Avisar SW activo
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: "FORCE_RELOAD_PREP" });
+      }
+      // 2) Purga total: caches + unregister SW (evita HTML/JS viejo)
       await clearCaches();
-      if (pendingBuild) localStorage.setItem(STORAGE_BUILD, pendingBuild);
-      var url = new URL(window.location.href);
-      url.searchParams.set("_salomon_update", String(Date.now()));
-      window.location.replace(url.toString());
+      await unregisterAllSw();
+      await clearCaches();
+      // 3) Romper caché HTTP del navegador
+      await warmNetworkBust();
+      // 4) Reset build id
+      try {
+        localStorage.removeItem(STORAGE_BUILD);
+        if (pendingBuild) localStorage.setItem(STORAGE_BUILD, pendingBuild);
+      } catch (e) {}
+      // 5) Navegación dura (evita bfcache)
+      var dest = "/?_salomon_force=" + Date.now() + "&_v=" + encodeURIComponent(VERSION);
+      window.location.replace(dest);
     } catch (e) {
       log("apply fail", e && e.message);
       applying = false;
       if (btn) btn.classList.remove("is-busy");
-      toast("No se pudo actualizar. Reintenta.");
+      toast("Fallo al actualizar. Reintentando…");
+      setTimeout(function () {
+        window.location.href = "/?_salomon_force=" + Date.now();
+      }, 400);
     }
   }
 
@@ -196,7 +226,7 @@
       if (known !== build) {
         pendingBuild = build;
         setBadge(true);
-        toast("Nueva versión en Render. Actualizando…");
+        toast("Nueva versión en Render…");
         setTimeout(function () {
           applyUpdate({ reason: "auto", force: false });
         }, AUTO_RELOAD_DELAY_MS);
@@ -218,34 +248,24 @@
 
   function registerSw() {
     if (!("serviceWorker" in navigator)) return;
+    // Tras force-reload: volver a registrar SW limpio
     navigator.serviceWorker
-      .register("/sw.js?v=8")
+      .register("/sw.js?v=12")
       .then(function (reg) {
+        try {
+          reg.update();
+        } catch (e) {}
         reg.addEventListener("updatefound", function () {
           var nw = reg.installing;
           if (!nw) return;
           nw.addEventListener("statechange", function () {
             if (nw.state === "installed" && navigator.serviceWorker.controller) {
               setBadge(true);
-              toast("Actualización lista. Aplicando…");
-              setTimeout(function () {
-                applyUpdate({ reason: "sw-updatefound", force: false });
-              }, 1200);
             }
           });
         });
-        try {
-          reg.update();
-        } catch (e) {}
       })
       .catch(function () {});
-
-    var refreshing = false;
-    navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    });
   }
 
   function boot() {
@@ -260,7 +280,7 @@
       },
       setReady: setBadge,
     };
-    log("CI/CD header mockup", VERSION);
+    log("force-reload activo", VERSION);
   }
 
   if (document.readyState === "loading") {

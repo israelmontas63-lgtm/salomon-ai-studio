@@ -257,11 +257,12 @@ body > #salomon-update-btn {
   display: none !important;
 }
 
-/* Marca bajo logo (maqueta) — compacta dentro de 56px */
+/* Marca bajo logo — no pisar position:absolute del eje óptico */
 html.salomon-mockup-ui .studio-header .header-brand {
   flex-direction: column !important;
   gap: 0 !important;
   line-height: 1 !important;
+  /* position/left/transform ya definidos en bloque eje óptico */
 }
 
 html.salomon-mockup-ui .studio-header .header-brand::after {
