@@ -28,7 +28,10 @@
 
   function pulse(pattern) {
     try {
-      if (navigator.vibrate) navigator.vibrate(pattern);
+      if (!navigator.vibrate) return;
+      // Chrome bloquea vibrate sin gesto de usuario (evita ruido en consola)
+      if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+      navigator.vibrate(pattern);
     } catch (e) { /* noop */ }
   }
 

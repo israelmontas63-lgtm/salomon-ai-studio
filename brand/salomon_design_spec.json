@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "name": "Salomón AI — Interfaz blindada",
   "strict_mode": true,
   "validation_on_fail": "ABORT_AND_REVERT",
@@ -31,7 +31,16 @@
     "layout_css": "/assets/index-CJUgt2ya.css",
     "layout_js": "/assets/index-BdcDx9nN.js"
   },
+  "audit": {
+    "live_http": "pass",
+    "identity_pixel": "pass",
+    "orchestrator": "pass",
+    "ui_shield": "pass",
+    "python_import": "pass",
+    "deps": ["fastapi", "uvicorn", "chromadb", "PIL"],
+    "fix_applied": "vibrate_requires_user_activation"
+  },
   "validated_live": true,
   "live_url": "https://salomon-ai-studio-1.onrender.com",
-  "commit_label": "Interfaz blindada v1.1"
+  "commit_label": "Interfaz blindada v1.2"
 }

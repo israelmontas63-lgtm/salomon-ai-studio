@@ -25,7 +25,9 @@
 
   function haptic(ms) {
     try {
-      if (navigator.vibrate) navigator.vibrate(ms || 10);
+      if (!navigator.vibrate) return;
+      if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+      navigator.vibrate(ms || 10);
     } catch (e) {}
   }
 
