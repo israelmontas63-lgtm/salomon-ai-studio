@@ -452,3 +452,61 @@ html.salomon-ui-shield .ui-bubble-menu button {
   cursor: pointer;
   padding: 4px 6px !important;
 }
+
+/* ========== PASO 3 — fidelidad maqueta aprobada (estética fija) ========== */
+html.salomon-ui-shield,
+html.salomon-mockup-ui {
+  --dorado: #c9a227;
+  --dorado-claro: #e8c860;
+  --plateado: #c0c0c0;
+  --cobrizo: #b87333;
+  --fondo-negro: #0a0a0a;
+}
+
+/* Header: no recortar logo 70px; menús 40px como maqueta */
+html.salomon-ui-shield .studio-header,
+html.salomon-mockup-ui .studio-header {
+  height: 88px !important;
+  min-height: 88px !important;
+  overflow: visible !important;
+  padding: 8px 14px !important;
+}
+
+html.salomon-ui-shield .studio-header .header-menu-btn,
+html.salomon-mockup-ui .studio-header .header-menu-btn,
+html.salomon-mockup-ui .studio-header .header-menu-btn:first-of-type,
+html.salomon-mockup-ui .studio-header .header-menu-btn:last-of-type {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--dorado) !important;
+  background: rgba(20, 20, 20, 0.6) !important;
+  box-shadow: 0 0 8px rgba(201, 162, 39, 0.5) !important;
+}
+
+html.salomon-ui-shield .studio-header .vinyl-card,
+html.salomon-ui-shield .studio-header .vinyl-card__disc,
+html.salomon-mockup-ui .studio-header .vinyl-card,
+html.salomon-mockup-ui .studio-header .vinyl-card__disc {
+  width: 70px !important;
+  height: 70px !important;
+}
+
+/* Chat fondo negro limpio */
+html.salomon-ui-shield .chat-body,
+html.salomon-ui-shield .chat-scroll {
+  background: var(--fondo-negro) !important;
+}
+
+/* Glass menús: items dorados */
+html.salomon-ui-shield .glass-panel button,
+html.salomon-ui-shield .glass-panel a,
+html.salomon-ui-shield .glass-panel .menu-item {
+  color: var(--dorado-claro) !important;
+}
+
+/* Cámara activa: central = icono cámara (disparador) — estética maqueta */
+html.salomon-cam-mode .controls-row .control-btn--main.is-cam-shutter .ui-shutter-cam-icon {
+  display: block !important;
+}

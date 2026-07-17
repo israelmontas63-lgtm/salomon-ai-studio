@@ -1452,6 +1452,7 @@
 
   function boot() {
     document.documentElement.classList.add("salomon-ui-shield");
+    document.documentElement.classList.add("salomon-mockup-ui");
     installCaptureEventWall();
     tick();
     var n = 0;
@@ -1478,7 +1479,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo cam-clean-270");
+    log("activo estructura-280");
   }
 
   if (document.readyState === "loading") {
@@ -1488,7 +1489,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "cam-clean-270",
+    version: "estructura-280",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,
