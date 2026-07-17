@@ -1,7 +1,7 @@
-{
-  "version": "2.6.0",
-  "timestamp": 1752774000,
-  "timestamp_iso": "2026-07-17T16:50:00Z",
+﻿{
+  "version": "2.7.0",
+  "timestamp": 1752775200,
+  "timestamp_iso": "2026-07-17T17:20:00Z",
   "channel": "main",
-  "label": "maqueta-limpia-live"
+  "label": "pinch-zoom-neural-clean"
 }

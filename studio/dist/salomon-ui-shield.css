@@ -773,12 +773,22 @@ html.salomon-cam-selfie .controls-row .ui-smart-cam-btn.is-selfie-phase {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  touch-action: none;
 }
 
 #ui-camera-overlay video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* Espejo selfie: base; el zoom lo aplica el shield vía transform inline */
+#ui-camera-overlay.is-selfie video,
+html.salomon-cam-selfie #ui-camera-overlay video {
+  /* scaleX se combina en JS con zoom; fallback sin JS: */
+  transform: scaleX(-1);
 }
 
 html.salomon-cam-mode .ui-smart-button {

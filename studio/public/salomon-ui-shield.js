@@ -24,7 +24,11 @@
     openSeq: 0,
     flipSeq: 0,
     agentLockTimer: 0,
+    zoom: 1,
+    pinch: { active: false, startDist: 0, startZoom: 1, moved: false },
   };
+  var ZOOM_MIN = 1;
+  var ZOOM_MAX = 4;
   var audio = { ctx: null, analyser: null, src: null, raf: 0, stream: null };
   var swapLock = false;
   var writeLock = false;
@@ -47,6 +51,7 @@
     var now = Date.now();
     if (now - lastShotAt < SHOT_COOLDOWN_MS) return false;
     if (!camera.open || camera.capturing) return false;
+    if (camera.pinch.active || camera.pinch.moved) return false;
     // Selfie: permitir foto aunque flipping aún corra (si hay video)
     if (camera.flipping && camera.phase !== "selfie") return false;
     lastShotAt = now;
@@ -245,8 +250,8 @@
     if (cam.dataset.uiCam !== "1") {
       cam.dataset.uiCam = "1";
       cam.classList.add("ui-smart-cam-btn", "boton-camara");
-      cam.setAttribute("aria-label", "Cámara");
-      cam.title = "Cámara — trasera → selfie → cerrar";
+      cam.setAttribute("aria-label", " ");
+      cam.removeAttribute("title");
       function onCamGesture(e) {
         if (!isPrimaryGesture(e)) return;
         if (e.cancelable) e.preventDefault();
@@ -429,7 +434,7 @@
     } catch (e) {}
   }
 
-  /** Controles permitidos en CAPTURA (resto del DOM = muro) */
+  /** Controles + preview permitidos en CAPTURA (resto del DOM = muro) */
   function isCaptureExemptTarget(t) {
     if (!t || !t.closest) return false;
     return !!(
@@ -444,6 +449,9 @@
       t.closest(".ui-camera-close") ||
       t.closest("#ui-smart-button") ||
       t.closest(".ui-smart-button") ||
+      t.closest("#ui-camera-overlay") ||
+      t.closest(".ui-camera-stage") ||
+      t.closest(".neural-camera") ||
       t.closest("#salomon-update-btn") ||
       t.closest(".salomon-update-slot")
     );
@@ -492,9 +500,13 @@
 
     function onScreenShutter(e) {
       if (!camera.open) return;
-      if (isCaptureExemptTarget(e.target)) return;
+      if (camera.pinch.active || camera.pinch.moved) return;
+      if (isCaptureExemptTarget(e.target) && !isScreenShutterTarget(e.target)) return;
       if (!isPrimaryGesture(e)) return;
       if (!isScreenShutterTarget(e.target)) return;
+      // 2 dedos = pellizco, no foto
+      if (e.touches && e.touches.length > 0) return;
+      if (e.changedTouches && e.changedTouches.length > 1) return;
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
       e.stopPropagation();
@@ -711,6 +723,7 @@
   function enterSelfieMode() {
     camera.phase = "selfie";
     camera.facing = "user";
+    resetCameraZoom();
     log("ciclo → selfie (espejo)");
     haptic(8);
     syncCameraUiState();
@@ -799,6 +812,7 @@
       }
     });
     updateCamActiveBadge();
+    applyCameraZoom(camera.zoom || 1);
   }
 
   function toggleCameraDirection() {
@@ -924,6 +938,99 @@
     }
   }
 
+  function touchDistance(t0, t1) {
+    var dx = t0.clientX - t1.clientX;
+    var dy = t0.clientY - t1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function clampZoom(z) {
+    return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+  }
+
+  function applyCameraZoom(z) {
+    camera.zoom = clampZoom(z);
+    var video = camera.videoEl || document.querySelector("#ui-camera-overlay video");
+    var stage = document.querySelector("#ui-camera-overlay .ui-camera-stage");
+    if (video) {
+      video.style.transformOrigin = "center center";
+      var mirror = camera.phase === "selfie" || camera.facing === "user";
+      video.style.transform = (mirror ? "scaleX(-1) " : "") + "scale(" + camera.zoom + ")";
+    }
+    if (stage) stage.dataset.zoom = String(camera.zoom.toFixed(2));
+
+    // Zoom óptico/hardware si el track lo soporta (cámara trasera)
+    try {
+      var track = camera.stream && camera.stream.getVideoTracks && camera.stream.getVideoTracks()[0];
+      if (track && typeof track.getCapabilities === "function") {
+        var caps = track.getCapabilities() || {};
+        if (caps.zoom) {
+          var min = caps.zoom.min || 1;
+          var max = caps.zoom.max || ZOOM_MAX;
+          var hw = min + ((camera.zoom - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN)) * (max - min);
+          track.applyConstraints({ advanced: [{ zoom: hw }] }).catch(function () {});
+        }
+      }
+    } catch (e) {}
+  }
+
+  function resetCameraZoom() {
+    camera.zoom = 1;
+    camera.pinch.active = false;
+    camera.pinch.moved = false;
+    camera.pinch.startDist = 0;
+    camera.pinch.startZoom = 1;
+    applyCameraZoom(1);
+  }
+
+  /** Pellizco en preview: abrir = zoom in · cerrar = zoom out (sobre todo trasera) */
+  function installPinchZoom(stage) {
+    if (!stage || stage.dataset.uiPinch === "1") return;
+    stage.dataset.uiPinch = "1";
+
+    function onStart(e) {
+      if (!camera.open) return;
+      if (!e.touches || e.touches.length < 2) return;
+      camera.pinch.active = true;
+      camera.pinch.moved = false;
+      camera.pinch.startDist = touchDistance(e.touches[0], e.touches[1]);
+      camera.pinch.startZoom = camera.zoom || 1;
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+    }
+
+    function onMove(e) {
+      if (!camera.open || !camera.pinch.active) return;
+      if (!e.touches || e.touches.length < 2) return;
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+      var dist = touchDistance(e.touches[0], e.touches[1]);
+      if (!camera.pinch.startDist) return;
+      var ratio = dist / camera.pinch.startDist;
+      if (Math.abs(ratio - 1) > 0.03) camera.pinch.moved = true;
+      // Abrir dedos → acerca; cerrar → aleja / normal
+      applyCameraZoom(camera.pinch.startZoom * ratio);
+    }
+
+    function onEnd(e) {
+      if (!camera.pinch.active) return;
+      if (e.touches && e.touches.length >= 2) return;
+      camera.pinch.active = false;
+      // Evitar foto al soltar el pellizco
+      if (camera.pinch.moved) {
+        lastShotAt = Date.now();
+        setTimeout(function () {
+          camera.pinch.moved = false;
+        }, 320);
+      }
+    }
+
+    stage.addEventListener("touchstart", onStart, CAPTURE_OPTS);
+    stage.addEventListener("touchmove", onMove, CAPTURE_OPTS);
+    stage.addEventListener("touchend", onEnd, CAPTURE_OPTS);
+    stage.addEventListener("touchcancel", onEnd, CAPTURE_OPTS);
+  }
+
   function capturePhoto() {
     if (!camera.open || camera.capturing) return;
     // En selfie permitir foto aunque el flip aún termine (si hay frame)
@@ -940,15 +1047,22 @@
     haptic([6, 12, 6]);
     try {
       var canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth || 720;
-      canvas.height = video.videoHeight || 1280;
+      var vw = video.videoWidth || 720;
+      var vh = video.videoHeight || 1280;
+      canvas.width = vw;
+      canvas.height = vh;
       var ctx = canvas.getContext("2d");
       var selfie = camera.phase === "selfie" || camera.facing === "user";
+      var z = clampZoom(camera.zoom || 1);
+      var sw = vw / z;
+      var sh = vh / z;
+      var sx = (vw - sw) / 2;
+      var sy = (vh - sh) / 2;
       if (selfie) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, vw, vh);
       var dataUrl = canvas.toDataURL("image/jpeg", 0.88);
       var blob = dataUrlToBlob(dataUrl);
       camera.capturing = false;
@@ -963,6 +1077,7 @@
         deferChat: true,
         cameraOnly: true,
         phase: camera.phase,
+        zoom: z,
       };
       window.dispatchEvent(new CustomEvent("salomon:ui-photo", { detail: detail }));
       log("foto OK (agente bloqueado)", detail.facing, camera.phase);
@@ -995,6 +1110,7 @@
   /** Preview: toque = disparo (refuerzo; muro document también cubre) */
   function bindStageShutter(stage) {
     function onTap(ev) {
+      if (camera.pinch.active || camera.pinch.moved) return;
       if (ev.target && ev.target.closest && ev.target.closest(".ui-smart-button, .ui-camera-close")) {
         return;
       }
@@ -1077,12 +1193,14 @@
         stage.className = "ui-camera-stage";
         stage.appendChild(video);
         bindStageShutter(stage);
+        installPinchZoom(stage);
+        resetCameraZoom();
 
         var smart = document.createElement("button");
         smart.type = "button";
         smart.className = "ui-smart-button";
         smart.id = "ui-smart-button";
-        smart.setAttribute("aria-label", "Disparar");
+        smart.setAttribute("aria-label", " ");
         smart.removeAttribute("title");
         smart.innerHTML =
           '<span class="ui-smart-button__ring-plata" aria-hidden="true"></span>' +
@@ -1164,6 +1282,9 @@
     camera.flipping = false;
     camera.videoEl = null;
     camera.phase = "closed";
+    camera.zoom = 1;
+    camera.pinch.active = false;
+    camera.pinch.moved = false;
     if (!silent) camera.facing = "environment";
     document.documentElement.classList.remove("salomon-cam-mode", "salomon-cam-selfie");
     if (!silent) unlockAgent();
@@ -1357,7 +1478,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo cam-clean-260");
+    log("activo cam-clean-270");
   }
 
   if (document.readyState === "loading") {
@@ -1367,7 +1488,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "cam-clean-260",
+    version: "cam-clean-270",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,
@@ -1375,6 +1496,7 @@
     capturePhoto: capturePhoto,
     syncCameraUiState: syncCameraUiState,
     syncWritingUiState: syncWritingUiState,
+    applyCameraZoom: applyCameraZoom,
   };
 })();
 
