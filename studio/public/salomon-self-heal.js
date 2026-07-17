@@ -171,7 +171,7 @@
 
     if (hard || healCount >= MAX_HEALS) {
       setTimeout(function () {
-        var url = "/?_salomon_heal=" + Date.now() + "&_v=2.0.2";
+        var url = "/?_salomon_heal=" + Date.now() + "&_v=2.0.4";
         window.location.replace(url);
       }, 350);
       return;

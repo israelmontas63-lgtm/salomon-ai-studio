@@ -1531,6 +1531,12 @@ def salomon_ui_shield_js() -> FileResponse:
     return _archivo_studio("salomon-ui-shield.js", "application/javascript")
 
 
+@app.get("/salomon-self-heal.js")
+def salomon_self_heal_js() -> FileResponse:
+    """Autosaneamiento: evaluateHealth + forceReset + Default Layout."""
+    return _archivo_studio("salomon-self-heal.js", "application/javascript")
+
+
 @app.get("/salomon-orchestrator-bridge.js")
 def salomon_orchestrator_bridge_js() -> FileResponse:
     """Capa 1 Bridge: estados + cancelación sobre UI estable."""
