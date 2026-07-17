@@ -39,3 +39,9 @@ data/modelos/
 *.log
 tmp/
 temp/
+
+# Basura local
+node_modules/
+_integrity_backup_dist/
+/index.html
+

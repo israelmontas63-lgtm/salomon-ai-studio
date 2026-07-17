@@ -7,7 +7,7 @@
   "use strict";
 
   var TAG = "Salomón AI";
-  var VERSION = "self-heal-2.0.0";
+  var VERSION = "self-heal-2.0.1";
   var CHECK_MS = 2200;
   var MAX_HEALS = 2;
   var healCount = 0;
@@ -162,7 +162,7 @@
     if (hard || healCount >= MAX_HEALS) {
       logStatus("ERROR", "Healed");
       setTimeout(function () {
-        var url = "/?_salomon_heal=" + Date.now() + "&_v=2.0.0";
+        var url = "/?_salomon_heal=" + Date.now() + "&_v=2.0.1";
         window.location.replace(url);
       }, 350);
       return;
