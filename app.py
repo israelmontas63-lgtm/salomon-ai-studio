@@ -376,7 +376,8 @@ def _leer_version_json() -> dict:
     }
     try:
         if ruta.is_file():
-            raw = json.loads(ruta.read_text(encoding="utf-8"))
+            texto = ruta.read_text(encoding="utf-8-sig")
+            raw = json.loads(texto)
             if isinstance(raw, dict):
                 data.update(raw)
     except Exception:
