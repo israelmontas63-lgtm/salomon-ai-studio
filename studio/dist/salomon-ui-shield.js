@@ -1357,7 +1357,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo cam-clean-209");
+    log("activo cam-clean-260");
   }
 
   if (document.readyState === "loading") {
@@ -1367,7 +1367,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "cam-clean-209",
+    version: "cam-clean-260",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

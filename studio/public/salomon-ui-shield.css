@@ -696,6 +696,10 @@ html.salomon-cam-mode .ui-camera-overlay {
   z-index: 9999 !important;
   pointer-events: auto !important;
   bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  background: #000 !important;
 }
 
 html.salomon-cam-mode .bottom-bar {
@@ -820,7 +824,9 @@ html.salomon-cam-mode .ui-camera-hint {
 
 /* Indicador CÁMARA — oculto (pantalla limpia, sin textos) */
 .ui-camera-active-badge,
-.ui-camera-hint {
+.ui-camera-hint,
+html.salomon-cam-mode .ui-camera-close,
+html.salomon-cam-mode #ui-smart-button {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -1088,34 +1094,11 @@ html.salomon-ui-shield .camera-backdrop {
 }
 
 .ui-camera-close {
-  position: absolute;
-  z-index: 9;
-  top: calc(14px + env(safe-area-inset-top, 0px));
-  right: 14px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid rgba(212, 175, 55, 0.45);
-  background: rgba(0, 0, 0, 0.45);
-  color: #f0d78c;
-  font-size: 1.4rem;
-  line-height: 1;
-  cursor: pointer;
+  display: none !important;
 }
 
 .ui-camera-hint {
-  position: absolute;
-  z-index: 7;
-  bottom: calc(118px + env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(92vw, 360px);
-  text-align: center;
-  color: rgba(240, 215, 140, 0.9);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  pointer-events: none;
-  text-shadow: 0 1px 4px #000;
+  display: none !important;
 }
 
 /* ——— Burbujas: selección + menú ——— */

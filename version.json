@@ -1,7 +1,7 @@
 {
-  "version": "2.0.9",
-  "timestamp": 1752772800,
-  "timestamp_iso": "2026-07-17T16:35:00Z",
+  "version": "2.6.0",
+  "timestamp": 1752774000,
+  "timestamp_iso": "2026-07-17T16:50:00Z",
   "channel": "main",
-  "label": "cam-clean-silver"
+  "label": "maqueta-limpia-live"
 }

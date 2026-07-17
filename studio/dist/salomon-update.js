@@ -9,7 +9,7 @@
 
   var STORAGE_KEY = "salomon_version_manifest";
   var POLL_MS = 25000;
-  var VERSION_SCRIPT = "cam-2.0.9";
+  var VERSION_SCRIPT = "cam-2.6.0";
   var polling = false;
   var applying = false;
   var mountTries = 0;
@@ -295,7 +295,7 @@
 
   function registerSw() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=17").then(function (reg) {
+    navigator.serviceWorker.register("/sw.js?v=18").then(function (reg) {
       try {
         reg.update();
       } catch (e) {}
