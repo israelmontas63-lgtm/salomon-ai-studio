@@ -26,6 +26,7 @@
   var audio = { ctx: null, analyser: null, src: null, raf: 0, stream: null };
   var swapLock = false;
   var writeLock = false;
+  var closingWrite = false;
   var lastTap = 0;
   var lastCamTap = 0;
   var HOLD_CAPTURE_MS = 500;
@@ -148,16 +149,21 @@
       );
     }
 
-    // Escritura (Aa): React togglea el panel; shield cierra cámara y sincroniza activo
+    // Escritura (Aa): bloqueada en CAPTURA; en CHAT React togglea el panel
     if (textBtn.dataset.uiText !== "1") {
       textBtn.dataset.uiText = "1";
       textBtn.classList.add("ui-write-btn");
       textBtn.setAttribute("aria-label", "Texto");
       textBtn.addEventListener(
         "click",
-        function () {
+        function (e) {
+          // writeLock = cierre forzado del panel mientras CAPTURA (dejar pasar a React)
+          if (camera.open && !writeLock) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+          }
           if (writeLock) return;
-          if (camera.open) closeCamera();
           setTimeout(syncWritingUiState, 0);
           setTimeout(syncWritingUiState, 80);
         },
@@ -165,13 +171,14 @@
       );
     }
 
-    // Voz central: órbita + nube + audio (shutter si cámara abierta)
-    if (main && main.dataset.uiVoice !== "1") {
-      main.dataset.uiVoice = "1";
+    // Voz/disparador central: gate de exclusividad CAPTURA vs CHAT
+    if (main) {
       ensureVoiceFx(main);
-      wireVoiceGestures(main);
-    } else if (main) {
-      ensureVoiceFx(main);
+      wireMainShutterGate(main);
+      if (main.dataset.uiVoice !== "1") {
+        main.dataset.uiVoice = "1";
+        wireVoiceGestures(main);
+      }
     }
 
     polishInput();
@@ -192,29 +199,38 @@
   }
 
   function closeWritingIfOpen() {
-    if (!isWritingOpen()) return;
+    if (closingWrite || !isWritingOpen()) return;
     var btn = getTextBtn();
     if (!btn) return;
+    closingWrite = true;
     writeLock = true;
     try {
+      // Con writeLock el handler Aa deja pasar el click a React para desmontar el form
       btn.click();
     } catch (e) {}
     writeLock = false;
-    syncWritingUiState();
+    closingWrite = false;
+    document.documentElement.classList.remove("salomon-write-mode");
+    if (btn) btn.classList.remove("is-write-active");
   }
 
   function syncWritingUiState() {
     var open = isWritingOpen();
-    document.documentElement.classList.toggle("salomon-write-mode", open);
     var textBtn = getTextBtn();
+    // CAPTURA manda: si el form de chat sigue en DOM, cerrar solo escritura (no apagar captura)
+    if (open && camera.open) {
+      closeWritingIfOpen();
+      open = isWritingOpen();
+    }
     if (textBtn) {
       textBtn.classList.add("ui-write-btn");
-      textBtn.classList.toggle("is-write-active", open);
+      textBtn.classList.toggle("is-write-active", open && !camera.open);
       textBtn.setAttribute("aria-label", "Texto");
-      textBtn.title = open ? "Cerrar escritura" : "Escribe tu mensaje";
+      textBtn.title =
+        camera.open ? "Escritura bloqueada (modo captura)" : open ? "Cerrar escritura" : "Escribe tu mensaje";
     }
-    if (open && camera.open) closeCamera();
-    polishInput();
+    document.documentElement.classList.toggle("salomon-write-mode", open && !camera.open);
+    if (!camera.open) polishInput();
   }
 
   function ensureVoiceFx(btn) {
@@ -232,23 +248,60 @@
     }
   }
 
-  function wireVoiceGestures(btn) {
-    // Modo cámara activo: botón central = disparador (no voz)
-    function shutterFromVoice(e) {
-      if (!camera.open) return;
+  /** Cancela chat/voz antes de entrar en modo Captura */
+  function pauseChatForCapture() {
+    closeWritingIfOpen();
+    stopAudioReactive();
+    try {
+      if (window.SalomonBridge && typeof window.SalomonBridge.cancelAll === "function") {
+        window.SalomonBridge.cancelAll("camera-capture-mode");
+      }
+    } catch (e) {}
+    var main = document.querySelector(".controls-row .control-btn--main");
+    if (main) {
+      main.dataset.uiMode = "";
+      main.classList.remove("voice-btn--spinning", "control-btn--recording");
+      main.removeAttribute("data-button-state");
+    }
+    document.documentElement.classList.add("salomon-cam-mode");
+  }
+
+  /**
+   * Gate duro CAPTURA vs CHAT en el botón grande.
+   * camera.open → tomar_foto + React no recibe el gesto
+   * !camera.open → no interceptar (VoiceButton / chat)
+   */
+  function wireMainShutterGate(main) {
+    if (!main || main.dataset.uiShutterGate === "1") return;
+    main.dataset.uiShutterGate = "1";
+    var wrap = main.closest(".voice-btn-wrap") || main;
+    var lastShot = 0;
+    var targets = wrap === main ? [main] : [wrap, main];
+
+    function gate(e) {
+      if (!camera.open) return; // modo CHAT
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
+      e.stopPropagation();
+      // Disparo solo en down/start (no en up/click duplicado)
+      if (e.type === "pointerup" || e.type === "touchend" || e.type === "click") return;
+      if (e.type === "pointerdown" && e.pointerType === "touch") return;
+      var now = Date.now();
+      if (now - lastShot < 480) return;
+      lastShot = now;
+      log("disparador → tomar_foto");
       capturePhoto();
     }
-    btn.addEventListener("touchstart", shutterFromVoice, CAPTURE_OPTS);
-    btn.addEventListener(
-      "pointerdown",
-      function (e) {
-        if (e.pointerType === "touch") return;
-        shutterFromVoice(e);
-      },
-      true
-    );
+
+    ["touchstart", "pointerdown", "touchend", "pointerup", "click"].forEach(function (type) {
+      targets.forEach(function (el) {
+        el.addEventListener(type, gate, CAPTURE_OPTS);
+      });
+    });
+  }
+
+  function wireVoiceGestures(btn) {
+    // Solo feedback visual en modo CHAT (CAPTURA lo corta el shutter gate)
     btn.addEventListener(
       "click",
       function (e) {
@@ -270,7 +323,7 @@
           startAudioReactive(btn);
         } else {
           setTimeout(function () {
-            if (Date.now() - lastTap >= 300) {
+            if (Date.now() - lastTap >= 300 && !camera.open) {
               btn.dataset.uiMode = "dictation";
               startAudioReactive(btn);
             }
@@ -381,7 +434,7 @@
       closeCamera();
       return;
     }
-    closeWritingIfOpen();
+    pauseChatForCapture();
     openNeuralCamera({ mode: "photo" });
   }
 
@@ -406,7 +459,20 @@
     var main = document.querySelector(".controls-row .control-btn--main");
     if (main) {
       main.classList.toggle("is-cam-shutter", active);
-      if (active) main.title = "Disparar foto";
+      if (active) {
+        main.title = "Disparar foto";
+        main.setAttribute("aria-label", "Disparador");
+        main.dataset.captureMode = "1";
+      } else {
+        main.title = "Núcleo Salomón — dictado / conversación";
+        main.setAttribute("aria-label", "Núcleo Salomón — mantener dictado, doble conversación, toque cancela");
+        main.dataset.captureMode = "0";
+      }
+    }
+    var writeBtn = getTextBtn();
+    if (writeBtn) {
+      writeBtn.toggleAttribute("disabled", active);
+      writeBtn.setAttribute("aria-disabled", active ? "true" : "false");
     }
     updateCamActiveBadge();
   }
@@ -668,8 +734,11 @@
       camera.facing = "environment";
     }
     closeCamera(true);
+    // Tras cerrar residual: aislar chat/voz antes del stream
+    pauseChatForCapture();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       log("cámara no disponible");
+      document.documentElement.classList.remove("salomon-cam-mode");
       return;
     }
     var seq = ++camera.openSeq;
@@ -997,7 +1066,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo ui-final-1");
+    log("activo capture-gate-2");
   }
 
   if (document.readyState === "loading") {
@@ -1007,7 +1076,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "ui-final-1",
+    version: "capture-gate-2",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

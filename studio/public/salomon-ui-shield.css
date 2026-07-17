@@ -656,6 +656,25 @@ html.salomon-cam-mode .bottom-bar {
 
 html.salomon-cam-mode .controls-row .control-btn--main.is-cam-shutter {
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.65), 0 0 18px rgba(212, 175, 55, 0.4);
+  transform: scale(1.04);
+}
+
+/* CAPTURA: chat/escritura aislados — solo disparador + cerrar cámara */
+html.salomon-cam-mode .bottom-bar form.chat-input,
+html.salomon-cam-mode .bottom-bar .chat-input {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+html.salomon-cam-mode .controls-row .ui-write-btn,
+html.salomon-cam-mode .controls-row .control-btn[aria-label="Texto"] {
+  pointer-events: none !important;
+  opacity: 0.35 !important;
+}
+
+html.salomon-cam-mode .send-btn {
+  pointer-events: none !important;
 }
 
 /* Preview no tapa la franja del footer */

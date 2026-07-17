@@ -1,7 +1,7 @@
 {
-  "version": "1.5.2",
-  "timestamp": 1752709200,
-  "timestamp_iso": "2026-07-16T23:00:00Z",
+  "version": "1.5.3",
+  "timestamp": 1752713100,
+  "timestamp_iso": "2026-07-17T00:05:00Z",
   "channel": "main",
-  "label": "ui-final-cam-write"
+  "label": "capture-gate-2"
 }
