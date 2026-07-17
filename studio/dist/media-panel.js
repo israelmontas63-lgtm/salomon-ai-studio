@@ -125,7 +125,9 @@
     document.getElementById("sm-gen").onclick = async () => {
       const prompt = document.getElementById("sm-prompt").value.trim();
       if (!prompt) return;
-      setStatus("Generando imagen…");
+      const vp = window.__SalomonVisualProgress;
+      if (vp) vp.arm();
+      setStatus("Mejorando prompt HD…");
       document.getElementById("sm-preview").style.display = "none";
       try {
         const h = await apiKeyHeader();
@@ -173,6 +175,10 @@
           break;
         }
         if (!data) throw lastErr || new Error("sin datos");
+        if (vp) {
+          if (data.progreso_requerido) vp.start("Finalizando calidad HD…");
+          vp.stop();
+        }
         const motor =
           (data.routing && data.routing.motor) ||
           (data.resultado && data.resultado.motor) ||
@@ -181,9 +187,11 @@
           (data.routing && data.routing.calidad) ||
           (data.resultado && data.resultado.calidad) ||
           "pro_ultra";
+        const enh = data.motor_enhancer ? " · enhancer:" + data.motor_enhancer : "";
+        const lat = data.latencia_ms != null ? " · " + data.latencia_ms + "ms" : "";
         setStatus(
           data.exito
-            ? "Listo · " + motor + " · " + cal
+            ? "Listo · " + motor + " · " + cal + enh + lat
             : data.error || "Falló"
         );
         const b64 = data.resultado && data.resultado.imagen_base64;
@@ -198,6 +206,7 @@
           img.style.display = "block";
         }
       } catch (e) {
+        if (window.__SalomonVisualProgress) window.__SalomonVisualProgress.stop();
         setStatus("Error: " + (e.message || e));
       }
     };

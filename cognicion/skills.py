@@ -138,6 +138,13 @@ def _registrar_skills_internas() -> None:
         prioridad=45,
     ))
     registrar_skill(Skill(
+        id="multimodal_core",
+        nombre="Multimodal Core",
+        descripcion="HD Generator + Prompt Enhancer + Visual Scrapers",
+        intenciones=frozenset({Intencion.VISION, Intencion.CHAT, Intencion.INVESTIGACION}),
+        prioridad=35,
+    ))
+    registrar_skill(Skill(
         id="agente",
         nombre="Agente autónomo",
         descripcion="Correcciones en archivos del proyecto",

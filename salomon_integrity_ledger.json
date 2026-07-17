@@ -1,6 +1,6 @@
 {
   "protocol": "SALOMON_VIVIENTE",
-  "protocol_version": "60.0.0",
+  "protocol_version": "70.0.0",
   "parent_protocol": "NEURAL_INTEGRITY_LOCK",
   "architect": "Israel",
   "authorization_word": "AUTORIZADO",
@@ -28,7 +28,7 @@
       "studio/src/features/camera_v13/MediaStreamManager.js",
       "studio/src/features/camera_v13/CameraV13.jsx"
     ],
-    "golden_snapshot_id": "viviente_v60+cognitive_core+camera_engine_v20.1.0",
+    "golden_snapshot_id": "viviente_v70+multimodal+camera_engine_v20.1.0",
     "notes": "Cualquier drift de checksum vs file_signatures_sha256 = bloqueo sin AUTORIZADO."
   },
   "defense_layer": {
@@ -73,15 +73,15 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "fa611eabb3fb5a0298e46924ae93f02ec603a87b0e4fbe87cde8ba9416dfb611",
+    "app.py": "36c67389e7835366f974f75e44c8d3d4959e62c5acb258a5a5cf0b553326974d",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
-    "studio/dist/index.html": "07a1552fc991381dd085460a643bc56a3456ed0e44d4a3b61d163083212bd552",
+    "studio/dist/index.html": "5d9ea674f95f804edc27c0698a9910bd031377b6b01aeb78cb2183a56335ef80",
     "studio/dist/salomon-security-kernel.js": "66804a6fa7f41bbec296b29d37c4b4a6de766766b1006ec26ee8610037c70dfd",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
-    "version.json": "af550cac0977a0fbb2833b00bed92e4a02727384e2ff42224fb4202d4a5ca626"
+    "version.json": "bfb2b7382b8e37381cc8322062c14516f9f21f8d3d1b92fe3dae7f5e8f9e4b9e"
   },
   "invariants": [
     "MediaStreamManager.forceReset debe existir",
@@ -173,6 +173,13 @@
       "at": "2026-07-17T15:30:00-04:00",
       "by": "Israel+Cursor",
       "note": "CoT APVE + Universal Code Engine + empatia + code guardrails"
+    },
+    {
+      "version": "70.0.0",
+      "event": "MULTIMODAL_CORE_VISUAL_AGENTS",
+      "at": "2026-07-17T15:45:00-04:00",
+      "by": "Israel+Cursor",
+      "note": "Prompt Enhancer + HD Generator + Visual Scrapers + 5s progress under SystemGuard"
     }
   ]
 }

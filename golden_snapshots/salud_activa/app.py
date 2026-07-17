@@ -54,6 +54,8 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/tunel/estado",
         "/api/cognicion/vdcp/estado",
         "/api/cognicion/cognitive-core",
+        "/api/cognicion/multimodal",
+        "/api/media/estado",
     }
 )
 
@@ -456,6 +458,17 @@ def _salud_payload() -> dict:
         }
     except Exception:
         guard = {"active": False}
+    multimodal: dict = {"active": False}
+    try:
+        from cognicion.multimodal import estado_multimodal
+
+        multimodal = {
+            "active": True,
+            "version": "70.0.0",
+            "budget_ms": estado_multimodal().get("modules", {}).get("system_guard_budget_ms"),
+        }
+    except Exception:
+        multimodal = {"active": False}
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -465,6 +478,7 @@ def _salud_payload() -> dict:
         "live": True,
         "neural_integrity_lock": True,
         "system_guard": guard,
+        "multimodal": multimodal,
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
 
@@ -883,6 +897,31 @@ def cognicion_cognitive_core() -> dict:
         },
         "active": True,
     }
+
+
+@app.get("/api/cognicion/multimodal")
+def cognicion_multimodal() -> dict:
+    """Estado Multimodal Core & Visual Agents (v70)."""
+    from cognicion.multimodal import estado_multimodal
+
+    return estado_multimodal()
+
+
+class VisionBuscarRequest(BaseModel):
+    consulta: str = Field(..., min_length=1, max_length=2000)
+    generar_si_falta: bool = True
+    session_id: str | None = None
+
+
+@app.post("/api/cognicion/vision/buscar")
+def cognicion_vision_buscar(body: VisionBuscarRequest) -> dict:
+    """Agente de recuperación visual (scraper) + fallback HD."""
+    from cognicion.multimodal import ejecutar_con_presupuesto
+    from cognicion.vision.busqueda_visual import buscar_visual, recuperar_o_generar
+
+    if body.generar_si_falta:
+        return ejecutar_con_presupuesto(recuperar_o_generar, body.consulta)
+    return ejecutar_con_presupuesto(buscar_visual, body.consulta)
 
 
 @app.get("/api/nucleo/estado")
@@ -1320,7 +1359,14 @@ def api_media_route(body: MediaRouteRequest) -> dict:
         "routing": pack.get("routing"),
         "resultado": res,
         "activo_url": res.get("url_relativa"),
-        "protocolo": pack.get("protocolo"),
+        "protocolo": pack.get("protocolo") or "MULTIMODAL_CORE",
+        "version": pack.get("version") or "70.0.0",
+        "prompt_enhancer": pack.get("prompt_enhancer"),
+        "motor_enhancer": pack.get("motor_enhancer"),
+        "prompt_original": pack.get("prompt_original"),
+        "latencia_ms": pack.get("latencia_ms"),
+        "progreso_requerido": pack.get("progreso_requerido"),
+        "budget_ms": pack.get("budget_ms"),
         "session_id": body.session_id,
         "error": res.get("error"),
     }
@@ -1457,15 +1503,20 @@ async def api_media_editar_video(
 def api_media_estado() -> dict:
     from cognicion.media.media_engine import estado_media_routing
     from cognicion.media.video import OPERACIONES, _moviepy_disponible
-    from settings import OPENAI_API_KEY
+    from cognicion.multimodal import MEDIA_PROGRESS_BUDGET_MS, estado_multimodal
+    from settings import MEDIA_PROMPT_ENHANCER, OPENAI_API_KEY
 
     routing = estado_media_routing()
     ej = routing.get("routing_ejemplo") or {}
+    mm = estado_multimodal()
     return {
-        "protocolo": "multi_model_routing_pro_ultra",
+        "protocolo": "MULTIMODAL_CORE",
+        "version": "70.0.0",
         "hub": routing.get("hub"),
         "calidad_forzada": routing.get("calidad_forzada"),
         "forzar_pro": routing.get("forzar_pro"),
+        "prompt_enhancer": MEDIA_PROMPT_ENHANCER,
+        "progress_budget_ms": MEDIA_PROGRESS_BUDGET_MS,
         "motores": routing.get("motores"),
         "imagen": {
             "motor_legacy": "dall-e-3" if OPENAI_API_KEY else "local_placeholder",
@@ -1482,6 +1533,7 @@ def api_media_estado() -> dict:
             k: bool((v or {}).get("configurado"))
             for k, v in (routing.get("motores") or {}).items()
         },
+        "multimodal": mm,
     }
 
 
@@ -1608,6 +1660,11 @@ def _archivo_studio(
 @app.get("/media-panel.js")
 def media_panel_js() -> FileResponse:
     return _archivo_studio("media-panel.js", "application/javascript")
+
+
+@app.get("/visual-progress.js")
+def visual_progress_js() -> FileResponse:
+    return _archivo_studio("visual-progress.js", "application/javascript")
 
 
 @app.get("/bca-indicator.js")

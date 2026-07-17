@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T19:30:00Z",
-  "timestamp": 1752790200,
-  "version": "60.0.0",
+  "timestamp_iso": "2026-07-17T19:45:00Z",
+  "timestamp": 1752791100,
+  "version": "70.0.0",
   "channel": "main",
-  "label": "cognitive-core-coding-engine",
+  "label": "multimodal-core-visual-agents",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "COGNITIVE_CORE_CODING_ENGINE",
-  "notes": "CoT APVE + Universal Code Engine + empatía cognitiva + code guardrails. Camera Golden State untouched."
+  "protocol": "MULTIMODAL_CORE",
+  "notes": "HD Generator + Prompt Enhancer + Visual Scrapers under SystemGuard 5s progress budget. Camera Golden State untouched."
 }

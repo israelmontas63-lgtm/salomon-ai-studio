@@ -102,6 +102,9 @@ MEDIA_FORZAR_PRO = os.getenv("MEDIA_FORZAR_PRO", "true").strip().lower() in (
 )
 MEDIA_PREFER_IMAGEN = os.getenv("MEDIA_PREFER_IMAGEN", "flux").strip().lower()
 MEDIA_PREFER_VIDEO = os.getenv("MEDIA_PREFER_VIDEO", "runway").strip().lower()
+MEDIA_PROMPT_ENHANCER = os.getenv("MEDIA_PROMPT_ENHANCER", "true").strip().lower() in (
+    "1", "true", "yes", "on",
+)
 FLUX_API_KEY = os.getenv("FLUX_API_KEY", "").strip()
 FLUX_API_URL = os.getenv("FLUX_API_URL", "").strip()
 FLUX_MODEL = os.getenv("FLUX_MODEL", "flux-1-pro").strip()

@@ -109,11 +109,19 @@ _MARCAS_IMAGEN = (
     "fotorreal",
     "ilustra",
     "dibuja",
+    "boceto",
+    "genera",
+    "crear imagen",
+    "alta definición",
+    "alta definicion",
+    "hd",
     "flux",
     "midjourney",
     "mj",
     "render",
     "retrato",
+    "dall-e",
+    "dalle",
 )
 
 
@@ -528,93 +536,117 @@ def bridge_colsub_media(
     hint: str | None = None,
     imagen_entrada: str | None = None,
     forzar_motor: str | None = None,
+    mejorar_prompt_flag: bool = True,
 ) -> dict[str, Any]:
     """
-    Bridge: prompt → Orquestador de routing → motor Pro/Ultra → activo.
+    Bridge: prompt → Prompt Enhancer → Orquestador de routing → motor Pro/Ultra.
     """
-    cfg = _cfg_media()
-    tarea = clasificar_tarea(prompt, hint)
-    seleccion = seleccionar_motor(tarea, cfg)
-    if forzar_motor:
-        seleccion["motor"] = forzar_motor.strip().lower()
-        seleccion["listo"] = True
+    from cognicion.multimodal import ejecutar_con_presupuesto
 
-    motor = seleccion["motor"]
-    resultado: dict[str, Any]
+    def _pipeline() -> dict[str, Any]:
+        cfg = _cfg_media()
+        tarea = clasificar_tarea(prompt, hint)
+        prompt_trabajo = (prompt or "").strip()
+        enhancer_meta: dict[str, Any] = {}
+        if mejorar_prompt_flag and tarea in {"imagen_hd", "video_gen"}:
+            from cognicion.media.prompt_enhancer import mejorar_prompt
 
-    if tarea == "imagen_hd":
-        if motor == "flux":
-            resultado = _llamar_flux(prompt, cfg)
-            if not resultado.get("exito"):
-                # Failover Midjourney → DALL·E
-                alt = _llamar_midjourney(prompt, cfg)
-                if alt.get("exito"):
-                    resultado = {**alt, "failover_desde": "flux"}
-                else:
-                    from cognicion.media.imagen import generar_imagen
+            enh = mejorar_prompt(prompt_trabajo, video=(tarea == "video_gen"))
+            enhancer_meta = {
+                "prompt_enhancer": True,
+                "motor_enhancer": enh.get("motor"),
+                "prompt_original": enh.get("prompt_original"),
+            }
+            if enh.get("prompt_mejorado"):
+                prompt_trabajo = str(enh["prompt_mejorado"])
 
-                    fb = generar_imagen(prompt, quality="hd")
-                    resultado = {
-                        **fb,
-                        "failover_desde": "flux",
-                        "calidad": "pro_ultra",
-                        "aviso": resultado.get("error") or fb.get("aviso"),
-                    }
-        elif motor == "midjourney":
-            resultado = _llamar_midjourney(prompt, cfg)
-            if not resultado.get("exito"):
-                alt = _llamar_flux(prompt, cfg)
-                resultado = alt if alt.get("exito") else resultado
+        seleccion = seleccionar_motor(tarea, cfg)
+        if forzar_motor:
+            seleccion["motor"] = forzar_motor.strip().lower()
+            seleccion["listo"] = True
+
+        motor = seleccion["motor"]
+        resultado: dict[str, Any]
+
+        if tarea == "imagen_hd":
+            if motor == "flux":
+                resultado = _llamar_flux(prompt_trabajo, cfg)
                 if not resultado.get("exito"):
-                    from cognicion.media.imagen import generar_imagen
+                    alt = _llamar_midjourney(prompt_trabajo, cfg)
+                    if alt.get("exito"):
+                        resultado = {**alt, "failover_desde": "flux"}
+                    else:
+                        from cognicion.media.imagen import generar_imagen
 
-                    resultado = {
-                        **generar_imagen(prompt, quality="hd"),
-                        "failover_desde": "midjourney",
-                    }
-        else:
-            from cognicion.media.imagen import generar_imagen
+                        fb = generar_imagen(prompt_trabajo, quality="hd", estilo_marca=False)
+                        resultado = {
+                            **fb,
+                            "failover_desde": "flux",
+                            "calidad": "pro_ultra",
+                            "aviso": resultado.get("error") or fb.get("aviso"),
+                        }
+            elif motor == "midjourney":
+                resultado = _llamar_midjourney(prompt_trabajo, cfg)
+                if not resultado.get("exito"):
+                    alt = _llamar_flux(prompt_trabajo, cfg)
+                    resultado = alt if alt.get("exito") else resultado
+                    if not resultado.get("exito"):
+                        from cognicion.media.imagen import generar_imagen
 
-            resultado = {
-                **generar_imagen(prompt, quality="hd"),
-                "calidad": "pro_ultra",
-            }
+                        resultado = {
+                            **generar_imagen(prompt_trabajo, quality="hd", estilo_marca=False),
+                            "failover_desde": "midjourney",
+                        }
+            else:
+                from cognicion.media.imagen import generar_imagen
 
-    elif tarea == "video_gen":
-        if motor == "runway":
-            resultado = _llamar_runway(prompt, cfg)
-            if not resultado.get("exito"):
-                alt = _llamar_kling(prompt, cfg)
-                resultado = alt if alt.get("exito") else resultado
-        elif motor == "kling":
-            resultado = _llamar_kling(prompt, cfg)
-            if not resultado.get("exito"):
-                alt = _llamar_runway(prompt, cfg)
-                resultado = alt if alt.get("exito") else resultado
-        else:
-            resultado = {
-                "exito": False,
-                "error": "video_pro_no_configurado",
-                "aviso": seleccion.get("aviso"),
-                "motor": motor,
-            }
+                resultado = {
+                    **generar_imagen(prompt_trabajo, quality="hd", estilo_marca=False),
+                    "calidad": "pro_ultra",
+                }
 
-    else:  # postproceso
-        if motor == "krea":
-            resultado = _llamar_krea(prompt, imagen_entrada, cfg)
-            if not resultado.get("exito"):
-                resultado = _postproceso_local(imagen_entrada, prompt)
-        else:
-            resultado = _postproceso_local(imagen_entrada, prompt)
+        elif tarea == "video_gen":
+            if motor == "runway":
+                resultado = _llamar_runway(prompt_trabajo, cfg)
+                if not resultado.get("exito"):
+                    alt = _llamar_kling(prompt_trabajo, cfg)
+                    resultado = alt if alt.get("exito") else resultado
+            elif motor == "kling":
+                resultado = _llamar_kling(prompt_trabajo, cfg)
+                if not resultado.get("exito"):
+                    alt = _llamar_runway(prompt_trabajo, cfg)
+                    resultado = alt if alt.get("exito") else resultado
+            else:
+                resultado = {
+                    "exito": False,
+                    "error": "video_pro_no_configurado",
+                    "aviso": seleccion.get("aviso"),
+                    "motor": motor,
+                }
 
-    return {
-        "exito": bool(resultado.get("exito")),
-        "tarea": tarea,
-        "routing": seleccion,
-        "resultado": resultado,
-        "protocolo": "multi_model_routing_pro_ultra",
-        "hub": "colsub_media",
-    }
+        else:  # postproceso
+            if motor == "krea":
+                resultado = _llamar_krea(prompt_trabajo, imagen_entrada, cfg)
+                if not resultado.get("exito"):
+                    resultado = _postproceso_local(imagen_entrada, prompt_trabajo)
+            else:
+                resultado = _postproceso_local(imagen_entrada, prompt_trabajo)
+
+        if isinstance(resultado, dict):
+            resultado["prompt_usado"] = prompt_trabajo
+
+        return {
+            "exito": bool(resultado.get("exito")),
+            "tarea": tarea,
+            "routing": seleccion,
+            "resultado": resultado,
+            "protocolo": "MULTIMODAL_CORE",
+            "hub": "colsub_media",
+            "version": "70.0.0",
+            **enhancer_meta,
+        }
+
+    return ejecutar_con_presupuesto(_pipeline)
 
 
 def estado_media_routing() -> dict[str, Any]:
