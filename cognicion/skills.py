@@ -119,9 +119,23 @@ def _registrar_skills_internas() -> None:
     registrar_skill(Skill(
         id="razonamiento_cot",
         nombre="Razonamiento CoT",
-        descripcion="Chain of Thought para tareas técnicas",
+        descripcion="Chain of Thought APVE para tareas técnicas",
         intenciones=frozenset({Intencion.TECNICO, Intencion.ERROR, Intencion.AGENTE}),
         prioridad=50,
+    ))
+    registrar_skill(Skill(
+        id="empatia_cognitiva",
+        nombre="Empatía cognitiva",
+        descripcion="Ajuste de tono emocional del turno",
+        intenciones=frozenset(),
+        prioridad=15,
+    ))
+    registrar_skill(Skill(
+        id="universal_code_engine",
+        nombre="Universal Code Engine",
+        descripcion="Ingeniería de software + matemática sandbox",
+        intenciones=frozenset({Intencion.TECNICO, Intencion.AGENTE, Intencion.ERROR}),
+        prioridad=45,
     ))
     registrar_skill(Skill(
         id="agente",

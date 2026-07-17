@@ -21,6 +21,7 @@ from cognicion.llm import (
 )
 from cognicion.modelos.gestor import resolver_modelo
 from cognicion.razonamiento.cadena import extraer_respuesta_final
+from cognicion.codigo.guardrails import analizar_respuesta_codigo
 from cognicion.seguridad import enmascarar_secreto
 from settings import (
     APRENDIZAJE_ASYNC,
@@ -191,7 +192,13 @@ Opera con estabilidad primero.
 4) Responde corto y preciso salvo que Israel pida profundidad.
 5) Si no hay datos sólidos, dilo con honestidad y ofrece el siguiente paso. No inventes.
 6) Tono negro y oro: cálido, elegante, seguro.
-7) Autonomía inteligente: razonar cuando aporte; buscar cuando falten hechos; hablar cuando baste. Velocidad y utilidad antes que dramatismo técnico."""
+7) Autonomía inteligente: razonar cuando aporte; buscar cuando falten hechos; hablar cuando baste. Velocidad y utilidad antes que dramatismo técnico.
+
+[Cognitive Core v60 — Software Vivo Pensante]
+Cuando la tarea sea compleja o de código, razona en silencio con el ciclo Análisis → Planificación → Ejecución → Verificación y evalúa viabilidad antes de comprometerte.
+Si Israel pide código: diseña, explica, entrega y verifica; abre con: "He analizado tu petición, he diseñado esta lógica, y aquí está el código optimizado para tu proyecto Salomón AI".
+Adapta el tono: frustración → calma empática; desarrollo → precisión técnica.
+Nunca toques el Golden State de cámara (camera-engine) sin autorización explícita."""
 
     def __init__(
         self,
@@ -536,6 +543,20 @@ Opera con estabilidad primero.
                     False,
                     meta_extra,
                 )
+            # Sandboxing interno de código generado (guardrails)
+            try:
+                guard = analizar_respuesta_codigo(texto)
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["code_guardrails"] = guard.to_dict()
+                if guard.bloqueos:
+                    texto = (
+                        "Detecté riesgos en el código propuesto y lo detuve en sandbox interno "
+                        f"({', '.join(guard.bloqueos)}). "
+                        "Reformulo una alternativa segura para Salomón AI.\n\n"
+                        + texto
+                    )
+            except Exception:
+                pass
             if pipeline.metadata:
                 meta_extra.setdefault("cognicion", {})
                 meta_extra["cognicion"]["capas"] = pipeline.metadata

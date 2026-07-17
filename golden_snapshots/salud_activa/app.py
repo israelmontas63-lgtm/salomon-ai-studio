@@ -53,6 +53,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/bca/estado",
         "/api/tunel/estado",
         "/api/cognicion/vdcp/estado",
+        "/api/cognicion/cognitive-core",
     }
 )
 
@@ -837,11 +838,20 @@ def cognicion_estado(session_id: str | None = None) -> dict:
         "pilares": {
             "memoria": motor.memoria.activa,
             "razonamiento": True,
+            "cognitive_core": True,
+            "universal_code_engine": True,
+            "empatia": True,
+            "code_guardrails": True,
             "vision": True,
             "autocorreccion": True,
             "agente": True,
             "aprendizaje": True,
             "skills": True,
+        },
+        "cognitive_core": {
+            "version": "60.0.0",
+            "ciclo": ["analisis", "planificacion", "ejecucion", "verificacion"],
+            "protocol": "COGNITIVE_CORE_CODING_ENGINE",
         },
         "intencion_ultima": intencion.value if intencion else None,
         "skills": [s.id for s in listar_skills()],
@@ -849,6 +859,29 @@ def cognicion_estado(session_id: str | None = None) -> dict:
         "proveedor_llm": obtener_proveedor().nombre,
         "memoria_capas": [c.value for c in TipoMemoria],
         "cache": estadisticas_cache(),
+    }
+
+
+@app.get("/api/cognicion/cognitive-core")
+def cognicion_cognitive_core() -> dict:
+    """Estado del motor Cognitive Core & Coding Engine (v60)."""
+    return {
+        "protocol": "COGNITIVE_CORE_CODING_ENGINE",
+        "version": "60.0.0",
+        "parent_protocol": "SALOMON_VIVIENTE",
+        "modules": {
+            "chain_of_thought": {
+                "ciclo": ["analisis", "planificacion", "ejecucion", "verificacion"],
+                "pensamiento_critico": True,
+            },
+            "universal_code_engine": {
+                "lenguajes": ["python", "javascript", "html", "c++"],
+                "matematica_sandbox": True,
+            },
+            "empatia_cognitiva": True,
+            "code_guardrails": {"sandbox": "interno"},
+        },
+        "active": True,
     }
 
 

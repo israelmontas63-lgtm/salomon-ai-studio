@@ -23,6 +23,8 @@ from settings import BUSQUEDA_WEB_AUTO
 from cognicion.razonamiento.cadena import (
     aplicar_cadena_de_pensamiento,
 )
+from cognicion.razonamiento.empatia import bloque_empatia
+from cognicion.codigo.motor_universal import bloque_motor_codigo
 from cognicion.razonamiento.intencion import (
     Intencion,
     clasificar_intencion,
@@ -239,9 +241,30 @@ class MotorCognicion:
             bloques.append(contexto_agente)
             meta["cognicion"]["agente_autonomo"] = True
 
-        if plan.usar_razonamiento:
-            mensaje_trabajo = aplicar_cadena_de_pensamiento(entrada)
+        # Empatía cognitiva (siempre — ajusta tono del turno)
+        emp_bloque, emp_meta = bloque_empatia(entrada)
+        bloques.append(emp_bloque)
+        meta["cognicion"]["empatia"] = emp_meta
+
+        # Universal Code Engine (matemática sandbox + prompt de ingeniería)
+        uce = bloque_motor_codigo(entrada)
+        meta["cognicion"]["universal_code_engine"] = uce.to_dict()
+        if uce.bloque_contexto:
+            bloques.append(uce.bloque_contexto)
+
+        usar_cot = plan.usar_razonamiento or (
+            uce.activo and uce.tipo in {"ingenieria", "matematica"}
+        )
+        if usar_cot:
+            mensaje_trabajo = aplicar_cadena_de_pensamiento(
+                entrada,
+                tono_bloque=emp_bloque,
+            )
             meta["cognicion"]["razonamiento_cot"] = True
+            meta["cognicion"]["cognitive_core"] = {
+                "version": "60.0.0",
+                "ciclo": ["analisis", "planificacion", "ejecucion", "verificacion"],
+            }
 
         hooks_ejecutados: list[str] = []
         for skill in skills_para_intencion(intencion):
