@@ -1513,6 +1513,12 @@ def header_logo_spec_css() -> FileResponse:
     return _archivo_studio("header-logo-spec.css", "text/css")
 
 
+@app.get("/salomon-estructura.css")
+def salomon_estructura_css() -> FileResponse:
+    """Estructura Salomón: logo/menús/campo/barra/burbujas (maqueta)."""
+    return _archivo_studio("salomon-estructura.css", "text/css")
+
+
 @app.get("/thinking-animation-spec.css")
 def thinking_animation_spec_css() -> FileResponse:
     """Thinking motion protocol (aditivo)."""

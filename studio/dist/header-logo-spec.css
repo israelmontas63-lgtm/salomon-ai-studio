@@ -1,23 +1,17 @@
 /**
- * Header / Logo — spec PIXEL_PERFECT
- * header.height_px=56, header.background=#000000
- * logo.dimensions_px=32, margin_top_px=10, margin_bottom_px=9
- * logo.visual_filter=drop-shadow(0 0 2px rgba(212, 175, 55, 0.5))
- * NO alterar estos valores sin revalidar.
+ * Header / Logo — alineado a ESTRUCTURA SALOMÓN (logo 70px)
+ * Antes: 56px/32px (recortaba la maqueta).
  */
-
 .studio-header {
-  height: 56px !important;
-  min-height: 56px !important;
-  max-height: 56px !important;
+  height: 88px !important;
+  min-height: 88px !important;
+  max-height: none !important;
   background: #000000 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  /* positioning: center_aligned */
+  padding: 8px 12px !important;
   align-items: center !important;
   justify-items: center !important;
   box-sizing: border-box !important;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
 .studio-header .header-brand {
@@ -26,18 +20,17 @@
   justify-content: center !important;
 }
 
-/* Evita que botones del header expandan la barra */
 .studio-header .header-menu-btn {
   min-height: 0 !important;
-  max-height: 56px !important;
-  height: 44px !important;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  max-height: none !important;
+  height: 40px !important;
+  width: 40px !important;
+  padding: 0 !important;
 }
 
 .studio-header .logo-wrap {
-  margin-top: 10px !important;
-  margin-bottom: 9px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -46,25 +39,23 @@
 
 .studio-header .vinyl-card,
 .studio-header .vinyl-card__disc {
-  width: 32px !important;
-  height: 32px !important;
+  width: 70px !important;
+  height: 70px !important;
 }
 
 .studio-header .vinyl-card {
-  filter: drop-shadow(0 0 2px rgba(212, 175, 55, 0.5)) !important;
+  filter: none !important;
 }
 
-/* Subtítulo fuera de presupuesto vertical de 56px */
 .studio-header .logo-subtitle {
   display: none !important;
 }
 
-/* Escala interna del disc a 32px */
 .studio-header .vinyl-card__label {
-  width: 12px !important;
-  height: 12px !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .studio-header .vinyl-card__ss {
-  font-size: 0.28rem !important;
+  font-size: 22px !important;
 }

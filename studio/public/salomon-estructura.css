@@ -1,0 +1,454 @@
+/**
+ * ESTRUCTURA SALOMÓN — estilos e interacciones (maqueta aprobada)
+ * Fuente: código del usuario. Incluye aliases al DOM React estable.
+ */
+:root {
+  --dorado: #c9a227;
+  --dorado-claro: #e8c860;
+  --plateado: #c0c0c0;
+  --cobrizo: #b87333;
+  --fondo-negro: #0a0a0a;
+  --panel-negro: #141414;
+}
+
+/* ---------- Liberar traba 56px/32px (header-logo-spec) ---------- */
+html.salomon-ui-shield .studio-header,
+html.salomon-mockup-ui .studio-header {
+  height: 88px !important;
+  min-height: 88px !important;
+  max-height: none !important;
+  overflow: visible !important;
+  align-items: center !important;
+  padding: 8px 12px !important;
+  box-sizing: border-box !important;
+}
+
+html.salomon-ui-shield .studio-header .header-menu-btn,
+html.salomon-mockup-ui .studio-header .header-menu-btn {
+  max-height: none !important;
+  height: 40px !important;
+  width: 40px !important;
+  min-width: 40px !important;
+}
+
+html.salomon-ui-shield .studio-header .logo-wrap,
+html.salomon-mockup-ui .studio-header .logo-wrap {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+html.salomon-ui-shield .studio-header .header-brand::after {
+  display: none !important;
+}
+
+/* ---------- LOGO "S S" ---------- */
+.salomon-logo,
+html.salomon-ui-shield .studio-header .vinyl-card,
+html.salomon-ui-shield .studio-header .vinyl-card__disc {
+  width: 70px !important;
+  height: 70px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: Georgia, serif !important;
+  font-weight: bold !important;
+  font-size: 22px !important;
+  color: var(--dorado-claro) !important;
+  background: radial-gradient(circle at 35% 30%, #2a2a2a, #0a0a0a 70%) !important;
+  border: 2px solid var(--dorado) !important;
+  box-shadow: 0 0 8px rgba(201, 162, 39, 0.4) !important;
+  transition: box-shadow 0.4s ease !important;
+  animation: logo-respirar 4s ease-in-out infinite !important;
+  filter: none !important;
+}
+
+html.salomon-ui-shield .studio-header .vinyl-card__label {
+  width: 100% !important;
+  height: 100% !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html.salomon-ui-shield .studio-header .vinyl-card__ss {
+  font-family: Georgia, serif !important;
+  font-weight: bold !important;
+  font-size: 22px !important;
+  letter-spacing: 0.08em !important;
+  color: var(--dorado-claro) !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--dorado-claro) !important;
+  filter: none !important;
+  animation: none !important;
+}
+
+.salomon-logo.pensando,
+html.salomon-ui-shield .studio-header .vinyl-card.pensando,
+html.salomon-ui-shield .studio-header .vinyl-card.pensando .vinyl-card__disc,
+html.salomon-ui-shield .studio-header[data-ss-state="thinking"] .vinyl-card__disc,
+html.salomon-ui-shield .studio-header:has(.status-dot--thinking) .vinyl-card__disc,
+html.salomon-ui-shield .studio-header:has(.status-dot--listening) .vinyl-card__disc,
+html.salomon-ui-shield .studio-header:has(.status-dot--speaking) .vinyl-card__disc {
+  animation: logo-pensando 1.4s linear infinite !important;
+}
+
+@keyframes logo-respirar {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(201, 162, 39, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(201, 162, 39, 0.55);
+  }
+}
+
+@keyframes logo-pensando {
+  0% {
+    border-color: var(--dorado);
+    box-shadow: 0 0 16px rgba(201, 162, 39, 0.7);
+    transform: rotate(0deg);
+  }
+  33% {
+    border-color: var(--plateado);
+    box-shadow: 0 0 16px rgba(192, 192, 192, 0.7);
+    transform: rotate(120deg);
+  }
+  66% {
+    border-color: var(--cobrizo);
+    box-shadow: 0 0 16px rgba(184, 115, 51, 0.7);
+    transform: rotate(240deg);
+  }
+  100% {
+    border-color: var(--dorado);
+    box-shadow: 0 0 16px rgba(201, 162, 39, 0.7);
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- MENÚS H Y USUARIO ---------- */
+.menu-icono,
+html.salomon-ui-shield .studio-header .header-menu-btn {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1.5px solid var(--dorado) !important;
+  color: var(--dorado-claro) !important;
+  background: rgba(20, 20, 20, 0.6) !important;
+  cursor: pointer;
+  transition: box-shadow 0.3s ease, transform 0.2s ease !important;
+}
+
+.menu-icono:active,
+html.salomon-ui-shield .studio-header .header-menu-btn:active {
+  transform: scale(0.92) !important;
+}
+
+.menu-icono.brillo,
+html.salomon-ui-shield .studio-header .header-menu-btn {
+  box-shadow: 0 0 8px rgba(201, 162, 39, 0.5) !important;
+}
+
+.menu-desplegable,
+html.salomon-ui-shield .glass-panel {
+  position: absolute;
+  top: 55px;
+  min-width: 200px;
+  padding: 10px !important;
+  border-radius: 14px !important;
+  background: rgba(20, 20, 20, 0.55) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(201, 162, 39, 0.4) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  animation: menu-aparecer 0.2s ease-out;
+  z-index: 50;
+}
+
+.menu-desplegable.izquierda {
+  left: 12px;
+}
+.menu-desplegable.derecha {
+  right: 12px;
+}
+
+@keyframes menu-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- CAMPO DE TEXTO ---------- */
+.campo-texto-contenedor,
+html.salomon-ui-shield .bottom-bar form.chat-input,
+html.salomon-ui-shield .bottom-bar .chat-input,
+html.salomon-ui-shield .bottom-bar .input-row {
+  display: flex !important;
+  align-items: center !important;
+  width: calc(100% - 24px) !important;
+  max-width: none !important;
+  margin: 0 12px 10px !important;
+  padding: 10px 16px !important;
+  border-radius: 24px !important;
+  background: var(--fondo-negro) !important;
+  border: 1.5px solid rgba(201, 162, 39, 0.5) !important;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+  box-sizing: border-box !important;
+}
+
+.campo-texto-contenedor.activo,
+html.salomon-ui-shield .bottom-bar .chat-input:focus-within,
+html.salomon-ui-shield .bottom-bar .input-row:focus-within {
+  border-color: var(--dorado-claro) !important;
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.5) !important;
+}
+
+.campo-texto-input,
+html.salomon-ui-shield .bottom-bar .chat-input input,
+html.salomon-ui-shield .bottom-bar input.chat-input {
+  flex: 1 !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: #fff !important;
+  font-size: 15px !important;
+}
+
+.campo-texto-input::placeholder,
+html.salomon-ui-shield .bottom-bar .chat-input input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.flecha-enviar,
+html.salomon-ui-shield .bottom-bar .send-btn {
+  color: var(--dorado) !important;
+  margin-left: 8px;
+  cursor: pointer;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html.salomon-ui-shield .bottom-bar .send-btn::after {
+  border-color: transparent transparent transparent var(--dorado) !important;
+}
+
+.teclado-deslizar-enter {
+  animation: subir-teclado 0.25s ease-out;
+}
+
+html.salomon-ui-shield .bottom-bar form.chat-input,
+html.salomon-ui-shield .bottom-bar .chat-input {
+  animation: subir-teclado 0.25s ease-out;
+}
+
+@keyframes subir-teclado {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ---------- BOTONES INFERIORES ---------- */
+.barra-botones,
+html.salomon-ui-shield .controls-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-evenly !important;
+  padding: 18px 0 !important;
+  min-height: 76px !important;
+  position: relative !important;
+}
+
+.boton-camara,
+.boton-texto,
+html.salomon-ui-shield .controls-row .control-btn:not(.control-btn--main) {
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--dorado) !important;
+  background: var(--fondo-negro) !important;
+  color: var(--dorado-claro) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer;
+  transition: transform 0.15s ease !important;
+}
+
+.boton-camara:active,
+.boton-texto:active,
+html.salomon-ui-shield .controls-row .control-btn:not(.control-btn--main):active {
+  transform: scale(0.9) !important;
+}
+
+.boton-central,
+html.salomon-ui-shield .controls-row .control-btn--main {
+  width: 76px !important;
+  height: 76px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at 35% 30%, var(--dorado-claro), var(--dorado)) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  margin-top: -38px !important;
+  margin-left: -38px !important;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(201, 162, 39, 0.5) !important;
+  border: none !important;
+  z-index: 6;
+}
+
+.boton-central .anillo-dictado,
+html.salomon-ui-shield .ui-voice-orbit {
+  position: absolute !important;
+  width: 44px !important;
+  height: 44px !important;
+  top: 50% !important;
+  left: 50% !important;
+  margin: -22px 0 0 -22px !important;
+  border-radius: 50% !important;
+  border: 3px solid transparent !important;
+  border-top-color: var(--dorado-claro) !important;
+  opacity: 0;
+  pointer-events: none;
+  box-sizing: border-box !important;
+}
+
+html.salomon-ui-shield .voice-btn--spinning .ui-voice-orbit,
+html.salomon-ui-shield .control-btn--recording .ui-voice-orbit,
+html.salomon-ui-shield .voice-btn[data-ui-mode="dictation"] .ui-voice-orbit,
+.boton-central.dictando .anillo-dictado {
+  opacity: 1 !important;
+  animation: girar-anillo var(--velocidad-anillo, 2.2s) linear infinite,
+    cambiar-color-anillo 3s ease-in-out infinite !important;
+}
+
+@keyframes girar-anillo {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cambiar-color-anillo {
+  0% {
+    border-top-color: var(--dorado-claro);
+  }
+  33% {
+    border-top-color: var(--plateado);
+  }
+  66% {
+    border-top-color: var(--cobrizo);
+  }
+  100% {
+    border-top-color: var(--dorado-claro);
+  }
+}
+
+.destello-nube,
+html.salomon-ui-shield .ui-voice-cloud {
+  position: absolute !important;
+  width: 76px !important;
+  height: 76px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(
+    circle,
+    rgba(232, 200, 96, 0.9) 0%,
+    rgba(201, 162, 39, 0.3) 60%,
+    transparent 80%
+  ) !important;
+  pointer-events: none;
+  opacity: 0;
+}
+
+html.salomon-ui-shield .voice-btn[data-ui-flash="1"] .ui-voice-cloud,
+.destello-nube {
+  animation: destello-expandir 0.7s ease-out forwards !important;
+}
+
+@keyframes destello-expandir {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* ---------- BURBUJAS DE CHAT ---------- */
+.burbuja-mensaje,
+html.salomon-ui-shield .bubble {
+  position: relative;
+  max-width: 78% !important;
+  padding: 14px 18px !important;
+  border-radius: 18px !important;
+  margin: 6px 12px !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.burbuja-mensaje.salomon,
+html.salomon-ui-shield .bubble--ai,
+html.salomon-ui-shield .bubble.bubble--ai {
+  background: linear-gradient(135deg, var(--dorado-claro), var(--dorado)) !important;
+  color: #111 !important;
+  align-self: flex-start;
+}
+
+.burbuja-mensaje.usuario,
+html.salomon-ui-shield .bubble--user,
+html.salomon-ui-shield .bubble.bubble--user {
+  background: #1e1e1e !important;
+  color: #fff !important;
+  border: 1px solid rgba(201, 162, 39, 0.4) !important;
+  align-self: flex-end;
+}
+
+.menu-contextual-mensaje,
+html.salomon-ui-shield .ui-bubble-menu {
+  position: absolute;
+  top: -46px;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 6px !important;
+  padding: 6px 10px !important;
+  border-radius: 12px !important;
+  background: rgba(20, 20, 20, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(201, 162, 39, 0.4) !important;
+  animation: menu-aparecer 0.15s ease-out;
+  z-index: 30;
+}
+
+.menu-contextual-mensaje button,
+html.salomon-ui-shield .ui-bubble-menu button {
+  background: none !important;
+  border: none !important;
+  color: var(--dorado-claro) !important;
+  font-size: 13px !important;
+  cursor: pointer;
+  padding: 4px 6px !important;
+}

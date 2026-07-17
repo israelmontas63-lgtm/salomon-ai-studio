@@ -120,6 +120,74 @@
           window.SalomonBridge.getState() === "DICTATING" ||
           window.SalomonBridge.getState() === "CONVERSATION"));
     header.dataset.ssState = thinking ? "thinking" : "idle";
+    var logo = header.querySelector(".vinyl-card, .salomon-logo");
+    if (logo) {
+      logo.classList.add("salomon-logo");
+      logo.classList.toggle("pensando", !!thinking);
+      var ss = logo.querySelector(".vinyl-card__ss");
+      if (ss && ss.textContent.replace(/\s/g, "") === "SS") ss.textContent = "S S";
+    }
+  }
+
+  /** Sella clases de la maqueta ESTRUCTURA sobre el DOM React estable */
+  function stampEstructuraClasses() {
+    var header = document.querySelector(".studio-header");
+    if (header) {
+      var logo = header.querySelector(".vinyl-card");
+      if (logo) logo.classList.add("salomon-logo");
+      header.querySelectorAll(".header-menu-btn").forEach(function (btn) {
+        btn.classList.add("menu-icono", "brillo");
+      });
+      syncLogoState(header);
+    }
+
+    var form =
+      document.querySelector(".bottom-bar form.chat-input") ||
+      document.querySelector(".bottom-bar .chat-input") ||
+      document.querySelector(".bottom-bar .input-row");
+    if (form) {
+      form.classList.add("campo-texto-contenedor", "teclado-deslizar-enter");
+      var input = form.querySelector("input");
+      if (input) {
+        input.classList.add("campo-texto-input");
+        if (!input.dataset.uiCampoFocus) {
+          input.dataset.uiCampoFocus = "1";
+          input.addEventListener("focus", function () {
+            form.classList.add("activo");
+          });
+          input.addEventListener("blur", function () {
+            form.classList.remove("activo");
+          });
+        }
+      }
+      var send = form.querySelector(".send-btn");
+      if (send) send.classList.add("flecha-enviar");
+    }
+
+    var row = document.querySelector(".controls-row");
+    if (row) {
+      row.classList.add("barra-botones");
+      var btns = row.querySelectorAll(".control-btn");
+      if (btns[0]) btns[0].classList.add("boton-camara");
+      var main = row.querySelector(".control-btn--main") || btns[1];
+      if (main) {
+        main.classList.add("boton-central");
+        var orbit = main.querySelector(".ui-voice-orbit");
+        if (orbit) orbit.classList.add("anillo-dictado");
+        var cloud = main.querySelector(".ui-voice-cloud");
+        if (cloud) cloud.classList.add("destello-nube");
+      }
+      if (btns.length) btns[btns.length - 1].classList.add("boton-texto");
+    }
+
+    document.querySelectorAll(".bubble--ai").forEach(function (el) {
+      el.classList.add("burbuja-mensaje", "salomon");
+    });
+    document.querySelectorAll(".bubble--user").forEach(function (el) {
+      el.classList.add("burbuja-mensaje", "usuario");
+    });
+    var menu = document.getElementById("ui-bubble-menu");
+    if (menu) menu.classList.add("menu-contextual-mensaje");
   }
 
   /* ——— Bottom controls: camera / voice fx / text ——— */
@@ -1019,6 +1087,7 @@
   function tick() {
     styleHeader();
     enhanceControls();
+    stampEstructuraClasses();
     wireBubbles();
     polishDrawers();
     syncLogoState();
@@ -1053,7 +1122,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo estructura-salomon-203");
+    log("activo estructura-fidelidad-205");
   }
 
   if (document.readyState === "loading") {
@@ -1063,7 +1132,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "estructura-salomon-203",
+    version: "estructura-fidelidad-205",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,
