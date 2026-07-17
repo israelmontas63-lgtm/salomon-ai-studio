@@ -1,6 +1,6 @@
 {
   "protocol": "SALOMON_VIVIENTE",
-  "protocol_version": "102.0.0",
+  "protocol_version": "103.0.0",
   "parent_protocol": "NEURAL_INTEGRITY_LOCK",
   "architect": "Israel",
   "authorization_word": "AUTORIZADO",
@@ -28,7 +28,7 @@
       "studio/src/features/camera_v13/MediaStreamManager.js",
       "studio/src/features/camera_v13/CameraV13.jsx"
     ],
-    "golden_snapshot_id": "viviente_v102+identidad_inmune+camera_engine_v20.1.0",
+    "golden_snapshot_id": "viviente_v103+sellado_pwa+camera_engine_v20.1.0",
     "notes": "Cualquier drift de checksum vs file_signatures_sha256 = bloqueo sin AUTORIZADO."
   },
   "defense_layer": {
@@ -73,15 +73,15 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "368cdfca9a461bd9883f5a0cf976519b7415ab49833bf08a72adf2b01c8ddba8",
+    "app.py": "468f95af72468d48573154a2c77f10fbe5777c5527cb051f8409afe302a84c6b",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
-    "studio/dist/index.html": "eb826422ecaa6cbaf2974953480aa90339130e6f2e94df0743a9641414d71e26",
+    "studio/dist/index.html": "9a58a54e83d936d45da4c9c69943f0399640b08534f42fa9bc843980e90e8472",
     "studio/dist/salomon-security-kernel.js": "66804a6fa7f41bbec296b29d37c4b4a6de766766b1006ec26ee8610037c70dfd",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
-    "version.json": "7b75a7d4dc4a516df4bd9aba50aed0e301635f9511535dfd60f3655df232d24f"
+    "version.json": "87e6bbd1bc4205074aa1c3a33476633e8792600b501f01f9ac205f624cb77585"
   },
   "invariants": [
     "MediaStreamManager.forceReset debe existir",
@@ -236,6 +236,13 @@
       "at": "2026-07-17T17:00:00-04:00",
       "by": "Israel+Cursor",
       "note": "ADN vinculante Israel Monta; SCE inmune; firma // Created by; /api/inmune"
+    },
+    {
+      "version": "103.0.0",
+      "event": "SELLADO_FINAL_DESPLIEGUE_SEGURO",
+      "at": "2026-07-17T17:10:00-04:00",
+      "by": "Israel+Cursor",
+      "note": "PWA SW v103 + preflight seal; CameraEngine untouched; INTEGRIDAD 100%"
     }
   ]
 }

@@ -1,10 +1,10 @@
 /**
- * Salomón PWA Nativa v97 — Service Worker
- * Shell cache-first para apertura instantánea; API chat/media siempre red.
- * Identidad + arquitecto web: stale-while-revalidate (núcleo interno PWA).
- * Created by Israel Monta - Salomón AI Studio
+ * Salomon PWA Nativa v103 — Service Worker (Sellado Final)
+ * Shell cache-first; API chat/media siempre red.
+ * Identidad + inmune + arquitecto: stale-while-revalidate.
+ * Created by Israel Monta - Salomon AI Studio
  */
-const CACHE = "salomon-pwa-v97";
+const CACHE = "salomon-pwa-v103";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -16,15 +16,16 @@ const PRECACHE = [
   "/icon-v2.svg",
   "/apple-touch-icon-v2.png",
   "/favicon-v2.ico",
-  "/salomon-theme.css?v=97",
-  "/splash.css?v=97",
-  "/thinking-animation-spec.css?v=97",
-  "/salomon-ui-shield.css?v=97",
-  "/standalone-boot.js?v=97",
-  "/salomon-update.js?v=97",
-  "/pwa-nativa.js?v=97",
+  "/salomon-theme.css?v=103",
+  "/splash.css?v=103",
+  "/thinking-animation-spec.css?v=103",
+  "/salomon-ui-shield.css?v=103",
+  "/standalone-boot.js?v=103",
+  "/salomon-update.js?v=103",
+  "/pwa-nativa.js?v=103",
   "/visual-progress.js?v=70",
   "/api/identidad",
+  "/api/inmune",
   "/api/web/arquitecto",
   "/api/eficiencia",
 ];
@@ -39,9 +40,10 @@ function pathOf(url) {
 
 function isApiNetworkOnly(path) {
   if (!path.startsWith("/api/")) return false;
-  // Núcleo identidad/web/salud ligera: pueden usarse desde caché PWA
+  // Nucleo identidad/inmune/web/salud ligera: pueden usarse desde cache PWA
   if (
     path === "/api/identidad" ||
+    path === "/api/inmune" ||
     path === "/api/web/arquitecto" ||
     path === "/api/eficiencia" ||
     path === "/api/cognicion/multimodal" ||

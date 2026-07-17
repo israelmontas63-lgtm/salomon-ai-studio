@@ -62,6 +62,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/web/arquitecto",
         "/api/pwa/estado",
         "/api/auditoria/preflight",
+        "/api/sellado",
         "/api/sce",
         "/api/evolucion/30x",
         "/api/comic/estado",
@@ -547,11 +548,13 @@ def _salud_payload() -> dict:
         identidad = {"active": False}
     pwa = {
         "active": True,
-        "version": "97.0.0",
+        "version": "103.0.0",
         "service_worker": "/service-worker.js",
         "display": "standalone",
         "theme_color": "#000000",
         "installable": True,
+        "cache": "salomon-pwa-v103",
+        "seal": True,
     }
     sce: dict = {"active": False}
     try:
@@ -2103,8 +2106,8 @@ def pwa_nativa_js() -> FileResponse:
 @app.get("/api/pwa/estado")
 def api_pwa_estado() -> dict:
     return {
-        "protocol": "PWA_NATIVA_INSTALLABLE",
-        "version": "97.0.0",
+        "protocol": "PWA_SELLADO_FINAL",
+        "version": "103.0.0",
         "active": True,
         "manifest": {
             "name": "Salomon AI",
@@ -2115,9 +2118,11 @@ def api_pwa_estado() -> dict:
         },
         "service_worker": "/service-worker.js",
         "service_worker_legacy": "/sw.js",
-        "core_endpoints": ["/api/identidad", "/api/web/arquitecto", "/api/eficiencia"],
+        "cache": "salomon-pwa-v103",
+        "core_endpoints": ["/api/identidad", "/api/inmune", "/api/web/arquitecto", "/api/eficiencia"],
         "installable": True,
         "owner": "Israel Monta - Salomon AI Studio",
+        "seal": "LISTO_PARA_DESPLIEGUE",
     }
 
 
@@ -2177,6 +2182,41 @@ def api_comic_producir(body: ComicProducirRequest | None = None) -> dict:
         tema=body.tema,
         persistir=body.persistir,
     )
+
+
+@app.get("/api/sellado")
+def api_sellado_final() -> dict:
+    """Informe de sellado final pre-despliegue (v103)."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parent / "scripts" / "sellado_final_v103.py"
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            timeout=90,
+            cwd=str(Path(__file__).resolve().parent),
+            encoding="utf-8",
+            errors="replace",
+        )
+        import json as _json
+
+        out = proc.stdout or ""
+        i = out.find("{")
+        payload = _json.loads(out[i:]) if i >= 0 else {"ok": False, "raw": out[-500:]}
+        payload["exit_code"] = proc.returncode
+        return payload
+    except Exception as exc:
+        return {
+            "ok": False,
+            "protocol": "SELLADO_FINAL_DESPLIEGUE_SEGURO",
+            "version": "103.0.0",
+            "estado": "ERROR_SELLADO",
+            "error": f"{type(exc).__name__}: {exc}",
+        }
 
 
 @app.get("/api/auditoria/preflight")

@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T21:00:00Z",
-  "timestamp": 1752795600,
-  "version": "102.0.0",
+  "timestamp_iso": "2026-07-17T21:10:00Z",
+  "timestamp": 1752796200,
+  "version": "103.0.0",
   "channel": "main",
-  "label": "identidad-propiedad-seguridad-inmune",
+  "label": "sellado-final-despliegue-seguro",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "IDENTIDAD_PROPIEDAD_SEGURIDAD_INMUNE",
-  "notes": "ADN vinculante Israel Monta, propiedad exclusiva, SCE inmune, firma // Created by. CameraEngine untouched."
+  "protocol": "SELLADO_FINAL_DESPLIEGUE_SEGURO",
+  "notes": "PWA seal v103: SW salomon-pwa-v103, identidad+inmune SWR, camera golden intact, Free Tier caps OK. INTEGRIDAD 100%."
 }

@@ -64,11 +64,12 @@ def main() -> int:
 
     # 3) SW policy vs visual APIs
     sw = (ROOT / "studio/dist/service-worker.js").read_text(encoding="utf-8")
-    check("sw_exists", "salomon-pwa-v97" in sw or "CACHE" in sw, "cache id presente")
+    check("sw_exists", "salomon-pwa-v103" in sw or "salomon-pwa-v97" in sw or "CACHE" in sw, "cache id presente")
     check("sw_identidad_swr", "/api/identidad" in sw, "identidad en núcleo PWA")
+    check("sw_inmune_swr", "/api/inmune" in sw, "inmune en núcleo PWA")
     check("sw_policy_fn", "isApiNetworkOnly" in sw, "política API network-only activa")
     idx = sw.find('path === "/api/identidad"')
-    allow = sw[idx : idx + 400] if idx >= 0 else ""
+    allow = sw[idx : idx + 450] if idx >= 0 else ""
     check(
         "sw_no_cache_media_chat",
         "/api/media" not in allow and "/api/chat" not in allow,
@@ -111,12 +112,36 @@ def main() -> int:
 
     from cognicion.evolucion import analizar_valor, estado_sce
 
-    sce_ok = estado_sce().get("active") and estado_sce().get("version") == "100.0.0"
-    check("sce_activo", bool(sce_ok), "SCE v100")
+    sce_st = estado_sce()
+    sce_ok = bool(sce_st.get("active")) and str(sce_st.get("version", "")).startswith(("100", "101", "102", "103"))
+    check("sce_activo", sce_ok, f"SCE v{sce_st.get('version')}")
     a = analizar_valor("añadir multilingüismo y síntesis de voz TTS vía API")
     check("sce_aprueba_mejora", a.get("decision") == "aprobar", a.get("mensaje", "")[:80])
     b = analizar_valor("instalar torch y transformers en runtime")
     check("sce_bloquea_riesgo", b.get("decision") == "bloquear", b.get("mensaje", "")[:80])
+
+    # v103 seal extras
+    from cognicion.identidad import estado_identidad, RESPUESTA_ORIGEN
+    from cognicion.evolucion import estado_sistema_inmune
+    from cognicion.comic import estado_comic_engine
+    from pathlib import Path as _P
+
+    idn = estado_identidad()
+    check(
+        "identidad_v102",
+        bool(idn.get("active"))
+        and idn.get("creador") == "Israel Monta"
+        and "servicio de su visión" in (RESPUESTA_ORIGEN or ""),
+        idn.get("version") or "",
+    )
+    imm = estado_sistema_inmune()
+    check("sistema_inmune", bool(imm.get("sistema_inmune_activo")), imm.get("nucleo") or "")
+    check("comic_engine", bool(estado_comic_engine().get("active")))
+    check("camera_engine_present", (_P(ROOT) / "studio/dist/camera-engine.js").is_file())
+    for d in ("data", "data/media", "data/comics"):
+        path = _P(ROOT) / d
+        path.mkdir(parents=True, exist_ok=True)
+        check(f"data_dir:{d}", path.is_dir())
 
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report["ok"] else 1

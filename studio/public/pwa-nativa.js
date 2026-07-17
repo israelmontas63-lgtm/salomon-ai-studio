@@ -1,19 +1,19 @@
 /**
- * PWA Nativa v97 — registro SW, install prompt, núcleo identidad interno.
- * Created by Israel Monta - Salomón AI Studio
+ * PWA Nativa v103 — registro SW, install prompt, nucleo identidad/inmune.
+ * Created by Israel Monta - Salomon AI Studio
  */
 (function () {
   "use strict";
   if (window.__SalomonPwaNativa) return;
 
-  var SW_URL = "/service-worker.js?v=97";
-  var IDENTITY_KEY = "salomon_pwa_identidad_v97";
+  var SW_URL = "/service-worker.js?v=103";
+  var IDENTITY_KEY = "salomon_pwa_identidad_v103";
   var deferredPrompt = null;
 
   function log() {
     try {
       if (localStorage.getItem("salomon_pwa_debug") === "1") {
-        console.log.apply(console, ["[PWA97]"].concat([].slice.call(arguments)));
+        console.log.apply(console, ["[PWA103]"].concat([].slice.call(arguments)));
       }
     } catch (_) {}
   }
@@ -27,13 +27,11 @@
         try {
           reg.update();
         } catch (_) {}
-        // Compat: también mantener /sw.js alineado vía fetch (mismo archivo en servidor)
         return reg;
       })
       .catch(function (err) {
         log("SW register fail", err);
-        // Fallback legacy
-        return navigator.serviceWorker.register("/sw.js?v=97").catch(function () {
+        return navigator.serviceWorker.register("/sw.js?v=103").catch(function () {
           return null;
         });
       });
@@ -61,6 +59,20 @@
             return window.__SalomonIdentidad;
           }
         } catch (_) {}
+        return null;
+      });
+  }
+
+  function hydrateInmune() {
+    return fetch("/api/inmune", { credentials: "same-origin" })
+      .then(function (r) {
+        return r.ok ? r.json() : null;
+      })
+      .then(function (data) {
+        if (data) window.__SalomonInmune = data;
+        return data;
+      })
+      .catch(function () {
         return null;
       });
   }
@@ -119,6 +131,7 @@
     }
     registerSw();
     hydrateIdentidad();
+    hydrateInmune();
     hydrateWebArchitect();
   }
 

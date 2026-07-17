@@ -1,13 +1,13 @@
 {
   "id": "salud_activa",
-  "created_at": "2026-07-17T20:46:33.102593+00:00",
+  "created_at": "2026-07-17T21:12:00+00:00",
   "protocol": "SALOMON_VIVIENTE",
-  "version": "102.0.0",
+  "version": "103.0.0",
   "files": {
     "app.py": {
       "source": "app.py",
       "snapshot": "golden_snapshots/salud_activa/app.py",
-      "sha256": "368cdfca9a461bd9883f5a0cf976519b7415ab49833bf08a72adf2b01c8ddba8"
+      "sha256": "468f95af72468d48573154a2c77f10fbe5777c5527cb051f8409afe302a84c6b"
     },
     "CameraEngine": {
       "source": "studio/dist/camera-engine.js",
@@ -27,7 +27,7 @@
     "UI_Layout": {
       "source": "studio/dist/index.html",
       "snapshot": "golden_snapshots/salud_activa/index.html",
-      "sha256": "eb826422ecaa6cbaf2974953480aa90339130e6f2e94df0743a9641414d71e26"
+      "sha256": "9a58a54e83d936d45da4c9c69943f0399640b08534f42fa9bc843980e90e8472"
     },
     "SecurityKernel": {
       "source": "studio/dist/salomon-security-kernel.js",
