@@ -297,11 +297,25 @@
   }
 
   function ensureShutterCamIcon(btn) {
-    if (!btn || btn.querySelector(".ui-shutter-cam-icon")) return;
-    var icon = document.createElement("span");
-    icon.className = "ui-shutter-cam-icon";
-    icon.setAttribute("aria-hidden", "true");
-    btn.appendChild(icon);
+    if (!btn) return;
+    if (!btn.querySelector(".ui-shutter-cam-icon")) {
+      var icon = document.createElement("span");
+      icon.className = "ui-shutter-cam-icon";
+      icon.setAttribute("aria-hidden", "true");
+      btn.appendChild(icon);
+    }
+    if (!btn.querySelector(".ui-cam-ring-plata")) {
+      var ring = document.createElement("span");
+      ring.className = "ui-cam-ring-plata";
+      ring.setAttribute("aria-hidden", "true");
+      btn.appendChild(ring);
+    }
+    if (!btn.querySelector(".ui-cam-swirl-plata")) {
+      var swirl = document.createElement("span");
+      swirl.className = "ui-cam-swirl-plata";
+      swirl.setAttribute("aria-hidden", "true");
+      btn.appendChild(swirl);
+    }
   }
 
   function getTextBtn() {
@@ -710,12 +724,12 @@
   }
 
   function updateCamActiveBadge() {
+    // Pantalla limpia: sin textos de modo
     var badge = document.getElementById("ui-camera-active-badge");
-    if (!badge) return;
-    if (camera.phase === "selfie" || camera.facing === "user") {
-      badge.textContent = "SELFIE — toque mic/pantalla = foto · icono = cerrar";
-    } else {
-      badge.textContent = "TRASERA — toque icono = selfie";
+    if (badge) {
+      badge.textContent = "";
+      badge.setAttribute("aria-hidden", "true");
+      badge.style.display = "none";
     }
   }
 
@@ -741,24 +755,33 @@
       cam.classList.toggle("is-selfie-phase", selfie);
       cam.dataset.facing = selfie ? "user" : "environment";
       cam.dataset.phase = camera.phase || "closed";
-      if (!active) cam.title = "Cámara — trasera → selfie → cerrar";
-      else if (selfie) cam.title = "Toque: recoger cámara (modo agente)";
-      else cam.title = "Toque: modo selfie";
+      if (!active) {
+        cam.title = "";
+        cam.setAttribute("aria-label", "Cámara");
+      } else if (selfie) {
+        cam.title = "";
+        cam.setAttribute("aria-label", "Cámara");
+      } else {
+        cam.title = "";
+        cam.setAttribute("aria-label", "Cámara");
+      }
     }
     var main = document.querySelector(".controls-row .control-btn--main");
     if (main) {
       ensureShutterCamIcon(main);
       main.classList.toggle("is-cam-shutter", active);
       if (active) {
-        main.title = selfie ? "Disparar selfie" : "Disparar foto";
-        main.setAttribute("aria-label", "Disparador de foto");
+        main.title = "";
+        main.setAttribute("aria-label", "Disparar");
         main.dataset.captureMode = "1";
         main.dataset.uiMode = "";
         main.classList.remove("voice-btn--spinning", "control-btn--recording");
+        main.classList.add("is-cam-live");
       } else {
-        main.title = "Núcleo Salomón — dictado / conversación";
-        main.setAttribute("aria-label", "Núcleo Salomón — mantener dictado, doble conversación, toque cancela");
+        main.title = "";
+        main.setAttribute("aria-label", "Núcleo Salomón");
         main.dataset.captureMode = "0";
+        main.classList.remove("is-cam-live", "is-cam-shot");
       }
     }
     var writeBtn = getTextBtn();
@@ -869,11 +892,22 @@
     flash.classList.remove("is-on");
     void flash.offsetWidth;
     flash.classList.add("is-on");
-    // Limpieza no bloqueante (no atrasa el disparo)
     queueMicrotask(function () {
       setTimeout(function () {
         flash.classList.remove("is-on");
       }, 180);
+    });
+    // Remolino plateado suave en botón inteligente / mic
+    var main = document.querySelector(".controls-row .control-btn--main");
+    var smart = document.getElementById("ui-smart-button");
+    [main, smart].forEach(function (el) {
+      if (!el) return;
+      el.classList.remove("is-cam-shot");
+      void el.offsetWidth;
+      el.classList.add("is-cam-shot");
+      setTimeout(function () {
+        el.classList.remove("is-cam-shot");
+      }, 900);
     });
   }
 
@@ -1048,27 +1082,20 @@
         smart.type = "button";
         smart.className = "ui-smart-button";
         smart.id = "ui-smart-button";
-        smart.setAttribute("aria-label", "Disparar foto");
-        smart.title = "Disparar foto";
+        smart.setAttribute("aria-label", "Disparar");
+        smart.removeAttribute("title");
         smart.innerHTML =
+          '<span class="ui-smart-button__ring-plata" aria-hidden="true"></span>' +
+          '<span class="ui-smart-button__swirl" aria-hidden="true"></span>' +
           '<span class="ui-smart-button__ring" aria-hidden="true"></span>' +
           '<span class="ui-smart-button__core ui-smart-button__core--shutter" aria-hidden="true"></span>';
         wireSmartButton(smart);
 
-        var badge = document.createElement("div");
-        badge.id = "ui-camera-active-badge";
-        badge.className = "ui-camera-active-badge";
-        badge.setAttribute("aria-live", "polite");
-        badge.textContent =
-          camera.phase === "selfie" || camera.facing === "user"
-            ? "SELFIE — mic/pantalla = foto · icono = cerrar"
-            : "TRASERA — icono = selfie";
-
         var closeBtn = document.createElement("button");
         closeBtn.type = "button";
         closeBtn.className = "ui-camera-close";
-        closeBtn.setAttribute("aria-label", "Cerrar cámara");
-        closeBtn.textContent = "×";
+        closeBtn.setAttribute("aria-label", "Cerrar");
+        closeBtn.innerHTML = "<span aria-hidden=\"true\">×</span>";
         closeBtn.addEventListener(
           "touchstart",
           function (e) {
@@ -1088,17 +1115,10 @@
           true
         );
 
-        var hint = document.createElement("div");
-        hint.className = "ui-camera-hint";
-        hint.textContent =
-          "Selfie: pantalla o mic = foto · 1 toque icono cámara = modo agente";
-
         overlay.appendChild(stage);
         overlay.appendChild(flash);
-        overlay.appendChild(badge);
         overlay.appendChild(smart);
         overlay.appendChild(closeBtn);
-        overlay.appendChild(hint);
         document.body.appendChild(overlay);
         syncCameraUiState();
         syncWritingUiState();
@@ -1337,7 +1357,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo cam-selfie-208");
+    log("activo cam-clean-209");
   }
 
   if (document.readyState === "loading") {
@@ -1347,7 +1367,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "cam-selfie-208",
+    version: "cam-clean-209",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

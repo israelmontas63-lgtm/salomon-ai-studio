@@ -9,7 +9,7 @@
 
   var STORAGE_KEY = "salomon_version_manifest";
   var POLL_MS = 25000;
-  var VERSION_SCRIPT = "cam-2.0.8";
+  var VERSION_SCRIPT = "cam-2.0.9";
   var polling = false;
   var applying = false;
   var mountTries = 0;
