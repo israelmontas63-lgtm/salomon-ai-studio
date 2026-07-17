@@ -173,9 +173,25 @@ VDCP_USAR_GEMINI = os.getenv("VDCP_USAR_GEMINI", "false").strip().lower() in (
 )
 TESSERACT_CMD = os.getenv("TESSERACT_CMD", "").strip()
 
-# ── Túnel móvil (localtunnel) ──────────────────────────────────────────────
-COLSUB_PORT = int(os.getenv("COLSUB_PORT", "8000"))
+# ── Túnel móvil (localtunnel) + puerto canónico v104 ───────────────────────
+def _puerto_env_default() -> int:
+    """800 tipográfico → 8000; Render usa PORT."""
+    raw = os.getenv("PORT") or os.getenv("COLSUB_PORT") or "8000"
+    try:
+        p = int(str(raw).strip())
+    except Exception:
+        p = 8000
+    if p == 800:
+        p = 8000
+    return p if 1 <= p <= 65535 else 8000
+
+
+COLSUB_PORT = _puerto_env_default()
 COLSUB_HOST = os.getenv("COLSUB_HOST", "0.0.0.0").strip() or "0.0.0.0"
+# Memoria: solo filesystem local (nunca HttpClient puerto 800/8000)
+MEMORIA_SOLO_LOCAL = os.getenv("MEMORIA_SOLO_LOCAL", "true").strip().lower() in (
+    "1", "true", "yes", "on",
+)
 TUNEL_HABILITADO = os.getenv("TUNEL_HABILITADO", "true").strip().lower() in (
     "1", "true", "yes", "on",
 )

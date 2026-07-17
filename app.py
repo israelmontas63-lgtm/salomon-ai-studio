@@ -59,6 +59,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/eficiencia",
         "/api/identidad",
         "/api/inmune",
+        "/api/conectividad",
         "/api/web/arquitecto",
         "/api/pwa/estado",
         "/api/auditoria/preflight",
@@ -548,12 +549,12 @@ def _salud_payload() -> dict:
         identidad = {"active": False}
     pwa = {
         "active": True,
-        "version": "103.0.0",
+        "version": "104.0.0",
         "service_worker": "/service-worker.js",
         "display": "standalone",
         "theme_color": "#000000",
         "installable": True,
-        "cache": "salomon-pwa-v103",
+        "cache": "salomon-pwa-v104",
         "seal": True,
     }
     sce: dict = {"active": False}
@@ -606,6 +607,11 @@ def _salud_payload() -> dict:
             "version": "102.0.0",
             "identidad_grabada": bool((identidad or {}).get("active")),
             "creador": (identidad or {}).get("creador") or "Israel Monta",
+        },
+        "conectividad": {
+            "active": True,
+            "version": "104.0.0",
+            "protocol": "RECONEXION_EMERGENCIA_PUERTOS_PERIFERICOS",
         },
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
@@ -1075,6 +1081,22 @@ def api_sistema_inmune() -> dict:
     from cognicion.evolucion import estado_sistema_inmune
 
     return estado_sistema_inmune()
+
+
+@app.get("/api/conectividad")
+def api_conectividad_estado() -> dict:
+    """Estado de reconexión (puertos, memoria, gateway) v104."""
+    from cognicion.reconexion import estado_conectividad
+
+    return estado_conectividad()
+
+
+@app.post("/api/conectividad/reconectar")
+def api_conectividad_reconectar() -> dict:
+    """Ejecuta protocolo de reconexión de emergencia + eco."""
+    from cognicion.reconexion import ejecutar_reconexion_emergencia
+
+    return ejecutar_reconexion_emergencia()
 
 
 class WebArchitectRequest(BaseModel):
@@ -2103,11 +2125,16 @@ def pwa_nativa_js() -> FileResponse:
     return _archivo_studio("pwa-nativa.js", "application/javascript")
 
 
+@app.get("/reconexion-perifericos.js")
+def reconexion_perifericos_js() -> FileResponse:
+    return _archivo_studio("reconexion-perifericos.js", "application/javascript")
+
+
 @app.get("/api/pwa/estado")
 def api_pwa_estado() -> dict:
     return {
-        "protocol": "PWA_SELLADO_FINAL",
-        "version": "103.0.0",
+        "protocol": "PWA_RECONEXION_EMERGENCIA",
+        "version": "104.0.0",
         "active": True,
         "manifest": {
             "name": "Salomon AI",
@@ -2118,11 +2145,18 @@ def api_pwa_estado() -> dict:
         },
         "service_worker": "/service-worker.js",
         "service_worker_legacy": "/sw.js",
-        "cache": "salomon-pwa-v103",
-        "core_endpoints": ["/api/identidad", "/api/inmune", "/api/web/arquitecto", "/api/eficiencia"],
+        "cache": "salomon-pwa-v104",
+        "core_endpoints": [
+            "/api/identidad",
+            "/api/inmune",
+            "/api/conectividad",
+            "/api/web/arquitecto",
+            "/api/eficiencia",
+        ],
+        "perifericos": "/reconexion-perifericos.js",
         "installable": True,
         "owner": "Israel Monta - Salomon AI Studio",
-        "seal": "LISTO_PARA_DESPLIEGUE",
+        "external_fetch_passthrough": True,
     }
 
 

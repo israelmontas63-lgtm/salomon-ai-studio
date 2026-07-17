@@ -6,8 +6,8 @@
   "use strict";
   if (window.__SalomonPwaNativa) return;
 
-  var SW_URL = "/service-worker.js?v=103";
-  var IDENTITY_KEY = "salomon_pwa_identidad_v103";
+  var SW_URL = "/service-worker.js?v=104";
+  var IDENTITY_KEY = "salomon_pwa_identidad_v104";
   var deferredPrompt = null;
 
   function log() {
@@ -31,7 +31,7 @@
       })
       .catch(function (err) {
         log("SW register fail", err);
-        return navigator.serviceWorker.register("/sw.js?v=103").catch(function () {
+        return navigator.serviceWorker.register("/sw.js?v=104").catch(function () {
           return null;
         });
       });

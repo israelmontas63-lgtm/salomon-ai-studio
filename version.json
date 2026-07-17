@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T21:10:00Z",
-  "timestamp": 1752796200,
-  "version": "103.0.0",
+  "timestamp_iso": "2026-07-17T21:40:00Z",
+  "timestamp": 1752798000,
+  "version": "104.0.0",
   "channel": "main",
-  "label": "sellado-final-despliegue-seguro",
+  "label": "reconexion-emergencia-puertos-perifericos",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "SELLADO_FINAL_DESPLIEGUE_SEGURO",
-  "notes": "PWA seal v103: SW salomon-pwa-v103, identidad+inmune SWR, camera golden intact, Free Tier caps OK. INTEGRIDAD 100%."
+  "protocol": "RECONEXION_EMERGENCIA_PUERTOS_PERIFERICOS",
+  "notes": "Puerto 800→8000, memoria chroma+JSON fallback, MediaDevices reconexion, SW external passthrough, gateway web eco OK. CameraEngine untouched."
 }

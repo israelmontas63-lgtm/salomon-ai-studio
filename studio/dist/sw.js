@@ -4,7 +4,7 @@
  * Identidad + inmune + arquitecto: stale-while-revalidate.
  * Created by Israel Monta - Salomon AI Studio
  */
-const CACHE = "salomon-pwa-v103";
+const CACHE = "salomon-pwa-v104";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -16,16 +16,18 @@ const PRECACHE = [
   "/icon-v2.svg",
   "/apple-touch-icon-v2.png",
   "/favicon-v2.ico",
-  "/salomon-theme.css?v=103",
-  "/splash.css?v=103",
-  "/thinking-animation-spec.css?v=103",
-  "/salomon-ui-shield.css?v=103",
-  "/standalone-boot.js?v=103",
-  "/salomon-update.js?v=103",
-  "/pwa-nativa.js?v=103",
+  "/salomon-theme.css?v=104",
+  "/splash.css?v=104",
+  "/thinking-animation-spec.css?v=104",
+  "/salomon-ui-shield.css?v=104",
+  "/standalone-boot.js?v=104",
+  "/salomon-update.js?v=104",
+  "/pwa-nativa.js?v=104",
+  "/reconexion-perifericos.js?v=104",
   "/visual-progress.js?v=70",
   "/api/identidad",
   "/api/inmune",
+  "/api/conectividad",
   "/api/web/arquitecto",
   "/api/eficiencia",
 ];
@@ -40,10 +42,11 @@ function pathOf(url) {
 
 function isApiNetworkOnly(path) {
   if (!path.startsWith("/api/")) return false;
-  // Nucleo identidad/inmune/web/salud ligera: pueden usarse desde cache PWA
+  // Nucleo identidad/inmune/conectividad/web: pueden usarse desde cache PWA
   if (
     path === "/api/identidad" ||
     path === "/api/inmune" ||
+    path === "/api/conectividad" ||
     path === "/api/web/arquitecto" ||
     path === "/api/eficiencia" ||
     path === "/api/cognicion/multimodal" ||
@@ -51,6 +54,7 @@ function isApiNetworkOnly(path) {
   ) {
     return false;
   }
+  // chat / media / busqueda / reconexion activa → siempre red
   return true;
 }
 
@@ -135,6 +139,7 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
+  // CRÍTICO v104: no interceptar orígenes externos (gateway web, APIs remotas)
   if (url.origin !== self.location.origin) return;
   const path = url.pathname;
 
@@ -144,9 +149,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Identidad / web architect / eficiencia: stale-while-revalidate (núcleo PWA)
+  // Identidad / inmune / conectividad / web: stale-while-revalidate
   if (
     path === "/api/identidad" ||
+    path === "/api/inmune" ||
+    path === "/api/conectividad" ||
     path === "/api/web/arquitecto" ||
     path === "/api/eficiencia"
   ) {

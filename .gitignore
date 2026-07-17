@@ -43,6 +43,7 @@ temp/
 salomon_integrity_attempts.jsonl
 salomon_evolution_ledger.jsonl
 data/comics/
+data/memoria_json_fallback.jsonl
 
 _integrity_backup_dist/
 /index.html

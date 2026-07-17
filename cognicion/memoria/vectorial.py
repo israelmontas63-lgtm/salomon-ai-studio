@@ -1,17 +1,27 @@
 """
-Memoria vectorial local (RAG) con ChromaDB.
-Persiste preferencias, configuraciones y turnos de conversación.
+Memoria vectorial local (RAG) con ChromaDB + fallback JSON (v104).
+Nunca usa HttpClient / puerto 800 — solo filesystem local estable.
 """
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from cognicion.config import CONOCIMIENTO_BASE, MEMORIA_DIR, RAG_TOP_K
 
 _instancia_global: "MemoriaVectorial | None" = None
+_FALLBACK_PATH = MEMORIA_DIR.parent / "memoria_json_fallback.jsonl"
+
+
+def reiniciar_instancia() -> "MemoriaVectorial":
+    """Fuerza re-init (reconexión de emergencia)."""
+    global _instancia_global
+    _instancia_global = None
+    return obtener_memoria()
 
 
 def obtener_memoria() -> "MemoriaVectorial":
@@ -23,37 +33,107 @@ def obtener_memoria() -> "MemoriaVectorial":
 
 
 class MemoriaVectorial:
-    """Base de conocimiento vectorial persistente."""
+    """Base de conocimiento vectorial persistente (chroma o JSON)."""
 
     def __init__(self) -> None:
         self._disponible = False
         self._coleccion = None
+        self.motor = "offline"
+        self._docs_fallback: list[dict[str, Any]] = []
         self._inicializar()
 
     def _inicializar(self) -> None:
+        # 1) Chroma PersistentClient — SOLO path local (nunca :800 / HttpClient)
         try:
             import chromadb
 
             MEMORIA_DIR.mkdir(parents=True, exist_ok=True)
-            cliente = chromadb.PersistentClient(path=str(MEMORIA_DIR))
+            # Evitar telemetría / servidores remotos
+            try:
+                from chromadb.config import Settings
+
+                cliente = chromadb.PersistentClient(
+                    path=str(MEMORIA_DIR),
+                    settings=Settings(anonymized_telemetry=False, allow_reset=True),
+                )
+            except Exception:
+                cliente = chromadb.PersistentClient(path=str(MEMORIA_DIR))
             self._coleccion = cliente.get_or_create_collection(
                 name="salomon_conocimiento",
                 metadata={"hnsw:space": "cosine"},
             )
             self._disponible = True
+            self.motor = "chroma_local"
             self._sembrar_conocimiento_base()
+            return
         except Exception as exc:
-            self._disponible = False
             self._coleccion = None
             try:
                 from cognicion.registro import obtener_logger
 
                 obtener_logger("memoria").warning(
-                    "memoria_vectorial_fallo_init error=%s",
+                    "memoria_chroma_fallo → fallback_json error=%s",
                     f"{type(exc).__name__}: {exc}",
                 )
             except Exception:
                 pass
+
+        # 2) Fallback JSONL — siempre R/W en disco local
+        try:
+            MEMORIA_DIR.mkdir(parents=True, exist_ok=True)
+            self._cargar_fallback()
+            self._disponible = True
+            self.motor = "json_fallback"
+            self._sembrar_fallback_base()
+        except Exception as exc:
+            self._disponible = False
+            self.motor = "offline"
+            try:
+                from cognicion.registro import obtener_logger
+
+                obtener_logger("memoria").warning(
+                    "memoria_fallback_fallo error=%s",
+                    f"{type(exc).__name__}: {exc}",
+                )
+            except Exception:
+                pass
+
+    def _cargar_fallback(self) -> None:
+        self._docs_fallback = []
+        if not _FALLBACK_PATH.exists():
+            return
+        for ln in _FALLBACK_PATH.read_text(encoding="utf-8").splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                self._docs_fallback.append(json.loads(ln))
+            except Exception:
+                continue
+
+    def _persistir_fallback(self, entry: dict[str, Any]) -> None:
+        _FALLBACK_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with _FALLBACK_PATH.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        self._docs_fallback.append(entry)
+
+    def _sembrar_fallback_base(self) -> None:
+        ids = {d.get("id") for d in self._docs_fallback}
+        for item in CONOCIMIENTO_BASE:
+            if item["id"] in ids:
+                continue
+            self._persistir_fallback(
+                {
+                    "id": item["id"],
+                    "texto": item["texto"],
+                    "metadata": {
+                        "tipo": item["tipo"],
+                        "categoria": item["categoria"],
+                        "capa": "permanente",
+                        "sesion_id": "global",
+                    },
+                }
+            )
 
     def _sembrar_conocimiento_base(self) -> None:
         if not self._coleccion:
@@ -81,6 +161,8 @@ class MemoriaVectorial:
 
     @property
     def activa(self) -> bool:
+        if self.motor == "json_fallback":
+            return self._disponible
         return self._disponible and self._coleccion is not None
 
     def guardar(
@@ -102,6 +184,16 @@ class MemoriaVectorial:
             for key, val in meta.items()
             if isinstance(val, (str, int, float, bool))
         }
+
+        if self.motor == "json_fallback":
+            try:
+                self._persistir_fallback(
+                    {"id": identificador, "texto": texto.strip(), "metadata": meta_limpio}
+                )
+                return identificador
+            except Exception:
+                return None
+
         try:
             self._coleccion.add(
                 ids=[identificador],
@@ -134,6 +226,31 @@ class MemoriaVectorial:
             return []
 
         limite = n or k or top_k or RAG_TOP_K
+
+        if self.motor == "json_fallback":
+            q = consulta.lower().split()
+            scored: list[tuple[float, dict[str, Any]]] = []
+            for doc in self._docs_fallback:
+                texto = (doc.get("texto") or "").lower()
+                score = sum(1.0 for w in q if w and w in texto)
+                if session_id:
+                    sid = (doc.get("metadata") or {}).get("sesion_id")
+                    if sid not in (session_id, "global", None):
+                        continue
+                if score > 0:
+                    scored.append((score, doc))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            out = []
+            for score, doc in scored[: max(1, int(limite))]:
+                out.append(
+                    {
+                        "texto": doc.get("texto"),
+                        "metadata": doc.get("metadata") or {},
+                        "relevancia": round(min(1.0, score / max(1, len(q))), 3),
+                    }
+                )
+            return out
+
         try:
             total = int(self._coleccion.count())
             if total <= 0:
@@ -208,6 +325,14 @@ class MemoriaVectorial:
             return []
 
         limite = n or max(2, RAG_TOP_K // 2)
+        if self.motor == "json_fallback" or not self._coleccion:
+            # Fallback: filtrar en memoria tras búsqueda textual
+            base = self.buscar(consulta, n=limite * 2, session_id=session_id)
+            return [
+                f for f in base
+                if (f.get("metadata") or {}).get("capa") == capa
+            ][:limite] or base[:limite]
+
         filtro: dict[str, Any] = {"capa": capa}
 
         if capa in ("temporal", "proyecto", "contexto") and session_id:

@@ -26,7 +26,19 @@ ROOT = Path(__file__).resolve().parents[2]
 ESTADO_DIR = ROOT / "data" / "bca"
 ESTADO_PATH = ESTADO_DIR / "estado.json"
 PID_PATH = ESTADO_DIR / "supervisor.pid"
-PUERTO = int(os.getenv("COLSUB_PORT", "8000"))
+
+def _puerto_bca() -> int:
+    raw = os.getenv("PORT") or os.getenv("COLSUB_PORT") or "8000"
+    try:
+        p = int(str(raw).strip())
+    except Exception:
+        p = 8000
+    if p == 800:
+        p = 8000
+    return p
+
+
+PUERTO = _puerto_bca()
 # Health checks siempre a loopback; el servidor escucha en 0.0.0.0
 HOST = "127.0.0.1"
 POLL_S = float(os.getenv("BCA_POLL_S", "2.0"))
