@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T19:05:00Z",
-  "timestamp": 1752788700,
-  "version": "40.0.0",
+  "timestamp_iso": "2026-07-17T19:20:00Z",
+  "timestamp": 1752789600,
+  "version": "41.0.0",
   "channel": "main",
-  "label": "salomon-viviente-system-guard",
+  "label": "salomon-health-dashboard",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "SALOMON_VIVIENTE",
-  "notes": "Autonomous Immune Kernel active. SystemGuard integrity map + golden snapshot self-heal. Camera Golden State untouched."
+  "notes": "Health Dashboard HTML en /api/salud (navegador). JSON preservado para Render via Accept/format."
 }

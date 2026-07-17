@@ -25,7 +25,7 @@ configurar_registro()
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -438,9 +438,8 @@ def api_version() -> dict:
     }
 
 
-@app.get("/api/salud")
-def salud() -> dict:
-    """Health check rápido para Render (no bloquea por Chroma/LLM)."""
+def _salud_payload() -> dict:
+    """Estado técnico de salud (JSON / Render / SystemGuard)."""
     ver = _leer_version_json()
     guard: dict = {"active": False}
     try:
@@ -467,6 +466,142 @@ def salud() -> dict:
         "system_guard": guard,
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
+
+
+def _salud_dashboard_html(payload: dict) -> str:
+    """Salomón Health Dashboard (v41) — vista viviente para navegador / PWA."""
+    ok = bool((payload.get("system_guard") or {}).get("integrity_ok", True))
+    integridad = "100% OK" if ok else "DRIFT DETECTADO"
+    version = payload.get("version") or "41.0.0"
+    protocol = payload.get("protocol") or "SALOMON_VIVIENTE"
+    return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Salomón VIVO" />
+  <title>Salomón VIVO — Salud</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {{
+      --bg0: #070708;
+      --bg1: #121316;
+      --neon: #39ff14;
+      --neon-dim: #1a8f0a;
+      --text: #e8eae6;
+      --muted: #8a9088;
+    }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    html, body {{
+      min-height: 100%;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, #1a2214 0%, transparent 55%),
+        linear-gradient(165deg, var(--bg0) 0%, var(--bg1) 100%);
+      color: var(--text);
+      font-family: "Outfit", sans-serif;
+    }}
+    main {{
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem 1.25rem 3rem;
+      gap: 1.25rem;
+    }}
+    .brand {{
+      font-size: 0.75rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }}
+    h1 {{
+      font-size: clamp(1.55rem, 5.5vw, 2.35rem);
+      font-weight: 700;
+      color: var(--neon);
+      text-shadow: 0 0 18px rgba(57, 255, 20, 0.35);
+      line-height: 1.25;
+      max-width: 18ch;
+    }}
+    .sub {{
+      font-size: clamp(1rem, 3.2vw, 1.2rem);
+      color: var(--text);
+      opacity: 0.92;
+    }}
+    .meta {{
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }}
+    .cta {{
+      margin-top: 1.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 3rem;
+      padding: 0.85rem 1.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(57, 255, 20, 0.45);
+      background: linear-gradient(180deg, rgba(57, 255, 20, 0.16), rgba(57, 255, 20, 0.05));
+      color: var(--neon);
+      font: inherit;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }}
+    .cta:hover {{
+      background: linear-gradient(180deg, rgba(57, 255, 20, 0.28), rgba(57, 255, 20, 0.1));
+      border-color: var(--neon);
+    }}
+    .cta:active {{ transform: scale(0.98); }}
+    @media (prefers-reduced-motion: reduce) {{
+      .cta {{ transition: none; }}
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <p class="brand">Salomón AI · {protocol}</p>
+    <h1>Estado: SALOMÓN VIVIENTE</h1>
+    <p class="sub">Integridad del Sistema: {integridad}</p>
+    <p class="meta">v{version}</p>
+    <a class="cta" href="/">Volver al Asistente</a>
+  </main>
+</body>
+</html>"""
+
+
+@app.get("/api/salud")
+def salud(request: Request):
+    """
+    Health Dashboard (HTML en navegador) + JSON para Render/monitores.
+    HTML: navegación documento / Accept text/html / ?view=dashboard
+    JSON: probes, Accept json, ?format=json
+    """
+    payload = _salud_payload()
+    fmt = (request.query_params.get("format") or "").lower()
+    view = (request.query_params.get("view") or "").lower()
+    if fmt == "json" or view == "json":
+        return payload
+    if view in {"dashboard", "html", "ui"}:
+        return HTMLResponse(content=_salud_dashboard_html(payload), status_code=200)
+    if request.headers.get("sec-fetch-dest") == "document":
+        return HTMLResponse(content=_salud_dashboard_html(payload), status_code=200)
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept:
+        html_i = accept.find("text/html")
+        json_i = accept.find("application/json")
+        if json_i < 0 or html_i < json_i:
+            return HTMLResponse(content=_salud_dashboard_html(payload), status_code=200)
+    return payload
 
 
 @app.get("/api/salud/detalle")

@@ -1,13 +1,13 @@
 {
   "id": "salud_activa",
-  "created_at": "2026-07-17T19:05:25.275071+00:00",
+  "created_at": "2026-07-17T19:20:27.501024+00:00",
   "protocol": "SALOMON_VIVIENTE",
-  "version": "40.0.0",
+  "version": "41.0.0",
   "files": {
     "app.py": {
       "source": "app.py",
       "snapshot": "golden_snapshots/salud_activa/app.py",
-      "sha256": "546c4f76045be71f5c3c1321765f4bbeeb8ac5fa1c6c2739c3c5519ee1c5cd7f"
+      "sha256": "a3f25b5cf5949228c51ede25cde0cc678b066ea81d848d41c472d1de8e9eed6d"
     },
     "CameraEngine": {
       "source": "studio/dist/camera-engine.js",

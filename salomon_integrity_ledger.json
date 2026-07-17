@@ -1,6 +1,6 @@
 {
   "protocol": "SALOMON_VIVIENTE",
-  "protocol_version": "40.0.0",
+  "protocol_version": "41.0.0",
   "parent_protocol": "NEURAL_INTEGRITY_LOCK",
   "architect": "Israel",
   "authorization_word": "AUTORIZADO",
@@ -28,7 +28,7 @@
       "studio/src/features/camera_v13/MediaStreamManager.js",
       "studio/src/features/camera_v13/CameraV13.jsx"
     ],
-    "golden_snapshot_id": "viviente_v40+camera_engine_v20.1.0+ui31+deploy24",
+    "golden_snapshot_id": "viviente_v41+health_dashboard+camera_engine_v20.1.0",
     "notes": "Cualquier drift de checksum vs file_signatures_sha256 = bloqueo sin AUTORIZADO."
   },
   "defense_layer": {
@@ -73,7 +73,7 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "546c4f76045be71f5c3c1321765f4bbeeb8ac5fa1c6c2739c3c5519ee1c5cd7f",
+    "app.py": "a3f25b5cf5949228c51ede25cde0cc678b066ea81d848d41c472d1de8e9eed6d",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
@@ -81,7 +81,7 @@
     "studio/dist/salomon-security-kernel.js": "66804a6fa7f41bbec296b29d37c4b4a6de766766b1006ec26ee8610037c70dfd",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
-    "version.json": "0729cfdea99a964b96207de905d3eee40874d31ad3fcc67661f596e4c568ef86"
+    "version.json": "e755cbd4d6595e731d1c65006301f423f2f8926e819957ad364d39b0b2c18cd4"
   },
   "invariants": [
     "MediaStreamManager.forceReset debe existir",
@@ -159,6 +159,13 @@
       "at": "2026-07-17T15:05:00-04:00",
       "by": "Israel+Cursor",
       "note": "Autonomous Immune Kernel: integrity map, golden snapshot, self-heal, proposal gate"
+    },
+    {
+      "version": "41.0.0",
+      "event": "SALOMON_HEALTH_DASHBOARD",
+      "at": "2026-07-17T15:20:00-04:00",
+      "by": "Israel+Cursor",
+      "note": "/api/salud HTML dashboard for browser; JSON retained for Render"
     }
   ]
 }
