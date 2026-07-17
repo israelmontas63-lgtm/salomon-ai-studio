@@ -1,7 +1,7 @@
 {
-    "timestamp_iso":  "2026-07-17T20:20:00Z",
-    "timestamp":  1752786000,
-    "version":  "13.0.0",
-    "channel":  "main",
-    "label":  "camera-v13-aislada-clean-slate"
+  "timestamp_iso": "2026-07-17T16:15:00Z",
+  "timestamp": 1752778500,
+  "version": "14.0.0",
+  "channel": "main",
+  "label": "camera-v14-eventos-reconectados"
 }

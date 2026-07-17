@@ -540,7 +540,10 @@
       t.closest(".ui-camera-stage") ||
       t.closest(".neural-camera") ||
       t.closest("#salomon-update-btn") ||
-      t.closest(".salomon-update-slot")
+      t.closest(".salomon-update-slot") ||
+      t.closest(".cam13-root") ||
+      t.closest("[data-salomon-camera-v13]") ||
+      t.closest("[data-salomon-camera-v14]")
     );
   }
 
@@ -575,6 +578,13 @@
       "click",
     ];
     function blockChat(e) {
+      // v13/v14 aislada: no interceptar gestos (ni preview ni botones)
+      if (
+        document.documentElement.classList.contains("camera-v13-open") ||
+        document.documentElement.classList.contains("camera-v14-open")
+      ) {
+        return;
+      }
       if (!isCamMode()) return;
       if (isCaptureExemptTarget(e.target)) return;
       if (e.cancelable) e.preventDefault();
