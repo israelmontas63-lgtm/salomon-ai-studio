@@ -23,6 +23,10 @@
     "preferencia_edicion": {
       "valor": "que me hables sobre el planeta tierra lo más fácil que tú puedas",
       "capa": "preferencias"
+    },
+    "proyecto": {
+      "valor": "se llama Salomón AI Studio",
+      "capa": "proyecto"
     }
   }
 }
