@@ -1,26 +1,35 @@
 /**
- * Dual-stream hot-swap — sin Bridge / modoInterfaz.
- * Activo + standby; switchCamera <300ms cuando dual OK.
+ * Failsafe single-stream switch — Apagar → Esperar 350ms → Reanudar.
+ * Sin dual-stream (compatible Redmi 13C / HW bloqueado).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const OTHER = (f) => (f === "user" ? "environment" : "user");
+const HARDWARE_RELEASE_MS = 350;
+const FADE_MS = 220;
 
 async function acquire(facing) {
   try {
     return await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { exact: facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      video: { facingMode: facing },
       audio: false,
     });
   } catch {
-    return navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false,
-    });
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: facing } },
+        audio: false,
+      });
+    } catch {
+      return navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: facing } },
+        audio: false,
+      });
+    }
   }
 }
 
-function waitFrame(video, ms = 1500) {
+function waitFrame(video, ms = 2500) {
   return new Promise((resolve) => {
     if (!video) return resolve(false);
     if (video.readyState >= 2 && video.videoWidth > 0) return resolve(true);
@@ -28,38 +37,79 @@ function waitFrame(video, ms = 1500) {
     const t = setTimeout(() => {
       if (!done) {
         done = true;
-        resolve(video.readyState >= 2);
+        resolve(video.readyState >= 2 && video.videoWidth > 0);
       }
     }, ms);
     const ok = () => {
-      if (done) return;
+      if (done || video.videoWidth < 1) return;
       done = true;
       clearTimeout(t);
       resolve(true);
     };
-    video.addEventListener("loadeddata", ok, { once: true });
-    video.addEventListener("playing", ok, { once: true });
+    video.addEventListener("loadeddata", ok);
+    video.addEventListener("playing", ok);
   });
 }
 
 function stopStream(stream) {
   if (!stream) return;
   try {
-    stream.getTracks().forEach((t) => t.stop());
+    stream.getTracks().forEach((t) => {
+      try {
+        t.stop();
+      } catch (_) {}
+    });
   } catch (_) {}
+}
+
+function delay(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 export function useCameraStream(active, facing) {
   const videoEnvRef = useRef(null);
   const videoUserRef = useRef(null);
-  const streamsRef = useRef({ environment: null, user: null });
-  const dualOkRef = useRef(true);
-  const warmingRef = useRef({ environment: false, user: false });
+  const freezeRef = useRef(null);
+  const streamRef = useRef(null);
+  const facingRef = useRef(facing);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
+  const [switching, setSwitching] = useState(false);
   const [lastSwitchMs, setLastSwitchMs] = useState(0);
 
+  facingRef.current = facing;
+
   const videoRefFor = useCallback((f) => (f === "user" ? videoUserRef : videoEnvRef), []);
+
+  const showFreeze = useCallback((video, mirror) => {
+    const canvas = freezeRef.current;
+    if (!canvas) return;
+    try {
+      const ctx = canvas.getContext("2d");
+      if (video && video.readyState >= 2 && video.videoWidth > 0) {
+        const w = video.videoWidth;
+        const h = video.videoHeight;
+        canvas.width = w;
+        canvas.height = h;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        if (mirror) {
+          ctx.translate(w, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(video, 0, 0, w, h);
+      } else {
+        canvas.width = 720;
+        canvas.height = 1280;
+        ctx.fillStyle = "#111";
+        ctx.fillRect(0, 0, 720, 1280);
+      }
+      canvas.classList.add("is-visible");
+    } catch (_) {}
+  }, []);
+
+  const hideFreeze = useCallback(() => {
+    freezeRef.current?.classList.remove("is-visible");
+  }, []);
 
   const attach = useCallback(async (f, stream) => {
     const video = videoRefFor(f).current;
@@ -67,63 +117,24 @@ export function useCameraStream(active, facing) {
       stopStream(stream);
       return false;
     }
-    stopStream(streamsRef.current[f]);
-    streamsRef.current[f] = stream;
+    streamRef.current = stream;
     video.srcObject = stream;
     await video.play().catch(() => {});
-    const ok = await waitFrame(video);
-    return ok;
+    return waitFrame(video);
   }, [videoRefFor]);
 
   const stopAll = useCallback(() => {
-    stopStream(streamsRef.current.environment);
-    stopStream(streamsRef.current.user);
-    streamsRef.current = { environment: null, user: null };
-    warmingRef.current = { environment: false, user: false };
+    stopStream(streamRef.current);
+    streamRef.current = null;
     if (videoEnvRef.current) videoEnvRef.current.srcObject = null;
     if (videoUserRef.current) videoUserRef.current.srcObject = null;
     setReady(false);
   }, []);
 
-  const warmStandby = useCallback(
-    async (f) => {
-      if (!active || !dualOkRef.current) return;
-      if (streamsRef.current[f] || warmingRef.current[f]) return;
-      warmingRef.current[f] = true;
-      try {
-        const stream = await acquire(f);
-        if (!active) {
-          stopStream(stream);
-          return;
-        }
-        const ok = await attach(f, stream);
-        if (!ok) return;
-        const cur = facing;
-        const curStream = streamsRef.current[cur];
-        const live =
-          curStream &&
-          curStream.getVideoTracks().some((t) => t.readyState === "live");
-        if (!live) {
-          dualOkRef.current = false;
-          stopStream(streamsRef.current[f]);
-          streamsRef.current[f] = null;
-          const s2 = await acquire(cur);
-          await attach(cur, s2);
-          setReady(true);
-        }
-      } catch {
-        dualOkRef.current = false;
-      } finally {
-        warmingRef.current[f] = false;
-      }
-    },
-    [active, attach, facing]
-  );
-
   useEffect(() => {
     if (!active) {
       stopAll();
-      dualOkRef.current = true;
+      setSwitching(false);
       return;
     }
     let cancelled = false;
@@ -131,18 +142,13 @@ export function useCameraStream(active, facing) {
     setReady(false);
     (async () => {
       try {
-        const stream = await acquire(facing);
+        const stream = await acquire(facingRef.current);
         if (cancelled) {
           stopStream(stream);
           return;
         }
-        const ok = await attach(facing, stream);
-        if (!cancelled && ok) {
-          setReady(true);
-          setTimeout(() => {
-            if (!cancelled) warmStandby(OTHER(facing));
-          }, 80);
-        }
+        const ok = await attach(facingRef.current, stream);
+        if (!cancelled) setReady(!!ok);
       } catch {
         if (!cancelled) setError("cam");
       }
@@ -151,47 +157,60 @@ export function useCameraStream(active, facing) {
       cancelled = true;
       stopAll();
     };
-    // Solo al abrir/cerrar — el flip lo hace switchCamera
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  const switchCamera = useCallback(
-    async (nextFacing) => {
-      const from = facing;
-      const to = nextFacing || OTHER(from);
-      if (to === from) return { ok: true, ms: 0 };
+  /**
+   * Failsafe: freeze → stop tracks → wait 350ms → getUserMedia → commit facing → fade.
+   * commitFacing(to) debe correr ANTES del hideFreeze (Paso 6).
+   */
+  const handleCameraSwitch = useCallback(
+    async (commitFacing) => {
+      if (!active || switching) return { ok: false, ms: 0 };
+      const from = facingRef.current;
+      const to = OTHER(from);
       const t0 = performance.now();
-      const standbyStream = streamsRef.current[to];
+      setSwitching(true);
 
-      if (dualOkRef.current && standbyStream) {
-        const ms = Math.round(performance.now() - t0);
-        setLastSwitchMs(ms);
-        setReady(true);
-        setTimeout(() => warmStandby(from), 120);
-        return { ok: true, ms, hot: true };
-      }
+      const currentVideo = videoRefFor(from).current;
+      showFreeze(currentVideo, from === "user");
+      stopAll();
+
+      await delay(HARDWARE_RELEASE_MS);
 
       try {
         const stream = await acquire(to);
         const ok = await attach(to, stream);
-        if (ok) {
-          stopStream(streamsRef.current[from]);
-          streamsRef.current[from] = null;
-          if (videoRefFor(from).current) videoRefFor(from).current.srcObject = null;
+        if (!ok) {
+          const s2 = await acquire(from);
+          await attach(from, s2);
+          hideFreeze();
+          setReady(true);
+          setSwitching(false);
+          setLastSwitchMs(Math.round(performance.now() - t0));
+          return { ok: false, ms: Math.round(performance.now() - t0), facing: from };
         }
+        setReady(true);
+        // Paso 6a — estado "user"/destino ANTES de quitar freeze
+        if (typeof commitFacing === "function") commitFacing(to);
+        facingRef.current = to;
+        await delay(40);
+        hideFreeze();
+        await delay(FADE_MS);
         const ms = Math.round(performance.now() - t0);
         setLastSwitchMs(ms);
-        setReady(!!ok);
-        setTimeout(() => {
-          if (dualOkRef.current) warmStandby(from);
-        }, 120);
-        return { ok, ms, hot: false };
-      } catch {
+        setSwitching(false);
+        console.info("[CameraV16] failsafe", from, "→", to, ms + "ms");
+        return { ok: true, ms, facing: to };
+      } catch (err) {
+        hideFreeze();
         setError("cam");
-        return { ok: false, ms: Math.round(performance.now() - t0) };
+        setSwitching(false);
+        setLastSwitchMs(Math.round(performance.now() - t0));
+        return { ok: false, ms: Math.round(performance.now() - t0), facing: from };
       }
     },
-    [facing, attach, warmStandby, videoRefFor]
+    [active, switching, videoRefFor, showFreeze, hideFreeze, stopAll, attach]
   );
 
   const captureBlob = useCallback(async () => {
@@ -216,13 +235,15 @@ export function useCameraStream(active, facing) {
   return {
     videoEnvRef,
     videoUserRef,
+    freezeRef,
     videoRef: videoRefFor(facing),
     ready,
     error,
+    switching,
     stop: stopAll,
     captureBlob,
-    switchCamera,
+    handleCameraSwitch,
+    switchCamera: handleCameraSwitch,
     lastSwitchMs,
-    dualOk: dualOkRef.current,
   };
 }

@@ -7,23 +7,26 @@ import ShutterButton from "./controls/ShutterButton.jsx";
 import "./cameraV13.css";
 
 /**
- * Cámara v15 — dual-stream hot-swap + crossfade.
- * No usa SalomonBridge, no dicta, no conversa.
+ * Cámara v16 — failsafe Apagar/Esperar/Reanudar (Redmi 13C).
  */
 export default function CameraV13({ open, onClose, onCaptured }) {
   const [facing, setFacing] = useState("environment");
   const [locked, setLocked] = useState(true);
   const [shotFx, setShotFx] = useState(false);
-  const [crossfading, setCrossfading] = useState(false);
-  const { videoEnvRef, videoUserRef, ready, captureBlob, switchCamera } = useCameraStream(
-    !!open,
-    facing
-  );
+  const {
+    videoEnvRef,
+    videoUserRef,
+    freezeRef,
+    ready,
+    switching,
+    captureBlob,
+    handleCameraSwitch,
+  } = useCameraStream(!!open, facing);
 
-  const status = open ? (ready ? "STREAMING" : "ACTIVE") : "IDLE";
+  const status = open ? (switching ? "SWITCHING" : ready ? "STREAMING" : "ACTIVE") : "IDLE";
 
   const takePicture = useCallback(async () => {
-    if (status === "IDLE" || !ready) return;
+    if (status === "IDLE" || switching || !ready) return;
     const blob = await captureBlob();
     if (!blob) return;
     setShotFx(true);
@@ -34,37 +37,31 @@ export default function CameraV13({ open, onClose, onCaptured }) {
       isolated: true,
       deferChat: true,
       cameraOnly: true,
-      source: "camera_v15",
+      source: "camera_v16",
     });
-  }, [status, ready, captureBlob, facing, onCaptured]);
+  }, [status, switching, ready, captureBlob, facing, onCaptured]);
 
   const rotateCamera = useCallback(async () => {
-    if (status === "IDLE") return;
-    const next = facing === "environment" ? "user" : "environment";
-    setCrossfading(true);
-    const result = await switchCamera(next);
-    setFacing(next);
-    setTimeout(() => setCrossfading(false), 180);
-    if (result?.ms != null) {
-      console.info("[CameraV15] switchCamera", result.ms + "ms", result.hot ? "HOT" : "cold");
-    }
-  }, [status, facing, switchCamera]);
+    if (status === "IDLE" || switching) return;
+    await handleCameraSwitch(setFacing);
+  }, [status, switching, handleCameraSwitch]);
 
   const toggleCameraMode = useCallback(() => {
+    if (switching) return;
     onClose?.();
-  }, [onClose]);
+  }, [onClose, switching]);
 
   if (!open) return null;
 
   return (
     <div
-      className={`cam13-root${facing === "user" ? " is-front" : ""}${shotFx ? " is-shot" : ""}${crossfading ? " is-crossfading" : ""}`}
+      className={`cam13-root${facing === "user" ? " is-front" : ""}${shotFx ? " is-shot" : ""}${switching ? " is-switching is-crossfading" : ""}`}
       data-salomon-camera-v13="1"
-      data-salomon-camera-v14="1"
-      data-salomon-camera-v15="1"
+      data-salomon-camera-v16="1"
       data-isolated="1"
       data-cam-status={status}
       data-facing={facing}
+      data-switch-mode="failsafe"
     >
       <video
         ref={videoEnvRef}
@@ -82,15 +79,13 @@ export default function CameraV13({ open, onClose, onCaptured }) {
         muted
         autoPlay
       />
+      <canvas ref={freezeRef} className="cam13-freeze" aria-hidden="true" />
       <button
         type="button"
         className="cam13-stage-hit"
         aria-label=" "
         onClick={takePicture}
-        onPointerUp={(e) => {
-          if (e.pointerType === "touch") return;
-          e.stopPropagation();
-        }}
+        disabled={switching}
       />
       <div className="cam13-flash" aria-hidden="true" />
 
@@ -98,11 +93,11 @@ export default function CameraV13({ open, onClose, onCaptured }) {
 
       <div className="cam13-cluster-right">
         <CamToggle active onToggle={toggleCameraMode} />
-        <FlipButton onFlip={rotateCamera} />
+        <FlipButton onFlip={rotateCamera} disabled={switching} />
       </div>
 
       <div className="cam13-shutter-wrap">
-        <ShutterButton onShoot={takePicture} disabled={!ready} />
+        <ShutterButton onShoot={takePicture} disabled={!ready || switching} />
       </div>
     </div>
   );

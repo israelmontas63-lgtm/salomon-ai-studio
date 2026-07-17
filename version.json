@@ -1,7 +1,7 @@
 {
-  "timestamp_iso": "2026-07-17T16:30:00Z",
-  "timestamp": 1752779400,
-  "version": "15.0.0",
+  "timestamp_iso": "2026-07-17T16:45:00Z",
+  "timestamp": 1752780300,
+  "version": "16.0.0",
   "channel": "main",
-  "label": "camera-v15-hot-swap-crossfade"
+  "label": "camera-v16-failsafe-apagar-esperar-reanudar"
 }

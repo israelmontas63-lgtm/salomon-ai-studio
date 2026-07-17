@@ -1,17 +1,17 @@
-/* Cámara Salomón AI v15 — dual-stream + crossfade hot-swap */
+/* Cámara Salomón AI v16 — failsafe freeze + fade (single-stream HW) */
 :root {
   --cam13-dorado: #c9a227;
   --cam13-dorado-claro: #e8c860;
   --cam13-gap-2mm: 7.56px;
   --cam13-ctrl-z: 60;
-  --cam13-crossfade: 180ms;
+  --cam13-crossfade: 220ms;
 }
 
 .cam13-root {
   position: fixed;
   inset: 0;
   z-index: 400000;
-  background: #000;
+  background: #111;
   isolation: isolate;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -28,6 +28,7 @@
   opacity: 0;
   transition: opacity var(--cam13-crossfade) ease-out;
   will-change: opacity;
+  background: #111;
 }
 
 .cam13-video.is-active {
@@ -40,8 +41,7 @@
   z-index: 2;
 }
 
-.cam13-video.is-mirror,
-.cam13-root.is-front .cam13-video.is-active.is-mirror {
+.cam13-video.is-mirror {
   transform: scaleX(-1);
 }
 
@@ -58,11 +58,18 @@
   pointer-events: none;
   z-index: 4;
   opacity: 0;
-  transition: opacity 120ms ease-out;
+  transition: opacity var(--cam13-crossfade) ease-out;
+  background: #111;
 }
 
 .cam13-freeze.is-visible {
   opacity: 1;
+}
+
+.cam13-root.is-switching .cam13-icon[data-cam-action="handleCameraSwitch"],
+.cam13-icon.is-disabled {
+  opacity: 0.45;
+  pointer-events: none !important;
 }
 
 .cam13-flash {
@@ -311,7 +318,12 @@ html.camera-v15-open .bottom-bar,
 html.camera-v15-open .studio-header,
 html.camera-v15-open .chat-body,
 html.camera-v15-open .ui-camera-overlay,
-html.camera-v15-open #ui-camera-overlay {
+html.camera-v15-open #ui-camera-overlay,
+html.camera-v16-open .bottom-bar,
+html.camera-v16-open .studio-header,
+html.camera-v16-open .chat-body,
+html.camera-v16-open .ui-camera-overlay,
+html.camera-v16-open #ui-camera-overlay {
   visibility: hidden !important;
   pointer-events: none !important;
   opacity: 0 !important;
@@ -322,6 +334,8 @@ html.camera-v13-open .camera-view,
 html.camera-v14-open .camera-modal,
 html.camera-v14-open .camera-view,
 html.camera-v15-open .camera-modal,
-html.camera-v15-open .camera-view {
+html.camera-v15-open .camera-view,
+html.camera-v16-open .camera-modal,
+html.camera-v16-open .camera-view {
   display: none !important;
 }

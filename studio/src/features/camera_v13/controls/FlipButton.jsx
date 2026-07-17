@@ -1,16 +1,21 @@
-export default function FlipButton({ onFlip }) {
+export default function FlipButton({ onFlip, disabled }) {
   return (
     <button
       type="button"
-      className="cam13-icon"
+      className={`cam13-icon${disabled ? " is-disabled" : ""}`}
       aria-label="Giro"
-      data-cam-action="rotateCamera"
+      aria-disabled={disabled ? "true" : "false"}
+      data-cam-action="handleCameraSwitch"
+      disabled={!!disabled}
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
+        if (disabled) return;
         onFlip?.(e);
       }}
       onPointerUp={(e) => e.stopPropagation()}
       onTouchEnd={(e) => {
+        e.preventDefault();
         e.stopPropagation();
       }}
     >
