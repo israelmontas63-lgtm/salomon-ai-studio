@@ -556,7 +556,7 @@ def _salud_payload() -> dict:
         identidad = {"active": False}
     pwa = {
         "active": True,
-        "version": "105.0.0",
+        "version": "106.0.0",
         "service_worker": "/service-worker.js",
         "display": "standalone",
         "theme_color": "#000000",
@@ -564,6 +564,7 @@ def _salud_payload() -> dict:
         "cache": "salomon-pwa-v105",
         "seal": True,
         "permissions": ["camera", "microphone"],
+        "espera_autorizacion_fisica": True,
     }
     sce: dict = {"active": False}
     try:
@@ -2149,8 +2150,8 @@ def reconexion_perifericos_js() -> FileResponse:
 @app.get("/api/pwa/estado")
 def api_pwa_estado() -> dict:
     return {
-        "protocol": "AUDITORIA_BLOQUEO_MUTUO_REPARACION_FORZOSA",
-        "version": "105.0.0",
+        "protocol": "EJECUCION_DESPLIEGUE_FINAL",
+        "version": "106.0.0",
         "active": True,
         "manifest": {
             "name": "Salomon AI",
@@ -2176,7 +2177,12 @@ def api_pwa_estado() -> dict:
         "installable": True,
         "owner": "Israel Monta - Salomon AI Studio",
         "external_fetch_passthrough": True,
-        "nucleo": "REPARADO_Y_SINCRONIZADO",
+        "nucleo": "DESPLIEGUE_FINAL",
+        "espera_autorizacion_fisica": True,
+        "mensaje": "DESPLIEGUE EN CURSO. ESPERANDO ACTIVACIÓN FÍSICA",
+        "instruccion_israel": (
+            "Abre la PWA, toca la pantalla y otorga permisos de micrófono y cámara."
+        ),
     }
 
 

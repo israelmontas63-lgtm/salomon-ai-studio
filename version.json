@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T21:50:00Z",
-  "timestamp": 1752798600,
-  "version": "105.0.0",
+  "timestamp_iso": "2026-07-17T22:00:00Z",
+  "timestamp": 1752799200,
+  "version": "106.0.0",
   "channel": "main",
-  "label": "auditoria-bloqueo-mutuo-reparacion-forzosa",
+  "label": "sincronizacion-completa-perifericos-pwa",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "AUDITORIA_BLOQUEO_MUTUO_REPARACION_FORZOSA",
-  "notes": "Cross-audit Cursor↔Salomon. Manifest camera/mic. SW v105 purge. Kernel repair window. Permissions-Policy. CameraEngine golden untouched."
+  "protocol": "EJECUCION_DESPLIEGUE_FINAL",
+  "notes": "v106.0.0 - Sincronizacion completa de perifericos y PWA. Post-deploy: espera autorizacion fisica mic/cam. CameraEngine untouched."
 }
