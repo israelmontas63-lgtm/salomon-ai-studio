@@ -1,9 +1,9 @@
 {
-  "timestamp_iso": "2026-07-17T18:15:00Z",
-  "timestamp": 1752785700,
-  "version": "24.0.0",
+  "timestamp_iso": "2026-07-17T18:50:00Z",
+  "timestamp": 1752787800,
+  "version": "31.0.0",
   "channel": "main",
-  "label": "render-deploy-repair-gunicorn-m",
+  "label": "ui-utf8-forensic-purge",
   "stability": "STABLE_PRODUCTION_READY",
-  "notes": "Start: python -m gunicorn (fix exit 127). Core cámara v20.1 intacto."
+  "notes": "UTF-8 enforcement index.html + welcome plain text. Camera core unchanged."
 }

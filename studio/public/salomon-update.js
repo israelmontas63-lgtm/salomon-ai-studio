@@ -115,7 +115,7 @@
     slot.className = "salomon-update-slot";
     slot.innerHTML =
       '<button type="button" id="salomon-update-btn" class="salomon-update-btn" ' +
-      'title="Forzar actualizaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n desde Render" aria-label="Actualizar">' +
+      'title="Forzar actualización desde Render" aria-label="Actualizar">' +
       '<span class="salomon-update-btn__icon">' +
       SYNC_ICON +
       "</span>" +
@@ -203,7 +203,7 @@
     applying = true;
     var btn = document.getElementById("salomon-update-btn");
     if (btn) btn.classList.add("is-busy");
-    if (!opts.silent) toast("Actualizando SalomÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦");
+    if (!opts.silent) toast("Actualizando Salomón…");
 
     try {
       if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -221,7 +221,7 @@
       log("apply fail", e && e.message);
       applying = false;
       if (btn) btn.classList.remove("is-busy");
-      if (!opts.silent) toast("Reintentando actualizaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦");
+      if (!opts.silent) toast("Reintentando actualización…");
       setTimeout(function () {
         window.location.href = "/?_salomon_force=" + Date.now();
       }, 350);

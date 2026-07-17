@@ -44,7 +44,7 @@
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
-    "version.json": "772a42f0058e85a937f363200171879a2e04454640e2abf56016cf3081af973c"
+    "version.json": "323a7ff2e3f9c6fbc1611eedec290974a2dff184bd7e1686cfde5073dacb49d1"
   },
   "invariants": [
     "MediaStreamManager.forceReset debe existir",
@@ -99,6 +99,13 @@
       "at": "2026-07-17T14:15:00-04:00",
       "by": "Israel+Cursor",
       "note": "gunicorn via python -m; app import fail-soft; Core camera unchanged"
+    },
+    {
+      "version": "31.0.0",
+      "event": "UI_UTF8_FORENSIC_PURGE",
+      "at": "2026-07-17T14:50:00-04:00",
+      "by": "Israel+Cursor",
+      "note": "index.html UTF-8 first-byte + welcome plain text; camera core unchanged"
     }
   ],
   "deploy": {
