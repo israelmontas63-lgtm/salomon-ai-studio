@@ -7,15 +7,18 @@ import ShutterButton from "./controls/ShutterButton.jsx";
 import "./cameraV13.css";
 
 /**
- * Cámara v14 — UI individual (eventos reconectados).
+ * Cámara v15 — dual-stream hot-swap + crossfade.
  * No usa SalomonBridge, no dicta, no conversa.
- * Solo: candado · cámara · giro · disparador.
  */
 export default function CameraV13({ open, onClose, onCaptured }) {
   const [facing, setFacing] = useState("environment");
   const [locked, setLocked] = useState(true);
   const [shotFx, setShotFx] = useState(false);
-  const { videoRef, ready, captureBlob } = useCameraStream(!!open, facing);
+  const [crossfading, setCrossfading] = useState(false);
+  const { videoEnvRef, videoUserRef, ready, captureBlob, switchCamera } = useCameraStream(
+    !!open,
+    facing
+  );
 
   const status = open ? (ready ? "STREAMING" : "ACTIVE") : "IDLE";
 
@@ -31,14 +34,21 @@ export default function CameraV13({ open, onClose, onCaptured }) {
       isolated: true,
       deferChat: true,
       cameraOnly: true,
-      source: "camera_v14",
+      source: "camera_v15",
     });
   }, [status, ready, captureBlob, facing, onCaptured]);
 
-  const rotateCamera = useCallback(() => {
+  const rotateCamera = useCallback(async () => {
     if (status === "IDLE") return;
-    setFacing((f) => (f === "environment" ? "user" : "environment"));
-  }, [status]);
+    const next = facing === "environment" ? "user" : "environment";
+    setCrossfading(true);
+    const result = await switchCamera(next);
+    setFacing(next);
+    setTimeout(() => setCrossfading(false), 180);
+    if (result?.ms != null) {
+      console.info("[CameraV15] switchCamera", result.ms + "ms", result.hot ? "HOT" : "cold");
+    }
+  }, [status, facing, switchCamera]);
 
   const toggleCameraMode = useCallback(() => {
     onClose?.();
@@ -48,14 +58,30 @@ export default function CameraV13({ open, onClose, onCaptured }) {
 
   return (
     <div
-      className={`cam13-root${facing === "user" ? " is-front" : ""}${shotFx ? " is-shot" : ""}`}
+      className={`cam13-root${facing === "user" ? " is-front" : ""}${shotFx ? " is-shot" : ""}${crossfading ? " is-crossfading" : ""}`}
       data-salomon-camera-v13="1"
       data-salomon-camera-v14="1"
+      data-salomon-camera-v15="1"
       data-isolated="1"
       data-cam-status={status}
+      data-facing={facing}
     >
-      <video ref={videoRef} className="cam13-video" playsInline muted autoPlay />
-      {/* Preview debajo de controles — no tapa botones */}
+      <video
+        ref={videoEnvRef}
+        className={`cam13-video${facing === "environment" ? " is-active" : " is-standby"}`}
+        data-facing="environment"
+        playsInline
+        muted
+        autoPlay
+      />
+      <video
+        ref={videoUserRef}
+        className={`cam13-video${facing === "user" ? " is-active is-mirror" : " is-standby"}`}
+        data-facing="user"
+        playsInline
+        muted
+        autoPlay
+      />
       <button
         type="button"
         className="cam13-stage-hit"

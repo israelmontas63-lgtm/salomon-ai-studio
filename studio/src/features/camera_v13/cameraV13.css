@@ -1,9 +1,10 @@
-/* Cámara Salomón AI v14 — estilos aislados + hit-layer corregida */
+/* Cámara Salomón AI v15 — dual-stream + crossfade hot-swap */
 :root {
   --cam13-dorado: #c9a227;
   --cam13-dorado-claro: #e8c860;
   --cam13-gap-2mm: 7.56px;
   --cam13-ctrl-z: 60;
+  --cam13-crossfade: 180ms;
 }
 
 .cam13-root {
@@ -24,10 +25,44 @@
   object-fit: cover;
   pointer-events: none;
   z-index: 1;
+  opacity: 0;
+  transition: opacity var(--cam13-crossfade) ease-out;
+  will-change: opacity;
 }
 
-.cam13-root.is-front .cam13-video {
+.cam13-video.is-active {
+  opacity: 1;
+  z-index: 3;
+}
+
+.cam13-video.is-standby {
+  opacity: 0;
+  z-index: 2;
+}
+
+.cam13-video.is-mirror,
+.cam13-root.is-front .cam13-video.is-active.is-mirror {
   transform: scaleX(-1);
+}
+
+.cam13-root.is-crossfading .cam13-video.is-active {
+  transition-duration: var(--cam13-crossfade);
+}
+
+.cam13-freeze {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.cam13-freeze.is-visible {
+  opacity: 1;
 }
 
 .cam13-flash {
@@ -261,7 +296,7 @@
   100% { transform: scale(1.4); opacity: 0; }
 }
 
-/* Mientras v13/v14 está abierto: ocultar chrome del asistente */
+/* Mientras cámara aislada abierta: ocultar chrome del asistente */
 html.camera-v13-open .bottom-bar,
 html.camera-v13-open .studio-header,
 html.camera-v13-open .chat-body,
@@ -271,7 +306,12 @@ html.camera-v14-open .bottom-bar,
 html.camera-v14-open .studio-header,
 html.camera-v14-open .chat-body,
 html.camera-v14-open .ui-camera-overlay,
-html.camera-v14-open #ui-camera-overlay {
+html.camera-v14-open #ui-camera-overlay,
+html.camera-v15-open .bottom-bar,
+html.camera-v15-open .studio-header,
+html.camera-v15-open .chat-body,
+html.camera-v15-open .ui-camera-overlay,
+html.camera-v15-open #ui-camera-overlay {
   visibility: hidden !important;
   pointer-events: none !important;
   opacity: 0 !important;
@@ -280,6 +320,8 @@ html.camera-v14-open #ui-camera-overlay {
 html.camera-v13-open .camera-modal,
 html.camera-v13-open .camera-view,
 html.camera-v14-open .camera-modal,
-html.camera-v14-open .camera-view {
+html.camera-v14-open .camera-view,
+html.camera-v15-open .camera-modal,
+html.camera-v15-open .camera-view {
   display: none !important;
 }

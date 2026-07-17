@@ -581,7 +581,8 @@
       // v13/v14 aislada: no interceptar gestos (ni preview ni botones)
       if (
         document.documentElement.classList.contains("camera-v13-open") ||
-        document.documentElement.classList.contains("camera-v14-open")
+        document.documentElement.classList.contains("camera-v14-open") ||
+        document.documentElement.classList.contains("camera-v15-open")
       ) {
         return;
       }
