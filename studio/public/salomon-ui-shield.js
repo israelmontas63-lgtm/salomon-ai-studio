@@ -28,6 +28,7 @@
     pinch: { active: false, startDist: 0, startZoom: 1, moved: false },
     stageEl: null,
     stageTapHandler: null,
+    opening: false,
   };
   /** CAPA 1 — único estado de interfaz (fuente de verdad) */
   var modoInterfaz = "asistente"; // "asistente" | "camara-trasera" | "camara-frontal"
@@ -78,7 +79,8 @@
       return;
     }
     if (next === modoInterfaz && next === "asistente") return;
-    if (next === modoInterfaz && isCamMode() && camera.open && !camera.flipping) return;
+    // Mismo modo cam + stream ok → no-op; si quedó colgado sin stream, reintenta
+    if (next === modoInterfaz && isCamMode() && camera.open && !camera.flipping && !camera.opening) return;
 
     var prev = modoInterfaz;
     modoInterfaz = next;
@@ -123,7 +125,9 @@
   function canCycleCam() {
     var now = Date.now();
     if (now - lastCamTap < CAM_CYCLE_MS) return false;
-    if (camera.flipping || camera.capturing) return false;
+    if (camera.flipping || camera.capturing || camera.opening) return false;
+    // En cam: no avanzar ciclo hasta tener stream listo (evita 2 streams)
+    if (isCamMode() && !camera.open) return false;
     lastCamTap = now;
     return true;
   }
@@ -334,7 +338,7 @@
       textBtn.addEventListener(
         "click",
         function (e) {
-          if (camera.open && !writeLock) {
+          if (isCamMode() && !writeLock) {
             e.preventDefault();
             e.stopImmediatePropagation();
             return;
@@ -415,20 +419,20 @@
   function syncWritingUiState() {
     var open = isWritingOpen();
     var textBtn = getTextBtn();
+    var camOn = isCamMode();
     // CAPTURA manda: si el form de chat sigue en DOM, cerrar solo escritura (no apagar captura)
-    if (open && camera.open) {
+    if (open && camOn) {
       closeWritingIfOpen();
       open = isWritingOpen();
     }
     if (textBtn) {
       textBtn.classList.add("ui-write-btn");
-      textBtn.classList.toggle("is-write-active", open && !camera.open);
-      textBtn.setAttribute("aria-label", "Texto");
-      textBtn.title =
-        camera.open ? "Escritura bloqueada (modo captura)" : open ? "Cerrar escritura" : "Escribe tu mensaje";
+      textBtn.classList.toggle("is-write-active", open && !camOn);
+      textBtn.setAttribute("aria-label", " ");
+      textBtn.removeAttribute("title");
     }
-    document.documentElement.classList.toggle("salomon-write-mode", open && !camera.open);
-    if (!camera.open) polishInput();
+    document.documentElement.classList.toggle("salomon-write-mode", open && !camOn);
+    if (!camOn) polishInput();
   }
 
   function ensureVoiceFx(btn) {
@@ -645,6 +649,17 @@
       capturePhoto();
     }
 
+    function blockVoiceWhileCam(e) {
+      if (!isCamMode()) return;
+      if (e.cancelable) e.preventDefault();
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+    }
+    ["touchstart", "pointerdown", "mousedown"].forEach(function (type) {
+      targets.forEach(function (el) {
+        el.addEventListener(type, blockVoiceWhileCam, CAPTURE_OPTS);
+      });
+    });
     ["touchend", "pointerup", "click"].forEach(function (type) {
       targets.forEach(function (el) {
         el.addEventListener(type, gate, type === "click" ? true : CAPTURE_OPTS);
@@ -814,7 +829,13 @@
       document.querySelector('.controls-row .control-btn[aria-label="Camara"]');
     var active = isCamMode();
     var selfie = modoInterfaz === "camara-frontal";
-    camera.open = active && !!(camera.stream || document.getElementById("ui-camera-overlay"));
+    // open solo si hay stream real; opening = esperando getUserMedia
+    if (!active) {
+      camera.open = false;
+      camera.opening = false;
+    } else if (camera.stream && camera.videoEl) {
+      camera.open = true;
+    }
     camera.phase = !active ? "closed" : selfie ? "selfie" : "rear";
     camera.facing = selfie ? "user" : "environment";
 
@@ -1209,9 +1230,16 @@
     stopCameraCompleto(true);
     pauseChatForCapture();
     installCaptureEventWall();
+    camera.opening = true;
+    camera.open = false;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      log("cÃ¡mara no disponible");
-      document.documentElement.classList.remove("salomon-cam-mode");
+      log("camara no disponible");
+      camera.opening = false;
+      modoInterfaz = "asistente";
+      document.documentElement.setAttribute("data-modo-interfaz", "asistente");
+      document.documentElement.classList.remove("salomon-cam-mode", "salomon-cam-selfie");
+      unlockAgent();
+      syncCameraUiState();
       return;
     }
     var seq = ++camera.openSeq;
@@ -1239,6 +1267,7 @@
         }
         camera.stream = stream;
         camera.open = true;
+        camera.opening = false;
         camera.flipping = false;
         if (modoInterfaz === "camara-frontal") {
           camera.phase = "selfie";
@@ -1340,6 +1369,7 @@
         if (seq !== camera.openSeq) return;
         log("cÃ¡mara error", err && err.name, err && err.message);
         camera.open = false;
+        camera.opening = false;
         camera.videoEl = null;
         modoInterfaz = "asistente";
         camera.phase = "closed";
@@ -1381,6 +1411,7 @@
     }
     camera.stream = null;
     camera.open = false;
+    camera.opening = false;
     camera.capturing = false;
     camera.flipping = false;
     camera.videoEl = null;
@@ -1410,10 +1441,7 @@
     onFooterCameraTap();
   }
   function openCamera() {
-    if (!camera.open) {
-      camera.facing = "environment";
-      openNeuralCamera({ mode: "photo", facing: "environment", keepFacing: true });
-    }
+    if (!isCamMode()) setModoInterfaz("camara-trasera");
   }
   function captureFromVideo() {
     capturePhoto();
@@ -1590,7 +1618,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo modo-interfaz-290");
+    log("activo modo-interfaz-291");
   }
 
   if (document.readyState === "loading") {
@@ -1600,7 +1628,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "modo-interfaz-290",
+    version: "modo-interfaz-291",
     getModoInterfaz: getModoInterfaz,
     setModoInterfaz: setModoInterfaz,
     isCamMode: isCamMode,

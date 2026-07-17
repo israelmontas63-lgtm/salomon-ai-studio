@@ -1,15 +1,15 @@
 /**
- * MÃƒÆ’Ã‚Â³dulo de ActualizaciÃƒÆ’Ã‚Â³n Proactiva ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SalomÃƒÆ’Ã‚Â³n AI
+ * MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³dulo de ActualizaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n Proactiva ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â SalomÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n AI
  * Compara /version.json del servidor vs localStorage.
- * Si el servidor es mÃƒÆ’Ã‚Â¡s nuevo ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ force-reload invisible.
- * Indicador discreto: "VersiÃƒÆ’Ã‚Â³n: X.X"
+ * Si el servidor es mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s nuevo ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ force-reload invisible.
+ * Indicador discreto: "VersiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n: X.X"
  */
 (function () {
   "use strict";
 
   var STORAGE_KEY = "salomon_version_manifest";
   var POLL_MS = 25000;
-  var VERSION_SCRIPT = "modo-2.9.0";
+  var VERSION_SCRIPT = "modo-2.9.1";
   var polling = false;
   var applying = false;
   var mountTries = 0;
@@ -51,7 +51,7 @@
       });
   }
 
-  /** true si remote es mÃƒÆ’Ã‚Â¡s nuevo que local */
+  /** true si remote es mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s nuevo que local */
   function isNewer(remote, local) {
     if (!remote) return false;
     if (!local) return false; // primera visita: solo guardar, no recargar en loop
@@ -89,11 +89,11 @@
       el.setAttribute("aria-live", "polite");
       document.body.appendChild(el);
     }
-    var ver = (manifest && manifest.version) || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â";
-    el.textContent = "VersiÃƒÆ’Ã‚Â³n: " + ver;
+    var ver = (manifest && manifest.version) || "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â";
+    el.textContent = "VersiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n: " + ver;
     el.title = manifest
-      ? "build " + (manifest.build || "?") + " Ãƒâ€šÃ‚Â· " + (manifest.timestamp_iso || "")
-      : "SalomÃƒÆ’Ã‚Â³n AI";
+      ? "build " + (manifest.build || "?") + " ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· " + (manifest.timestamp_iso || "")
+      : "SalomÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n AI";
   }
 
   function mountInHeader() {
@@ -115,7 +115,7 @@
     slot.className = "salomon-update-slot";
     slot.innerHTML =
       '<button type="button" id="salomon-update-btn" class="salomon-update-btn" ' +
-      'title="Forzar actualizaciÃƒÆ’Ã‚Â³n desde Render" aria-label="Actualizar">' +
+      'title="Forzar actualizaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n desde Render" aria-label="Actualizar">' +
       '<span class="salomon-update-btn__icon">' +
       SYNC_ICON +
       "</span>" +
@@ -203,7 +203,7 @@
     applying = true;
     var btn = document.getElementById("salomon-update-btn");
     if (btn) btn.classList.add("is-busy");
-    if (!opts.silent) toast("Actualizando SalomÃƒÆ’Ã‚Â³nÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦");
+    if (!opts.silent) toast("Actualizando SalomÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³nÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦");
 
     try {
       if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -221,7 +221,7 @@
       log("apply fail", e && e.message);
       applying = false;
       if (btn) btn.classList.remove("is-busy");
-      if (!opts.silent) toast("Reintentando actualizaciÃƒÆ’Ã‚Â³nÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦");
+      if (!opts.silent) toast("Reintentando actualizaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³nÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦");
       setTimeout(function () {
         window.location.href = "/?_salomon_force=" + Date.now();
       }, 350);
@@ -257,7 +257,7 @@
       }
 
       if (isNewer(remote, local)) {
-        log("servidor mÃƒÆ’Ã‚Â¡s nuevo ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ reload invisible", local.version, "ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢", remote.version);
+        log("servidor mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s nuevo ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ reload invisible", local.version, "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢", remote.version);
         setBadge(true);
         writeLocal(remote);
         // Invisible: sin toast, force inmediato
@@ -270,7 +270,7 @@
         return;
       }
 
-      // Misma versiÃƒÆ’Ã‚Â³n: refrescar badge/build local
+      // Misma versiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n: refrescar badge/build local
       writeLocal(remote);
       ensureVersionBadge(remote);
       setBadge(false);
@@ -295,7 +295,7 @@
 
   function registerSw() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=22").then(function (reg) {
+    navigator.serviceWorker.register("/sw.js?v=23").then(function (reg) {
       try {
         reg.update();
       } catch (e) {}
@@ -315,7 +315,7 @@
         return applyUpdate({ reason: "api", force: true, silent: false });
       },
     };
-    log("actualizaciÃƒÆ’Ã‚Â³n proactiva activa", VERSION_SCRIPT);
+    log("actualizaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n proactiva activa", VERSION_SCRIPT);
   }
 
   if (document.readyState === "loading") {

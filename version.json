@@ -1,7 +1,7 @@
 {
-    "timestamp_iso":  "2026-07-17T19:10:00Z",
-    "timestamp":  1752781800,
-    "version":  "2.9.0",
+    "timestamp_iso":  "2026-07-17T19:20:00Z",
+    "timestamp":  1752782400,
+    "version":  "2.9.1",
     "channel":  "main",
-    "label":  "modo-interfaz-capas-1-2"
+    "label":  "fix-desacople-cam-asistente"
 }
