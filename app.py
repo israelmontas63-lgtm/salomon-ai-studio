@@ -57,6 +57,8 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/cognicion/multimodal",
         "/api/agentes/estado",
         "/api/eficiencia",
+        "/api/identidad",
+        "/api/web/arquitecto",
         "/api/media/estado",
     }
 )
@@ -526,6 +528,17 @@ def _salud_payload() -> dict:
         eficiencia = estado_eficiencia()
     except Exception:
         eficiencia = {"active": False}
+    identidad: dict = {"active": False}
+    try:
+        from cognicion.identidad import estado_identidad
+        from cognicion.web import estado_web_architect
+
+        identidad = {
+            **estado_identidad(),
+            "web_architect_active": estado_web_architect().get("active"),
+        }
+    except Exception:
+        identidad = {"active": False}
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -538,6 +551,7 @@ def _salud_payload() -> dict:
         "multimodal": multimodal,
         "multiagente": multiagente,
         "eficiencia": eficiencia,
+        "identidad": identidad,
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
 
@@ -979,6 +993,35 @@ def api_eficiencia() -> dict:
     from cognicion.eficiencia import estado_eficiencia
 
     return estado_eficiencia()
+
+
+@app.get("/api/identidad")
+def api_identidad() -> dict:
+    from cognicion.identidad import estado_identidad
+    from cognicion.web import estado_web_architect
+
+    return {
+        **estado_identidad(),
+        "web_architect": estado_web_architect(),
+    }
+
+
+class WebArchitectRequest(BaseModel):
+    peticion: str = Field(..., min_length=1, max_length=4000)
+
+
+@app.post("/api/web/arquitecto")
+def api_web_arquitecto(body: WebArchitectRequest) -> dict:
+    from cognicion.web import ejecutar_arquitecto_web
+
+    return ejecutar_arquitecto_web(body.peticion)
+
+
+@app.get("/api/web/arquitecto")
+def api_web_arquitecto_estado() -> dict:
+    from cognicion.web import estado_web_architect
+
+    return estado_web_architect()
 
 
 class CoordinarRequest(BaseModel):

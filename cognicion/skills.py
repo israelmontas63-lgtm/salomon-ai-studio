@@ -145,6 +145,13 @@ def _registrar_skills_internas() -> None:
         prioridad=35,
     ))
     registrar_skill(Skill(
+        id="web_architect",
+        nombre="Web Architect Engine",
+        descripcion="HTML5/CSS3/JS + Flask/React structure con ownership Israel Monta",
+        intenciones=frozenset({Intencion.TECNICO, Intencion.CHAT, Intencion.AGENTE}),
+        prioridad=36,
+    ))
+    registrar_skill(Skill(
         id="agente",
         nombre="Agente autónomo",
         descripcion="Correcciones en archivos del proyecto",

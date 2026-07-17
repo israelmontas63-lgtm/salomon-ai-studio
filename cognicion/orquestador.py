@@ -246,6 +246,24 @@ class MotorCognicion:
         bloques.append(emp_bloque)
         meta["cognicion"]["empatia"] = emp_meta
 
+        # Identidad + Web Architect (v96) — logic-first, Free Tier safe
+        try:
+            from cognicion.identidad import bloque_identidad, es_pregunta_identidad
+
+            if es_pregunta_identidad(entrada):
+                bloques.append(bloque_identidad())
+                meta["cognicion"]["identidad"] = True
+        except Exception:
+            pass
+        try:
+            from cognicion.web import bloque_contexto_web, es_peticion_web
+
+            if es_peticion_web(entrada):
+                bloques.append(bloque_contexto_web(entrada))
+                meta["cognicion"]["web_architect"] = True
+        except Exception as exc:
+            meta["cognicion"]["web_architect_error"] = type(exc).__name__
+
         # Multimodal Core — lazy (Agent_Visual path; no eager import al boot)
         from cognicion.multimodal import es_generacion_visual
         from cognicion.vision.busqueda_visual import es_busqueda_visual
