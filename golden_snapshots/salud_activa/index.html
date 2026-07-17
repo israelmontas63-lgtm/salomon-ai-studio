@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Salomón</title>
+    <link rel="icon" href="/favicon-v2.ico?v=31" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/icon-v2.svg?v=31" />
+    <link rel="icon" type="image/png" href="/icon-192-v2.png?v=31" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png?v=31" />
+    <meta name="theme-color" content="#C5A059" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Salomón" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="description" content="Salomón — asistente con memoria, voz y visión." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Salomón" />
+    <meta property="og:description" content="Asistente de inteligencia artificial." />
+    <meta property="og:site_name" content="Salomón" />
+    <link rel="manifest" href="/manifest.json?v=31" />
+    <link rel="manifest" href="/manifest.webmanifest?v=31" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/salomon-theme.css?v=31" />
+    <link rel="stylesheet" href="/splash.css?v=31" />
+    <link rel="stylesheet" href="/drawers.css?v=31" />
+    <link rel="stylesheet" crossorigin href="/assets/index-CJUgt2ya.css?v=31" />
+    <link rel="stylesheet" href="/header-logo-spec.css?v=31" />
+    <link rel="stylesheet" href="/voice-orchestrator.css?v=31" />
+    <link rel="stylesheet" href="/thinking-animation-spec.css?v=31" />
+    <link rel="stylesheet" href="/camera-v13.css?v=31" />
+    <link rel="stylesheet" href="/salomon-ui-shield.css?v=31" />
+    <link rel="stylesheet" href="/salomon-estructura.css?v=31" />
+  </head>
+  <body>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("Limpiando memoria de interfaz...");
+        document.title = "Salomón";
+        document.documentElement.lang = "es";
+      });
+    </script>
+
+    <div id="salomon-splash" aria-live="polite">
+      <div class="splash-icon" role="img" aria-label="Salomón"></div>
+      <div class="splash-title">SALOMÓN</div>
+      <div id="splash-dots" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="splash-step" id="splash-step">Iniciando…</div>
+    </div>
+
+    <div id="root"></div>
+
+    <script src="/salomon-self-heal.js?v=31"></script>
+    <script src="/standalone-boot.js?v=31" data-salomon-boot="1"></script>
+    <script type="module" crossorigin src="/assets/index-BdcDx9nN.js?v=31"></script>
+    <script src="/drawers.js?v=31" defer></script>
+    <script src="/media-panel.js?v=31" defer></script>
+    <script src="/bca-indicator.js?v=31" defer></script>
+    <script src="/salomon-orchestrator-bridge.js?v=31" defer></script>
+    <script src="/camera-engine.js?v=20.1" defer></script>
+    <script src="/camera-v13.js?v=20.1" defer></script>
+    <script src="/salomon-security-kernel.js?v=23" defer></script>
+    <script src="/salomon-ui-shield.js?v=31" defer></script>
+    <script src="/vision-overlay.js?v=31" defer></script>
+    <script src="/salomon-update.js?v=31" defer></script>
+  </body>
+</html>

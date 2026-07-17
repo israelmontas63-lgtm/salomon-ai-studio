@@ -1,9 +1,17 @@
 {
-  "protocol": "NEURAL_INTEGRITY_LOCK",
-  "protocol_version": "32.0.0",
-  "parent_protocol": "SALOMON_INMORTAL",
+  "protocol": "SALOMON_VIVIENTE",
+  "protocol_version": "40.0.0",
+  "parent_protocol": "NEURAL_INTEGRITY_LOCK",
   "architect": "Israel",
   "authorization_word": "AUTORIZADO",
+  "system_guard": {
+    "active": true,
+    "module": "SystemGuard.py",
+    "activated_at": "2026-07-17T15:05:00-04:00",
+    "golden_snapshot": "golden_snapshots/salud_activa",
+    "self_heal": true,
+    "integrity_violation_blocks_write": true
+  },
   "neural_integrity_lock": {
     "active": true,
     "activated_at": "2026-07-17T14:54:00-04:00",
@@ -15,21 +23,24 @@
       "studio/dist/camera-engine.js",
       "studio/dist/camera-v13.js",
       "studio/dist/camera-v13.css",
+      "studio/dist/index.html",
       "studio/dist/salomon-security-kernel.js",
       "studio/src/features/camera_v13/MediaStreamManager.js",
       "studio/src/features/camera_v13/CameraV13.jsx"
     ],
-    "golden_snapshot_id": "camera_engine_v20.1.0+ui31+deploy24",
+    "golden_snapshot_id": "viviente_v40+camera_engine_v20.1.0+ui31+deploy24",
     "notes": "Cualquier drift de checksum vs file_signatures_sha256 = bloqueo sin AUTORIZADO."
   },
   "defense_layer": {
     "security_kernel": "studio/dist/salomon-security-kernel.js",
+    "system_guard": "SystemGuard.py",
     "sandbox": true,
     "hardware_proxy": true,
     "resource_limiter": true,
     "anomaly_telemetry": true,
     "read_only_golden_lock": true,
-    "neural_integrity_lock": true
+    "neural_integrity_lock": true,
+    "self_heal_from_golden_snapshot": true
   },
   "golden_state": {
     "id": "camera_engine_v20.1.0",
@@ -41,12 +52,13 @@
     "label": "camera-engine-v20.1-stable-production-ready",
     "immutable": true,
     "read_only_lock": true,
-    "notes": "Estado Dorado cámara INMUTABLE. Neural Lock sella app.py + engine + streaming UI shell."
+    "notes": "Estado Dorado cámara INMUTABLE. Viviente sella app.py + engine + UI Layout + kernel."
   },
   "protected_paths": [
     "studio/dist/camera-engine.js",
     "studio/dist/camera-v13.js",
     "studio/dist/camera-v13.css",
+    "studio/dist/index.html",
     "studio/dist/salomon-security-kernel.js",
     "studio/src/features/camera_v13/**",
     "studio/public/camera-engine.js",
@@ -56,17 +68,20 @@
     "studio/src/**",
     "studio/features/**",
     "app.py",
-    "version.json"
+    "SystemGuard.py",
+    "version.json",
+    "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "b3da429dc0b92a2e8f68d34f9e6489724ac275b381c61194b53590b73957776e",
+    "app.py": "546c4f76045be71f5c3c1321765f4bbeeb8ac5fa1c6c2739c3c5519ee1c5cd7f",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
+    "studio/dist/index.html": "07a1552fc991381dd085460a643bc56a3456ed0e44d4a3b61d163083212bd552",
     "studio/dist/salomon-security-kernel.js": "66804a6fa7f41bbec296b29d37c4b4a6de766766b1006ec26ee8610037c70dfd",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
-    "version.json": "16f864bb32a653ccdc90475bd786b925356dd356b05def2972c226c1cb156faf"
+    "version.json": "0729cfdea99a964b96207de905d3eee40874d31ad3fcc67661f596e4c568ef86"
   },
   "invariants": [
     "MediaStreamManager.forceReset debe existir",
@@ -79,17 +94,25 @@
     "Security Kernel envuelve getUserMedia y switch sin editar Core",
     "Resource Limiter: max 8 GUM/min, max 6 switch/30s, gaps mínimos",
     "Zero-Lag: overhead nuevo sobre cámara <= 100ms o rechazo",
-    "Non-Distraction: sin logs/temp/bg no críticos en CameraEngine"
+    "Non-Distraction: sin logs/temp/bg no críticos en CameraEngine",
+    "SystemGuard boot fail-soft: nunca tumba Render",
+    "Self-heal solo camera/UI/kernel; app.py drift exige AUTORIZADO"
   ],
   "gatekeeper": {
     "require_impact_report": true,
     "require_dry_run": true,
     "require_hardware_risk_report": true,
     "require_word": "AUTORIZADO",
+    "require_value_proposal": true,
     "block_git_without_auth": true,
     "block_write_on_signature_drift": true,
     "read_only_golden_lock": true,
-    "zero_lag_reject_over_ms": 100
+    "zero_lag_reject_over_ms": 100,
+    "proposal_format": [
+      "Diagnóstico",
+      "Riesgo Neuronal",
+      "Ventaja Evolutiva"
+    ]
   },
   "resource_limiter": {
     "max_getUserMedia_per_minute": 8,
@@ -129,6 +152,13 @@
       "at": "2026-07-17T14:54:00-04:00",
       "by": "Israel+Cursor",
       "note": "Checksum Core + Zero-Lag 100ms + Non-Distraction"
+    },
+    {
+      "version": "40.0.0",
+      "event": "SALOMON_VIVIENTE_SYSTEM_GUARD_ACTIVE",
+      "at": "2026-07-17T15:05:00-04:00",
+      "by": "Israel+Cursor",
+      "note": "Autonomous Immune Kernel: integrity map, golden snapshot, self-heal, proposal gate"
     }
   ]
 }

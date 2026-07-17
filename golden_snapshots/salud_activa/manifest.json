@@ -1,0 +1,43 @@
+{
+  "id": "salud_activa",
+  "created_at": "2026-07-17T19:05:25.275071+00:00",
+  "protocol": "SALOMON_VIVIENTE",
+  "version": "40.0.0",
+  "files": {
+    "app.py": {
+      "source": "app.py",
+      "snapshot": "golden_snapshots/salud_activa/app.py",
+      "sha256": "546c4f76045be71f5c3c1321765f4bbeeb8ac5fa1c6c2739c3c5519ee1c5cd7f"
+    },
+    "CameraEngine": {
+      "source": "studio/dist/camera-engine.js",
+      "snapshot": "golden_snapshots/salud_activa/camera-engine.js",
+      "sha256": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849"
+    },
+    "StreamingUI": {
+      "source": "studio/dist/camera-v13.js",
+      "snapshot": "golden_snapshots/salud_activa/camera-v13.js",
+      "sha256": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a"
+    },
+    "CameraCSS": {
+      "source": "studio/dist/camera-v13.css",
+      "snapshot": "golden_snapshots/salud_activa/camera-v13.css",
+      "sha256": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20"
+    },
+    "UI_Layout": {
+      "source": "studio/dist/index.html",
+      "snapshot": "golden_snapshots/salud_activa/index.html",
+      "sha256": "07a1552fc991381dd085460a643bc56a3456ed0e44d4a3b61d163083212bd552"
+    },
+    "SecurityKernel": {
+      "source": "studio/dist/salomon-security-kernel.js",
+      "snapshot": "golden_snapshots/salud_activa/salomon-security-kernel.js",
+      "sha256": "66804a6fa7f41bbec296b29d37c4b4a6de766766b1006ec26ee8610037c70dfd"
+    },
+    "MediaStreamManager": {
+      "source": "studio/src/features/camera_v13/MediaStreamManager.js",
+      "snapshot": "golden_snapshots/salud_activa/MediaStreamManager.js",
+      "sha256": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250"
+    }
+  }
+}
