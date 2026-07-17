@@ -133,20 +133,13 @@
     var main = row.querySelector(".control-btn--main") || btns[1];
     var textBtn = btns[btns.length - 1];
 
-    // Cámara: toque = abrir/cerrar | flip solo dentro del overlay
+    // Cámara: React CameraView (modoCamaraActiva) — NO bloquear el click
     if (cam.dataset.uiCam !== "1") {
       cam.dataset.uiCam = "1";
       cam.classList.add("ui-smart-cam-btn");
       cam.setAttribute("aria-label", "Cámara");
-      cam.addEventListener(
-        "click",
-        function (e) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          onFooterCameraTap();
-        },
-        true
-      );
+      cam.title = "Abrir cámara (vista exclusiva)";
+      // No stopImmediatePropagation: App.jsx setModoCamaraActiva(true)
     }
 
     // Escritura (Aa): bloqueada en CAPTURA; en CHAT React togglea el panel
@@ -1052,7 +1045,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo capture-wall-3");
+    log("activo camview-react-1");
   }
 
   if (document.readyState === "loading") {
@@ -1062,7 +1055,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "capture-wall-3",
+    version: "camview-react-1",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

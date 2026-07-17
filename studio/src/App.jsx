@@ -3,7 +3,7 @@ import Header from "./components/Header";
 import ChatBody from "./components/ChatBody";
 import BottomBar from "./components/BottomBar";
 import GlassPanel from "./components/GlassPanel";
-import CameraModal from "./components/CameraModal";
+import CameraView from "./components/CameraView";
 import MediaPanel from "./components/MediaPanel";
 import { useDayNight } from "./hooks/useTypewriter";
 import { useSalomonOrchestrator } from "./hooks/useSalomonOrchestrator";
@@ -31,7 +31,8 @@ export default function App() {
   const [appStatus, setAppStatus] = useState("ready");
   const [toolsOpen, setToolsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [cameraOpen, setCameraOpen] = useState(false);
+  /** Si true: Chat NO se renderiza; solo CameraView en el DOM */
+  const [modoCamaraActiva, setModoCamaraActiva] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(true);
   const [inputValue, setInputValue] = useState("");
@@ -582,15 +583,61 @@ export default function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") {
+        if (modoCamaraActiva) {
+          setModoCamaraActiva(false);
+          return;
+        }
         setToolsOpen(false);
         setAccountOpen(false);
-        setCameraOpen(false);
         orchestrator.cancelAll("user");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [orchestrator]);
+  }, [orchestrator, modoCamaraActiva]);
+
+  // Señal global + cancelación de voz al entrar en cámara (Chat desmontado)
+  useEffect(() => {
+    window.__SALOMON_MODO_CAMARA__ = modoCamaraActiva;
+    document.documentElement.classList.toggle("salomon-modo-camara", modoCamaraActiva);
+    if (modoCamaraActiva) {
+      try {
+        window.SalomonBridge?.cancelAll?.("modo-camara-activa");
+      } catch {
+        /* noop */
+      }
+      setKeyboardVisible(false);
+      setToolsOpen(false);
+      setAccountOpen(false);
+      setMediaOpen(false);
+    }
+    return () => {
+      if (modoCamaraActiva) {
+        window.__SALOMON_MODO_CAMARA__ = false;
+        document.documentElement.classList.remove("salomon-modo-camara");
+      }
+    };
+  }, [modoCamaraActiva]);
+
+  // RENDER CONDICIONAL: con cámara activa el Chat NO existe en el DOM
+  if (modoCamaraActiva) {
+    return (
+      <div
+        className={[
+          "app-shell",
+          "app-shell--camera",
+          isDay ? "app-shell--day" : "app-shell--night",
+        ].join(" ")}
+      >
+        <CameraView
+          onClose={() => setModoCamaraActiva(false)}
+          onCaptured={() => {
+            /* visión via salomon:ui-photo; Chat se remonta al cerrar */
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -624,7 +671,7 @@ export default function App() {
         sending={sending}
         onInputChange={setInputValue}
         onSend={() => sendMessage()}
-        onOpenCamera={() => setCameraOpen(true)}
+        onOpenCamera={() => setModoCamaraActiva(true)}
         onToggleKeyboard={() => setKeyboardVisible((v) => !v)}
         onNotify={showVoiceHint}
         onOpenMedia={() => setMediaOpen(true)}
@@ -649,12 +696,6 @@ export default function App() {
         onClose={() => setToolsOpen(false)}
         side="right"
         onItemClick={handleToolClick}
-      />
-
-      <CameraModal
-        open={cameraOpen}
-        onClose={() => setCameraOpen(false)}
-        onCaptureComment={handleCameraComment}
       />
 
       <MediaPanel

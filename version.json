@@ -1,7 +1,7 @@
 {
-  "version": "1.5.4",
-  "timestamp": 1752714000,
-  "timestamp_iso": "2026-07-17T00:20:00Z",
+  "version": "1.6.0",
+  "timestamp": 1752715200,
+  "timestamp_iso": "2026-07-17T00:40:00Z",
   "channel": "main",
-  "label": "capture-wall-3-selfie"
+  "label": "camera-view-conditional"
 }

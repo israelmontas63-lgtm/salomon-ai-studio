@@ -23,22 +23,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
-    <!-- Estilos identidad + splash (carga inmediata) -->
     <link rel="stylesheet" href="/salomon-theme.css?v=icon-v2" />
     <link rel="stylesheet" href="/splash.css?v=icon-v2" />
     <link rel="stylesheet" href="/drawers.css?v=2" />
+    <!-- Layout estable + estilos CameraView (build 1.6.0) -->
     <link rel="stylesheet" crossorigin href="/assets/index-CJUgt2ya.css" />
-    <!-- Header/Logo PIXEL_PERFECT (aditivo; no sustituye layout) -->
+    <link rel="stylesheet" crossorigin href="/assets/index-CnAWSg3Q.css" />
     <link rel="stylesheet" href="/header-logo-spec.css?v=1" />
-    <!-- Capa 1 Bridge: animaciones del núcleo (NO sustituye el CSS de layout) -->
     <link rel="stylesheet" href="/voice-orchestrator.css?v=capa1" />
-    <!-- Thinking motion protocol (2s pulse ease-in-out + wave linear) -->
     <link rel="stylesheet" href="/thinking-animation-spec.css?v=1" />
-    <!-- UI Shield: rediseño visual aditivo -->
-    <link rel="stylesheet" href="/salomon-ui-shield.css?v=capturewall3" />
+    <link rel="stylesheet" href="/salomon-ui-shield.css?v=camview1" />
   </head>
   <body>
-    <!-- Splash Screen nativo -->
     <div id="salomon-splash" aria-live="polite">
       <div class="splash-icon" role="img" aria-label="Salomón"></div>
       <div class="splash-title">SALOMÓN</div>
@@ -50,18 +46,15 @@
 
     <div id="root"></div>
 
-    <!-- Boot standalone → conecta servidor / visión / UI -->
     <script src="/standalone-boot.js?v=7" data-salomon-boot="1"></script>
-    <script type="module" crossorigin src="/assets/index-BdcDx9nN.js?v=texto-inmediato-1"></script>
+    <!-- Bundle con modoCamaraActiva + CameraView (Chat desmontado en captura) -->
+    <script type="module" crossorigin src="/assets/index-ubEqirz5.js?v=camview1"></script>
     <script src="/drawers.js?v=6" defer></script>
     <script src="/media-panel.js?v=3" defer></script>
     <script src="/bca-indicator.js?v=1" defer></script>
-    <!-- Capa 1 Bridge: orquestador visual + cancelación (UI estable intacta) -->
     <script src="/salomon-orchestrator-bridge.js?v=nucleo13" defer></script>
-    <!-- Shield ANTES que vision: evita race SalomonUIShield undefined -->
-    <script src="/salomon-ui-shield.js?v=capturewall3" defer></script>
+    <script src="/salomon-ui-shield.js?v=camview1" defer></script>
     <script src="/vision-overlay.js?v=sync1" defer></script>
-    <!-- CI/CD: SW + auto-update desde Render (única registración SW) -->
     <script src="/salomon-update.js?v=proactive1" defer></script>
   </body>
 </html>
