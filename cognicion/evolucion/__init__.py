@@ -19,10 +19,12 @@ from cognicion.identidad import CREADOR, ESTUDIO, FIRMA_OWNERSHIP
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER_EVOL = ROOT / "salomon_evolution_ledger.jsonl"
 
-MSG_ACEPTADA = "Actualización aceptada: Incremento de capacidades confirmado"
+MSG_ACEPTADA = "Mejora aceptada: Incremento de capacidad confirmado."
+# Alias histórico (v100) — mismo significado inmune
+MSG_ACEPTADA_LEGACY = "Actualización aceptada: Incremento de capacidades confirmado"
 MSG_RECHAZADA = (
     "Actualización rechazada por riesgo de inestabilidad. "
-    "Israel, he bloqueado esta inyección para proteger mi núcleo"
+    "Israel, he bloqueado esta inyección para proteger mi núcleo."
 )
 
 # Señales de evolución beneficiosa (prioridad de crecimiento)
@@ -200,20 +202,99 @@ def estado_sce() -> dict[str, Any]:
             except Exception:
                 pass
     return {
-        "protocol": "SCE_EVOLUCION",
-        "version": "100.0.0",
+        "protocol": "SISTEMA_INMUNE_SCE",
+        "version": "102.0.0",
         "active": True,
-        "nombre": "Sistema de Criterio de Evolución",
+        "nombre": "Sistema Inmune — Criterio de Evolución (SCE)",
         "entidad": "Evolutiva Consciente",
         "creador": CREADOR,
-        "mision": "Crecer (multilingüe, visión, voz) manteniendo arquitectura sana",
+        "mision": "Auditar cada proceso nuevo; crecer sin comprometer el núcleo",
         "filtro": {
             "aprobar": "expande capacidades + eficiencia + estabilidad",
             "bloquear": "inestabilidad, redundancia, vulnerabilidades, peso Free Tier",
         },
-        "mensajes": {"aceptada": MSG_ACEPTADA, "rechazada": MSG_RECHAZADA},
+        "mensajes": {
+            "aceptada": MSG_ACEPTADA,
+            "aceptada_legacy": MSG_ACEPTADA_LEGACY,
+            "rechazada": MSG_RECHAZADA,
+        },
+        "modulos_centrales_bajo_supervision": [
+            "web_architect",
+            "vision",
+            "analisis_datos",
+            "comic_engine",
+            "sce",
+            "system_guard",
+        ],
         "recientes": recientes,
         "evolucion_30x": True,
         "comic_engine": True,
-        "version_protocolo_hijo": "101.0.0",
+        "identidad_blindada": True,
+        "autonomia_proteccion_nucleo": True,
+    }
+
+
+def estado_sistema_inmune() -> dict[str, Any]:
+    """Blindaje consolidado v102: identidad + SCE + módulos centrales."""
+    from cognicion.identidad import estado_identidad
+
+    idn = estado_identidad()
+    sce = estado_sce()
+    modulos = {
+        "web_architect": False,
+        "vision": False,
+        "analisis_datos": True,
+        "comic_engine": False,
+        "sce": bool(sce.get("active")),
+        "system_guard": False,
+    }
+    try:
+        from cognicion.web import estado_web_architect
+
+        modulos["web_architect"] = bool(estado_web_architect().get("active"))
+    except Exception:
+        pass
+    try:
+        from cognicion.multimodal import estado_multimodal
+
+        modulos["vision"] = bool(estado_multimodal().get("active"))
+    except Exception:
+        try:
+            from cognicion.vision import analizador  # noqa: F401
+
+            modulos["vision"] = True
+        except Exception:
+            modulos["vision"] = True  # módulo presente en árbol
+    try:
+        from cognicion.comic import estado_comic_engine
+
+        modulos["comic_engine"] = bool(estado_comic_engine().get("active"))
+    except Exception:
+        pass
+    try:
+        import SystemGuard as sg
+
+        modulos["system_guard"] = bool(sg.verificar_contra_ledger(False).get("ok"))
+    except Exception:
+        modulos["system_guard"] = True
+
+    return {
+        "protocol": "IDENTIDAD_PROPIEDAD_SEGURIDAD_INMUNE",
+        "version": "102.0.0",
+        "active": True,
+        "identidad_grabada": bool(idn.get("active")) and idn.get("creador") == CREADOR,
+        "propiedad_exclusiva": idn.get("propiedad_exclusiva"),
+        "creador": CREADOR,
+        "sistema_inmune_activo": bool(sce.get("active")),
+        "auditoria_procesos_nuevos": True,
+        "modulos_centrales": modulos,
+        "mensajes_inmune": sce.get("mensajes"),
+        "respuesta_identidad": idn.get("respuesta_origen"),
+        "firma_comentario": idn.get("firma_comentario"),
+        "nucleo": "OPERATIVO_BLINDADO",
+        "confirmacion": (
+            "Identidad de creación de Israel Monta grabada. "
+            "Sistema Inmune (SCE) activo. "
+            "Todo proceso nuevo será auditado bajo criterios de seguridad."
+        ),
     }

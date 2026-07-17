@@ -58,6 +58,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/agentes/estado",
         "/api/eficiencia",
         "/api/identidad",
+        "/api/inmune",
         "/api/web/arquitecto",
         "/api/pwa/estado",
         "/api/auditoria/preflight",
@@ -596,6 +597,13 @@ def _salud_payload() -> dict:
             "nucleo": evolucion_30x.get("nucleo"),
         },
         "comic_engine": comic,
+        "sistema_inmune": {
+            "active": bool(sce.get("active")),
+            "protocol": "IDENTIDAD_PROPIEDAD_SEGURIDAD_INMUNE",
+            "version": "102.0.0",
+            "identidad_grabada": bool((identidad or {}).get("active")),
+            "creador": (identidad or {}).get("creador") or "Israel Monta",
+        },
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
 
@@ -1041,13 +1049,29 @@ def api_eficiencia() -> dict:
 
 @app.get("/api/identidad")
 def api_identidad() -> dict:
+    from cognicion.evolucion import estado_sistema_inmune
     from cognicion.identidad import estado_identidad
     from cognicion.web import estado_web_architect
 
+    inmune = estado_sistema_inmune()
     return {
         **estado_identidad(),
         "web_architect": estado_web_architect(),
+        "sistema_inmune": {
+            "active": inmune.get("sistema_inmune_activo"),
+            "nucleo": inmune.get("nucleo"),
+            "confirmacion": inmune.get("confirmacion"),
+            "modulos_centrales": inmune.get("modulos_centrales"),
+        },
     }
+
+
+@app.get("/api/inmune")
+def api_sistema_inmune() -> dict:
+    """Sistema Inmune + identidad blindada (v102)."""
+    from cognicion.evolucion import estado_sistema_inmune
+
+    return estado_sistema_inmune()
 
 
 class WebArchitectRequest(BaseModel):

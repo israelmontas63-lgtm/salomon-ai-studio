@@ -27,15 +27,22 @@ def es_peticion_web(texto: str) -> bool:
 
 
 def firmar_codigo(codigo: str, *, lenguaje: str = "html") -> str:
-    """Inyecta firma de ownership de Israel Monta."""
+    """Inyecta firma de ownership de Israel Monta (v102)."""
+    from cognicion.identidad import (
+        FIRMA_COMENTARIO_HTML,
+        FIRMA_COMENTARIO_JS,
+        FIRMA_COMENTARIO_PY,
+        FIRMA_OWNERSHIP,
+        firma_comentario,
+    )
+
     firma = FIRMA_OWNERSHIP
     c = (codigo or "").strip()
-    if firma in c:
+    if firma in c or "Created by Israel Monta" in c:
         return c
     if lenguaje in {"html", "htm"}:
-        meta = f'  <!-- {firma} -->\n'
+        meta = f"  {FIRMA_COMENTARIO_HTML}\n"
         if "<head>" in c.lower():
-            # Insertar tras <head>
             import re
 
             return re.sub(
@@ -44,14 +51,14 @@ def firmar_codigo(codigo: str, *, lenguaje: str = "html") -> str:
                 c,
                 count=1,
             )
-        return f"<!-- {firma} -->\n{c}"
+        return f"{FIRMA_COMENTARIO_HTML}\n{c}"
     if lenguaje in {"css"}:
         return f"/* {firma} */\n{c}"
     if lenguaje in {"js", "javascript", "jsx", "ts", "tsx"}:
-        return f"// {firma}\n{c}"
+        return f"{FIRMA_COMENTARIO_JS}\n{c}"
     if lenguaje in {"py", "python", "flask"}:
-        return f"# {firma}\n{c}"
-    return f"/* {firma} */\n{c}"
+        return f"{FIRMA_COMENTARIO_PY}\n{c}"
+    return f"{firma_comentario(lenguaje)}\n{c}"
 
 
 def plantilla_landing(titulo: str = "Salomón AI Studio") -> dict[str, str]:
