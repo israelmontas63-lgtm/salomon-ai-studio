@@ -583,7 +583,8 @@
         document.documentElement.classList.contains("camera-v13-open") ||
         document.documentElement.classList.contains("camera-v14-open") ||
         document.documentElement.classList.contains("camera-v15-open") ||
-        document.documentElement.classList.contains("camera-v16-open")
+        document.documentElement.classList.contains("camera-v16-open") ||
+        document.documentElement.classList.contains("camera-v20-open")
       ) {
         return;
       }

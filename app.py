@@ -1534,13 +1534,19 @@ def salomon_ui_shield_css() -> FileResponse:
 
 @app.get("/camera-v13.css")
 def camera_v13_css() -> FileResponse:
-    """Cámara Salomón v13 — UI aislada."""
+    """Cámara Salomón — UI aislada (engine v20)."""
     return _archivo_studio("camera-v13.css", "text/css")
+
+
+@app.get("/camera-engine.js")
+def camera_engine_js() -> FileResponse:
+    """MediaStreamManager / CameraEngine v20 — pipeline nativo."""
+    return _archivo_studio("camera-engine.js", "application/javascript")
 
 
 @app.get("/camera-v13.js")
 def camera_v13_js() -> FileResponse:
-    """Cámara Salomón v13 — lógica aislada (sin Bridge/agente)."""
+    """Cámara Salomón — UI shell sobre CameraEngine (sin Bridge/agente)."""
     return _archivo_studio("camera-v13.js", "application/javascript")
 
 

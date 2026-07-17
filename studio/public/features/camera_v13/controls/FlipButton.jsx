@@ -5,7 +5,7 @@ export default function FlipButton({ onFlip, disabled }) {
       className={`cam13-icon${disabled ? " is-disabled" : ""}`}
       aria-label="Giro"
       aria-disabled={disabled ? "true" : "false"}
-      data-cam-action="handleCameraSwitch"
+      data-cam-action="rotateCamera"
       disabled={!!disabled}
       onClick={(e) => {
         e.preventDefault();

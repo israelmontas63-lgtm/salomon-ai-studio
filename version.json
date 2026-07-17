@@ -1,7 +1,7 @@
 {
-  "timestamp_iso": "2026-07-17T16:45:00Z",
-  "timestamp": 1752780300,
-  "version": "16.0.0",
+  "timestamp_iso": "2026-07-17T17:00:00Z",
+  "timestamp": 1752781200,
+  "version": "20.0.0",
   "channel": "main",
-  "label": "camera-v16-failsafe-apagar-esperar-reanudar"
+  "label": "camera-engine-v20-mediastream-native"
 }

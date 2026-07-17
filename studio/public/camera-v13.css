@@ -1,10 +1,10 @@
-/* Cámara Salomón AI v16 — failsafe freeze + fade (single-stream HW) */
+/* Cámara Salomón AI v20 — CameraEngine + freeze buffer */
 :root {
   --cam13-dorado: #c9a227;
   --cam13-dorado-claro: #e8c860;
   --cam13-gap-2mm: 7.56px;
   --cam13-ctrl-z: 60;
-  --cam13-crossfade: 220ms;
+  --cam13-crossfade: 200ms;
 }
 
 .cam13-root {
@@ -25,28 +25,12 @@
   object-fit: cover;
   pointer-events: none;
   z-index: 1;
-  opacity: 0;
-  transition: opacity var(--cam13-crossfade) ease-out;
-  will-change: opacity;
-  background: #111;
-}
-
-.cam13-video.is-active {
   opacity: 1;
-  z-index: 3;
-}
-
-.cam13-video.is-standby {
-  opacity: 0;
-  z-index: 2;
+  background: #111;
 }
 
 .cam13-video.is-mirror {
   transform: scaleX(-1);
-}
-
-.cam13-root.is-crossfading .cam13-video.is-active {
-  transition-duration: var(--cam13-crossfade);
 }
 
 .cam13-freeze {
@@ -66,10 +50,32 @@
   opacity: 1;
 }
 
-.cam13-root.is-switching .cam13-icon[data-cam-action="handleCameraSwitch"],
-.cam13-icon.is-disabled {
-  opacity: 0.45;
+/* State machine: controles solo en READY */
+.cam13-root:not([data-engine-status="READY"]) .cam13-ctrl,
+.cam13-root:not([data-engine-status="READY"]) .cam13-shutter,
+.cam13-root:not([data-engine-status="READY"]) .cam13-icon,
+.cam13-root:not([data-engine-status="READY"]) .cam13-lock,
+.cam13-root:not([data-engine-status="READY"]) .cam13-stage-hit {
   pointer-events: none !important;
+  opacity: 0.45;
+}
+
+.cam13-root[data-engine-status="READY"] .cam13-ctrl,
+.cam13-root[data-engine-status="READY"] .cam13-shutter,
+.cam13-root[data-engine-status="READY"] .cam13-icon,
+.cam13-root[data-engine-status="READY"] .cam13-lock,
+.cam13-root[data-engine-status="READY"] .cam13-stage-hit {
+  pointer-events: auto !important;
+  opacity: 1;
+}
+
+.cam13-root[data-engine-status="READY"] .cam13-icon.is-on {
+  opacity: 1;
+}
+
+.cam13-root.is-switching .cam13-icon[data-cam-action="rotateCamera"] {
+  pointer-events: none !important;
+  opacity: 0.4;
 }
 
 .cam13-flash {
@@ -323,7 +329,12 @@ html.camera-v16-open .bottom-bar,
 html.camera-v16-open .studio-header,
 html.camera-v16-open .chat-body,
 html.camera-v16-open .ui-camera-overlay,
-html.camera-v16-open #ui-camera-overlay {
+html.camera-v16-open #ui-camera-overlay,
+html.camera-v20-open .bottom-bar,
+html.camera-v20-open .studio-header,
+html.camera-v20-open .chat-body,
+html.camera-v20-open .ui-camera-overlay,
+html.camera-v20-open #ui-camera-overlay {
   visibility: hidden !important;
   pointer-events: none !important;
   opacity: 0 !important;
@@ -336,6 +347,8 @@ html.camera-v14-open .camera-view,
 html.camera-v15-open .camera-modal,
 html.camera-v15-open .camera-view,
 html.camera-v16-open .camera-modal,
-html.camera-v16-open .camera-view {
+html.camera-v16-open .camera-view,
+html.camera-v20-open .camera-modal,
+html.camera-v20-open .camera-view {
   display: none !important;
 }
