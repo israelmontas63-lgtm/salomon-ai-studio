@@ -135,6 +135,13 @@
   }
 
   function injectBubbles(userText, aiText) {
+    if (
+      document.documentElement.classList.contains("salomon-cam-mode") ||
+      document.documentElement.getAttribute("data-salomon-camera-only") === "1"
+    ) {
+      console.info("[Salomon Vision] burbujas diferidas (modo cámara)");
+      return;
+    }
     var scroll =
       document.querySelector(".chat-scroll") ||
       document.querySelector(".messages") ||
@@ -158,6 +165,15 @@
   }
 
   function speakIfPossible(data) {
+    // Nunca hablar mientras la cámara está activa (modo solo cámara)
+    if (
+      document.documentElement.classList.contains("salomon-cam-mode") ||
+      document.documentElement.getAttribute("data-salomon-camera-only") === "1" ||
+      document.getElementById("ui-camera-overlay")
+    ) {
+      console.info("[Salomon Vision] TTS bloqueado (modo cámara)");
+      return;
+    }
     if (!data) return;
     if (window.SalomonBridge && typeof window.SalomonBridge.ensureVoiceOut === "function") {
       window.SalomonBridge.ensureVoiceOut(data);

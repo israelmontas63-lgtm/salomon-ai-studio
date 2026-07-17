@@ -14,7 +14,8 @@
 
   var camera = {
     stream: null,
-    facing: "environment", // trasera por defecto al abrir
+    facing: "environment",
+    phase: "closed", // closed | rear | selfie — ciclo UI (no depende del hardware)
     open: false,
     capturing: false,
     flipping: false,
@@ -22,6 +23,7 @@
     videoEl: null,
     openSeq: 0,
     flipSeq: 0,
+    agentLockTimer: 0,
   };
   var audio = { ctx: null, analyser: null, src: null, raf: 0, stream: null };
   var swapLock = false;
@@ -44,7 +46,9 @@
   function canTakeShot() {
     var now = Date.now();
     if (now - lastShotAt < SHOT_COOLDOWN_MS) return false;
-    if (!camera.open || camera.capturing || camera.flipping) return false;
+    if (!camera.open || camera.capturing) return false;
+    // Selfie: permitir foto aunque flipping aún corra (si hay video)
+    if (camera.flipping && camera.phase !== "selfie") return false;
     lastShotAt = now;
     return true;
   }
@@ -361,15 +365,11 @@
     }
   }
 
-  /** Cancela chat/voz antes de entrar en modo Captura */
+  /** Cancela chat/voz y bloquea agente mientras CAPTURA */
   function pauseChatForCapture() {
     closeWritingIfOpen();
     stopAudioReactive();
-    try {
-      if (window.SalomonBridge && typeof window.SalomonBridge.cancelAll === "function") {
-        window.SalomonBridge.cancelAll("camera-capture-mode");
-      }
-    } catch (e) {}
+    lockAgentOut();
     var main = document.querySelector(".controls-row .control-btn--main");
     if (main) {
       main.dataset.uiMode = "";
@@ -377,6 +377,42 @@
       main.removeAttribute("data-button-state");
     }
     document.documentElement.classList.add("salomon-cam-mode");
+    document.documentElement.setAttribute("data-salomon-camera-only", "1");
+  }
+
+  function lockAgentOut() {
+    try {
+      if (window.SalomonBridge && typeof window.SalomonBridge.cancelAll === "function") {
+        window.SalomonBridge.cancelAll("camera-only-mode");
+      }
+    } catch (e) {}
+    try {
+      window.dispatchEvent(new CustomEvent("salomon:camera-agent-lock", { detail: { lock: true } }));
+    } catch (e) {}
+    if (camera.agentLockTimer) return;
+    camera.agentLockTimer = setInterval(function () {
+      if (!camera.open) {
+        clearInterval(camera.agentLockTimer);
+        camera.agentLockTimer = 0;
+        return;
+      }
+      try {
+        if (window.SalomonBridge && typeof window.SalomonBridge.cancelAll === "function") {
+          window.SalomonBridge.cancelAll("camera-only-pulse");
+        }
+      } catch (e) {}
+    }, 1200);
+  }
+
+  function unlockAgent() {
+    if (camera.agentLockTimer) {
+      clearInterval(camera.agentLockTimer);
+      camera.agentLockTimer = 0;
+    }
+    document.documentElement.removeAttribute("data-salomon-camera-only");
+    try {
+      window.dispatchEvent(new CustomEvent("salomon:camera-agent-lock", { detail: { lock: false } }));
+    } catch (e) {}
   }
 
   /** Controles permitidos en CAPTURA (resto del DOM = muro) */
@@ -632,37 +668,55 @@
   /* ——— Unidad neuronal de cámara — ciclo limpio ——— */
 
   /**
-   * Toque icono cámara:
-   * 1) cerrado → abre TRASERA
-   * 2) trasera → SELFIE
-   * 3) selfie → CIERRA
+   * Ciclo icono cámara:
+   * 1) cerrado → TRASERA
+   * 2) trasera → SELFIE (espejo)
+   * 3) selfie → RECOGER cámara → solo modo agente
    */
   function onFooterCameraTap() {
     if (!canCycleCam()) return;
 
-    if (!camera.open) {
+    if (camera.phase === "closed" || !camera.open) {
       pauseChatForCapture();
+      camera.phase = "rear";
       camera.facing = "environment";
       openNeuralCamera({ mode: "photo", facing: "environment", keepFacing: true });
       return;
     }
-    if (camera.facing === "environment") {
-      camera.facing = "user";
-      log("ciclo → selfie");
-      haptic(8);
-      syncCameraUiState();
-      swapFacingInPlace("environment");
+
+    if (camera.phase === "rear") {
+      enterSelfieMode();
       return;
     }
-    log("ciclo → cerrar");
+
+    // selfie (u otra): un toque recoge la cámara → modo agente
+    log("selfie → recoger cámara (modo agente)");
     closeCamera();
+  }
+
+  function enterSelfieMode() {
+    camera.phase = "selfie";
+    camera.facing = "user";
+    log("ciclo → selfie (espejo)");
+    haptic(8);
+    syncCameraUiState();
+    // Aplicar espejo de inmediato (aunque el stream tarde)
+    var overlay = document.getElementById("ui-camera-overlay");
+    if (overlay) {
+      overlay.dataset.facing = "user";
+      overlay.classList.add("is-selfie");
+    }
+    swapFacingInPlace("environment");
   }
 
   function updateCamActiveBadge() {
     var badge = document.getElementById("ui-camera-active-badge");
     if (!badge) return;
-    badge.textContent =
-      camera.facing === "user" ? "CÁMARA ACTIVA — SELFIE" : "CÁMARA ACTIVA — TRASERA";
+    if (camera.phase === "selfie" || camera.facing === "user") {
+      badge.textContent = "SELFIE — toque mic/pantalla = foto · icono = cerrar";
+    } else {
+      badge.textContent = "TRASERA — toque icono = selfie";
+    }
   }
 
   function syncCameraUiState() {
@@ -670,25 +724,33 @@
       document.querySelector(".controls-row .ui-smart-cam-btn") ||
       document.querySelector('.controls-row .control-btn[aria-label="Cámara"]');
     var active = !!camera.open;
+    var selfie = active && (camera.phase === "selfie" || camera.facing === "user");
     document.documentElement.classList.toggle("salomon-cam-mode", active);
+    document.documentElement.classList.toggle("salomon-cam-selfie", selfie);
+    if (active) document.documentElement.setAttribute("data-salomon-camera-only", "1");
+    else document.documentElement.removeAttribute("data-salomon-camera-only");
+
     var overlay = document.getElementById("ui-camera-overlay");
     if (overlay) {
-      overlay.dataset.facing = camera.facing || "environment";
-      overlay.classList.toggle("is-selfie", camera.facing === "user");
+      overlay.dataset.facing = selfie ? "user" : "environment";
+      overlay.dataset.phase = camera.phase || (active ? "rear" : "closed");
+      overlay.classList.toggle("is-selfie", selfie);
     }
     if (cam) {
       cam.classList.toggle("is-cam-active", active);
-      cam.dataset.facing = camera.facing || "environment";
-      if (!active) cam.title = "Cámara — 1: trasera · 2: selfie · 3: cerrar";
-      else if (camera.facing === "environment") cam.title = "Toque: modo selfie";
-      else cam.title = "Toque: cerrar cámara";
+      cam.classList.toggle("is-selfie-phase", selfie);
+      cam.dataset.facing = selfie ? "user" : "environment";
+      cam.dataset.phase = camera.phase || "closed";
+      if (!active) cam.title = "Cámara — trasera → selfie → cerrar";
+      else if (selfie) cam.title = "Toque: recoger cámara (modo agente)";
+      else cam.title = "Toque: modo selfie";
     }
     var main = document.querySelector(".controls-row .control-btn--main");
     if (main) {
       ensureShutterCamIcon(main);
       main.classList.toggle("is-cam-shutter", active);
       if (active) {
-        main.title = "Disparar foto";
+        main.title = selfie ? "Disparar selfie" : "Disparar foto";
         main.setAttribute("aria-label", "Disparador de foto");
         main.dataset.captureMode = "1";
         main.dataset.uiMode = "";
@@ -704,7 +766,6 @@
       writeBtn.toggleAttribute("disabled", active);
       writeBtn.setAttribute("aria-disabled", active ? "true" : "false");
     }
-    // Congelar input de chat
     document.querySelectorAll(".bottom-bar input, .bottom-bar textarea, .bottom-bar .send-btn").forEach(function (el) {
       if (active) {
         el.setAttribute("disabled", "disabled");
@@ -735,7 +796,9 @@
   function swapFacingInPlace(prevFacing) {
     var video = camera.videoEl;
     if (!video || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      if (prevFacing) camera.facing = prevFacing;
+      // Sin hardware swap: mantener fase selfie + espejo CSS
+      camera.flipping = false;
+      syncCameraUiState();
       return;
     }
     camera.flipping = true;
@@ -743,16 +806,21 @@
     var prev = camera.stream;
     var smart = document.getElementById("ui-smart-button");
     if (smart) smart.dataset.flip = "1";
+    var want = camera.facing || "user";
     navigator.mediaDevices
       .getUserMedia({
-        video: { facingMode: { exact: camera.facing } },
+        video: { facingMode: { exact: want } },
         audio: false,
       })
       .catch(function () {
         return navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: camera.facing } },
+          video: { facingMode: { ideal: want } },
           audio: false,
         });
+      })
+      .catch(function () {
+        // Último recurso: cualquier cámara; UI sigue en selfie/espejo
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       })
       .then(function (stream) {
         if (seq !== camera.flipSeq || !camera.open) {
@@ -774,11 +842,13 @@
             });
           } catch (e) {}
         }
+        // Fase selfie se conserva aunque el device no reporte facingMode
+        if (camera.phase === "selfie") camera.facing = "user";
       })
       .catch(function (err) {
-        log("flip error", err && err.message);
-        // Sincronía: revertir facing si el hardware falló
-        if (prevFacing && seq === camera.flipSeq) camera.facing = prevFacing;
+        log("flip error (se mantiene selfie UI)", err && err.message);
+        // NO revertir phase a rear: el usuario debe poder cerrar con 1 toque
+        if (camera.phase === "selfie") camera.facing = "user";
       })
       .then(function () {
         if (seq === camera.flipSeq) camera.flipping = false;
@@ -821,16 +891,17 @@
   }
 
   function capturePhoto() {
-    if (!camera.open || camera.capturing || camera.flipping) return;
+    if (!camera.open || camera.capturing) return;
+    // En selfie permitir foto aunque el flip aún termine (si hay frame)
     var video = camera.videoEl || document.querySelector("#ui-camera-overlay video");
     var overlay = document.getElementById("ui-camera-overlay");
     if (!video || video.readyState < 2) {
       log("capture: video no listo");
-      // devolver cooldown si falló (permitir reintento)
       lastShotAt = 0;
       return;
     }
     camera.capturing = true;
+    lockAgentOut();
     flashShutter(overlay);
     haptic([6, 12, 6]);
     try {
@@ -838,8 +909,8 @@
       canvas.width = video.videoWidth || 720;
       canvas.height = video.videoHeight || 1280;
       var ctx = canvas.getContext("2d");
-      // Selfie: espejo visual coherente con preview
-      if (camera.facing === "user") {
+      var selfie = camera.phase === "selfie" || camera.facing === "user";
+      if (selfie) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
@@ -850,15 +921,17 @@
       if (!blob) return;
       var detail = {
         blob: blob,
-        facing: camera.facing,
+        facing: selfie ? "user" : camera.facing,
         mode: camera.mode || "photo",
         width: canvas.width,
         height: canvas.height,
         dataUrl: dataUrl,
         deferChat: true,
+        cameraOnly: true,
+        phase: camera.phase,
       };
       window.dispatchEvent(new CustomEvent("salomon:ui-photo", { detail: detail }));
-      log("foto OK", detail.facing, detail.width + "x" + detail.height);
+      log("foto OK (agente bloqueado)", detail.facing, camera.phase);
     } catch (e) {
       camera.capturing = false;
       lastShotAt = 0;
@@ -944,6 +1017,8 @@
         camera.stream = stream;
         camera.open = true;
         camera.flipping = false;
+        if (!camera.phase || camera.phase === "closed") camera.phase = "rear";
+        pauseChatForCapture();
 
         var overlay = document.createElement("div");
         overlay.className = "ui-camera-overlay neural-camera";
@@ -985,7 +1060,9 @@
         badge.className = "ui-camera-active-badge";
         badge.setAttribute("aria-live", "polite");
         badge.textContent =
-          camera.facing === "user" ? "CÁMARA ACTIVA — SELFIE" : "CÁMARA ACTIVA — TRASERA";
+          camera.phase === "selfie" || camera.facing === "user"
+            ? "SELFIE — mic/pantalla = foto · icono = cerrar"
+            : "TRASERA — icono = selfie";
 
         var closeBtn = document.createElement("button");
         closeBtn.type = "button";
@@ -1014,7 +1091,7 @@
         var hint = document.createElement("div");
         hint.className = "ui-camera-hint";
         hint.textContent =
-          "Toque preview / mic / volumen = foto · icono cámara: trasera → selfie → cerrar";
+          "Selfie: pantalla o mic = foto · 1 toque icono cámara = modo agente";
 
         overlay.appendChild(stage);
         overlay.appendChild(flash);
@@ -1066,10 +1143,14 @@
     camera.capturing = false;
     camera.flipping = false;
     camera.videoEl = null;
+    camera.phase = "closed";
     if (!silent) camera.facing = "environment";
+    document.documentElement.classList.remove("salomon-cam-mode", "salomon-cam-selfie");
+    if (!silent) unlockAgent();
     syncCameraUiState();
     if (!silent) {
       window.dispatchEvent(new CustomEvent("salomon:camera-close"));
+      log("cámara recogida → modo agente");
     }
   }
 
@@ -1256,7 +1337,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo cam-gestures-207");
+    log("activo cam-selfie-208");
   }
 
   if (document.readyState === "loading") {
@@ -1266,7 +1347,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "cam-gestures-207",
+    version: "cam-selfie-208",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

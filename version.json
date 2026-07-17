@@ -1,7 +1,7 @@
 {
-  "version": "2.0.7",
-  "timestamp": 1752771000,
-  "timestamp_iso": "2026-07-17T16:00:00Z",
+  "version": "2.0.8",
+  "timestamp": 1752772000,
+  "timestamp_iso": "2026-07-17T16:20:00Z",
   "channel": "main",
-  "label": "cam-gestures-stable"
+  "label": "cam-selfie-agent-lock"
 }
