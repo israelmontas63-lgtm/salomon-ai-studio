@@ -29,13 +29,49 @@
   var closingWrite = false;
   var lastTap = 0;
   var lastCamTap = 0;
+  var lastShotAt = 0;
   var HOLD_CAPTURE_MS = 500;
   var CAPTURE_OPTS = { capture: true, passive: false };
+  var SHOT_COOLDOWN_MS = 550;
+  var CAM_CYCLE_MS = 550;
 
   function log() {
     try {
       console.info.apply(console, ["[UI Shield]"].concat([].slice.call(arguments)));
     } catch (e) {}
+  }
+
+  function canTakeShot() {
+    var now = Date.now();
+    if (now - lastShotAt < SHOT_COOLDOWN_MS) return false;
+    if (!camera.open || camera.capturing || camera.flipping) return false;
+    lastShotAt = now;
+    return true;
+  }
+
+  function canCycleCam() {
+    var now = Date.now();
+    if (now - lastCamTap < CAM_CYCLE_MS) return false;
+    if (camera.flipping || camera.capturing) return false;
+    lastCamTap = now;
+    return true;
+  }
+
+  /** Solo un evento “útil” por gesto táctil (evita touchend+click doble) */
+  function isPrimaryGesture(e) {
+    if (!e) return false;
+    if (e.type === "touchend") return true;
+    if (e.type === "pointerup") {
+      if (e.pointerType === "touch") return false; // ya hubo touchend
+      return true; // mouse / pen
+    }
+    if (e.type === "click") {
+      if (e.pointerType === "touch") return false;
+      // click sintético tras touch: detail suele ser 1; si hubo touch reciente, ignorar
+      if (Date.now() - lastCamTap < 700 || Date.now() - lastShotAt < 700) return false;
+      return true;
+    }
+    return false;
   }
 
   function haptic(ms) {
@@ -201,30 +237,22 @@
     var main = row.querySelector(".control-btn--main") || btns[1];
     var textBtn = btns[btns.length - 1];
 
-    // Ciclo cámara: cerrado → trasera → selfie → cerrado
+    // Ciclo cámara: cerrado → trasera → selfie → cerrado (un solo gesto)
     if (cam.dataset.uiCam !== "1") {
       cam.dataset.uiCam = "1";
-      cam.classList.add("ui-smart-cam-btn");
+      cam.classList.add("ui-smart-cam-btn", "boton-camara");
       cam.setAttribute("aria-label", "Cámara");
       cam.title = "Cámara — trasera → selfie → cerrar";
-      cam.addEventListener(
-        "click",
-        function (e) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          onFooterCameraTap();
-        },
-        true
-      );
-      cam.addEventListener(
-        "touchend",
-        function (e) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          onFooterCameraTap();
-        },
-        CAPTURE_OPTS
-      );
+      function onCamGesture(e) {
+        if (!isPrimaryGesture(e)) return;
+        if (e.cancelable) e.preventDefault();
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        onFooterCameraTap();
+      }
+      cam.addEventListener("touchend", onCamGesture, CAPTURE_OPTS);
+      cam.addEventListener("pointerup", onCamGesture, CAPTURE_OPTS);
+      cam.addEventListener("click", onCamGesture, true);
     }
 
     // Escritura (Aa): bloqueada en CAPTURA
@@ -351,14 +379,18 @@
     document.documentElement.classList.add("salomon-cam-mode");
   }
 
-  /** Controles permitidos en CAPTURA (resto del DOM = muro de eventos) */
+  /** Controles permitidos en CAPTURA (resto del DOM = muro) */
   function isCaptureExemptTarget(t) {
     if (!t || !t.closest) return false;
     return !!(
       t.closest(".control-btn--main") ||
       t.closest(".voice-btn-wrap") ||
+      t.closest(".boton-central") ||
       t.closest(".ui-smart-cam-btn") ||
+      t.closest(".boton-camara") ||
       t.closest('.control-btn[aria-label="Cámara"]') ||
+      t.closest(".ui-write-btn") ||
+      t.closest(".boton-texto") ||
       t.closest(".ui-camera-close") ||
       t.closest("#ui-smart-button") ||
       t.closest(".ui-smart-button") ||
@@ -367,99 +399,110 @@
     );
   }
 
+  function isScreenShutterTarget(t) {
+    if (!t || !t.closest) return false;
+    if (t.closest(".bottom-bar")) return false;
+    if (t.closest(".studio-header")) return false;
+    if (t.closest(".salomon-update-slot")) return false;
+    return !!(
+      t.closest("#ui-camera-overlay") ||
+      t.closest(".ui-camera-stage") ||
+      t.closest("#root") ||
+      t === document.body ||
+      t === document.documentElement
+    );
+  }
+
   /**
    * Muro CAPTURA: chat no recibe gestos.
-   * Toque en preview/pantalla = disparo (excepto controles exempt).
+   * Gatillo de pantalla solo sobre preview/área de cámara (no footer).
    */
   function installCaptureEventWall() {
     if (document.documentElement.dataset.uiCamWall === "1") return;
     document.documentElement.dataset.uiCamWall = "1";
-    var lastScreenShot = 0;
-    var types = [
+    var blockTypes = [
       "touchstart",
-      "touchend",
       "touchmove",
       "pointerdown",
-      "pointerup",
       "pointermove",
-      "click",
       "mousedown",
       "mouseup",
+      "click",
     ];
-    function wall(e) {
+    function blockChat(e) {
       if (!camera.open) return;
       if (isCaptureExemptTarget(e.target)) return;
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
       e.stopPropagation();
-      // Pantalla / preview = gatillo
-      if (e.type === "click" || e.type === "pointerup" || e.type === "touchend") {
-        var now = Date.now();
-        if (now - lastScreenShot < 500) return;
-        lastScreenShot = now;
-        log("pantalla → capturePhoto");
-        capturePhoto();
-      }
     }
-    types.forEach(function (type) {
-      document.addEventListener(type, wall, CAPTURE_OPTS);
+    blockTypes.forEach(function (type) {
+      document.addEventListener(type, blockChat, CAPTURE_OPTS);
     });
-    // Volumen = gatillo (cuando el navegador lo permite)
+
+    function onScreenShutter(e) {
+      if (!camera.open) return;
+      if (isCaptureExemptTarget(e.target)) return;
+      if (!isPrimaryGesture(e)) return;
+      if (!isScreenShutterTarget(e.target)) return;
+      if (e.cancelable) e.preventDefault();
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+      if (!canTakeShot()) return;
+      log("pantalla → capturePhoto");
+      capturePhoto();
+    }
+    document.addEventListener("touchend", onScreenShutter, CAPTURE_OPTS);
+    document.addEventListener("pointerup", onScreenShutter, CAPTURE_OPTS);
+
     if (document.documentElement.dataset.uiCamVol !== "1") {
       document.documentElement.dataset.uiCamVol = "1";
-      document.addEventListener(
-        "keydown",
-        function (e) {
-          if (!camera.open) return;
-          var k = e.key || "";
-          var c = e.code || "";
-          if (
-            k === "AudioVolumeUp" ||
-            k === "AudioVolumeDown" ||
-            c === "VolumeUp" ||
-            c === "VolumeDown" ||
-            c === "AudioVolumeUp" ||
-            c === "AudioVolumeDown"
-          ) {
-            if (e.cancelable) e.preventDefault();
-            e.stopImmediatePropagation();
-            log("volumen → capturePhoto");
-            capturePhoto();
-          }
-        },
-        true
-      );
+      function onVolume(e) {
+        if (!camera.open) return;
+        var k = e.key || "";
+        var c = e.code || "";
+        if (
+          k === "AudioVolumeUp" ||
+          k === "AudioVolumeDown" ||
+          c === "VolumeUp" ||
+          c === "VolumeDown" ||
+          c === "AudioVolumeUp" ||
+          c === "AudioVolumeDown"
+        ) {
+          if (e.cancelable) e.preventDefault();
+          e.stopImmediatePropagation();
+          if (!canTakeShot()) return;
+          log("volumen → capturePhoto");
+          capturePhoto();
+        }
+      }
+      document.addEventListener("keydown", onVolume, true);
+      document.addEventListener("keyup", onVolume, true);
     }
-    log("muro CAPTURA + gatillo pantalla/volumen");
+    log("muro CAPTURA + gatillos pantalla/volumen v2");
   }
 
-  /** Botón central = disparador (icono cámara) en modo captura */
+  /** Botón central / mic = disparador con icono cámara */
   function wireMainShutterGate(main) {
     if (!main || main.dataset.uiShutterGate === "1") return;
     main.dataset.uiShutterGate = "1";
     var wrap = main.closest(".voice-btn-wrap") || main;
-    var lastShot = 0;
     var targets = wrap === main ? [main] : [wrap, main];
 
     function gate(e) {
       if (!camera.open) return;
+      if (!isPrimaryGesture(e)) return;
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
       e.stopPropagation();
-      // Un solo disparo por gesto (evitar down+up+click)
-      if (e.type !== "pointerdown" && e.type !== "touchstart" && e.type !== "click") return;
-      if (e.type === "pointerdown" && e.pointerType === "touch") return;
-      if (e.type === "click" && e.pointerType === "touch") return;
-      var now = Date.now();
-      if (now - lastShot < 480) return;
-      lastShot = now;
+      if (!canTakeShot()) return;
       log("mic/shutter → capturePhoto (facing=" + camera.facing + ")");
       capturePhoto();
     }
 
-    ["touchstart", "pointerdown", "click"].forEach(function (type) {
+    ["touchend", "pointerup", "click"].forEach(function (type) {
       targets.forEach(function (el) {
-        el.addEventListener(type, gate, CAPTURE_OPTS);
+        el.addEventListener(type, gate, type === "click" ? true : CAPTURE_OPTS);
       });
     });
   }
@@ -595,10 +638,7 @@
    * 3) selfie → CIERRA
    */
   function onFooterCameraTap() {
-    var now = Date.now();
-    if (now - lastCamTap < 400) return;
-    lastCamTap = now;
-    if (camera.flipping || camera.capturing) return;
+    if (!canCycleCam()) return;
 
     if (!camera.open) {
       pauseChatForCapture();
@@ -631,6 +671,11 @@
       document.querySelector('.controls-row .control-btn[aria-label="Cámara"]');
     var active = !!camera.open;
     document.documentElement.classList.toggle("salomon-cam-mode", active);
+    var overlay = document.getElementById("ui-camera-overlay");
+    if (overlay) {
+      overlay.dataset.facing = camera.facing || "environment";
+      overlay.classList.toggle("is-selfie", camera.facing === "user");
+    }
     if (cam) {
       cam.classList.toggle("is-cam-active", active);
       cam.dataset.facing = camera.facing || "environment";
@@ -781,6 +826,8 @@
     var overlay = document.getElementById("ui-camera-overlay");
     if (!video || video.readyState < 2) {
       log("capture: video no listo");
+      // devolver cooldown si falló (permitir reintento)
+      lastShotAt = 0;
       return;
     }
     camera.capturing = true;
@@ -790,7 +837,13 @@
       var canvas = document.createElement("canvas");
       canvas.width = video.videoWidth || 720;
       canvas.height = video.videoHeight || 1280;
-      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+      var ctx = canvas.getContext("2d");
+      // Selfie: espejo visual coherente con preview
+      if (camera.facing === "user") {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       var dataUrl = canvas.toDataURL("image/jpeg", 0.88);
       var blob = dataUrlToBlob(dataUrl);
       camera.capturing = false;
@@ -805,55 +858,48 @@
         deferChat: true,
       };
       window.dispatchEvent(new CustomEvent("salomon:ui-photo", { detail: detail }));
-      log("foto capturada (cámara sigue abierta)", detail.facing, detail.width + "x" + detail.height);
-      // NO cerrar — solo el icono cámara cierra (3er toque)
+      log("foto OK", detail.facing, detail.width + "x" + detail.height);
     } catch (e) {
       camera.capturing = false;
+      lastShotAt = 0;
       log("capture fail", e && e.message);
     }
   }
 
-  /** Nodo overlay = también disparador (no voltear; el ciclo es el icono cámara) */
+  /** Nodo overlay = disparador */
   function wireSmartButton(btn) {
     if (!btn || btn.dataset.neuralBound === "1") return;
     btn.dataset.neuralBound = "1";
-    var lastShot = 0;
 
     function shoot(e) {
+      if (!isPrimaryGesture(e)) return;
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
       e.stopPropagation();
-      if (e.type !== "touchstart" && e.type !== "pointerdown" && e.type !== "click") return;
-      if (e.type === "pointerdown" && e.pointerType === "touch") return;
-      var now = Date.now();
-      if (now - lastShot < 480) return;
-      lastShot = now;
+      if (!canTakeShot()) return;
       capturePhoto();
     }
 
-    ["touchstart", "pointerdown", "click"].forEach(function (type) {
-      btn.addEventListener(type, shoot, CAPTURE_OPTS);
+    ["touchend", "pointerup", "click"].forEach(function (type) {
+      btn.addEventListener(type, shoot, type === "click" ? true : CAPTURE_OPTS);
     });
   }
 
-  /** Preview: toque = disparo; no llega al chat */
+  /** Preview: toque = disparo (refuerzo; muro document también cubre) */
   function bindStageShutter(stage) {
-    var lastShot = 0;
     function onTap(ev) {
       if (ev.target && ev.target.closest && ev.target.closest(".ui-smart-button, .ui-camera-close")) {
         return;
       }
+      if (!isPrimaryGesture(ev)) return;
       if (ev.cancelable) ev.preventDefault();
       ev.stopImmediatePropagation();
       ev.stopPropagation();
-      if (ev.type !== "pointerup" && ev.type !== "touchend" && ev.type !== "click") return;
-      var now = Date.now();
-      if (now - lastShot < 500) return;
-      lastShot = now;
+      if (!canTakeShot()) return;
       capturePhoto();
     }
-    ["touchstart", "touchend", "pointerdown", "pointerup", "click"].forEach(function (type) {
-      stage.addEventListener(type, onTap, CAPTURE_OPTS);
+    ["touchend", "pointerup", "click"].forEach(function (type) {
+      stage.addEventListener(type, onTap, type === "click" ? true : CAPTURE_OPTS);
     });
   }
 
@@ -968,7 +1014,7 @@
         var hint = document.createElement("div");
         hint.className = "ui-camera-hint";
         hint.textContent =
-          "Pantalla / volumen / mic = foto · icono cámara: trasera→selfie→cerrar";
+          "Toque preview / mic / volumen = foto · icono cámara: trasera → selfie → cerrar";
 
         overlay.appendChild(stage);
         overlay.appendChild(flash);
@@ -1210,7 +1256,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo cam-cycle-206");
+    log("activo cam-gestures-207");
   }
 
   if (document.readyState === "loading") {
@@ -1220,7 +1266,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "cam-cycle-206",
+    version: "cam-gestures-207",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

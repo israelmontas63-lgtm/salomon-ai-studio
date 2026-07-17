@@ -1,7 +1,7 @@
 {
-  "version": "2.0.6",
-  "timestamp": 1752770000,
-  "timestamp_iso": "2026-07-17T15:50:00Z",
+  "version": "2.0.7",
+  "timestamp": 1752771000,
+  "timestamp_iso": "2026-07-17T16:00:00Z",
   "channel": "main",
-  "label": "cam-cycle-clean"
+  "label": "cam-gestures-stable"
 }

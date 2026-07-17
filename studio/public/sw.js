@@ -1,5 +1,5 @@
 /* Service worker PWA — force-fresh: JS/CSS/API siempre desde Render */
-const CACHE = "salomon-v15-cam";
+const CACHE = "salomon-v16-cam";
 const PRECACHE = [
   "/manifest.json",
   "/manifest.webmanifest",

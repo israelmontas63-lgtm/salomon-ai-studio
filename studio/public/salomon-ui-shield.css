@@ -753,6 +753,25 @@ html.salomon-cam-mode .control-btn--main.is-cam-shutter .ui-shutter-cam-icon {
   display: block;
 }
 
+/* Selfie: preview espejo (giro visual) */
+#ui-camera-overlay.is-selfie video,
+#ui-camera-overlay[data-facing="user"] video {
+  transform: scaleX(-1);
+  -webkit-transform: scaleX(-1);
+}
+
+#ui-camera-overlay .ui-camera-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+#ui-camera-overlay video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 html.salomon-cam-mode .ui-smart-button {
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
 }
