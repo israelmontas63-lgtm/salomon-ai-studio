@@ -1,8 +1,14 @@
 /**
- * Cámara Salomón AI v13 — feature aislada (sin Bridge/agente/dictado).
- * Carpeta raíz: src/features/camera_v13/
+ * Cámara Salomón AI — feature aislada (Camera Engine v20).
+ * Ruta: src/features/camera_v13/ (motor STABLE_PRODUCTION_READY).
  */
 export { default as CameraV13 } from "./CameraV13.jsx";
+export {
+  MediaStreamManager,
+  ENGINE_STATUS,
+  STABLE_PRODUCTION_READY,
+  READY_TIMEOUT_MS,
+} from "./MediaStreamManager.js";
 export { useCameraStream } from "./useCameraStream.js";
 export { default as LockButton } from "./controls/LockButton.jsx";
 export { default as CamToggle } from "./controls/CamToggle.jsx";

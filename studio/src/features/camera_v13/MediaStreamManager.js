@@ -1,7 +1,9 @@
 /**
- * MediaStreamManager v20 — motor universal (deviceId + freeze + applyConstraints).
- * Estados: INITIALIZING | READY | SWITCHING | ERROR
+ * MediaStreamManager v20.1.0 — STABLE_PRODUCTION_READY
+ * Filtro: forceReset si no READY en <2000ms.
  */
+export const READY_TIMEOUT_MS = 2000;
+export const STABLE_PRODUCTION_READY = true;
 const HARDWARE_GAP_MS = 320;
 const FADE_MS = 200;
 
@@ -40,16 +42,23 @@ function waitFrame(video, timeoutMs = 2500) {
     if (!video) return resolve(false);
     if (video.readyState >= 2 && video.videoWidth > 0) return resolve(true);
     let done = false;
+    const cleanup = () => {
+      try {
+        video.removeEventListener("loadeddata", ok);
+        video.removeEventListener("playing", ok);
+      } catch (_) {}
+    };
     const timer = setTimeout(() => {
-      if (!done) {
-        done = true;
-        resolve(video.readyState >= 2 && video.videoWidth > 0);
-      }
+      if (done) return;
+      done = true;
+      cleanup();
+      resolve(video.readyState >= 2 && video.videoWidth > 0);
     }, timeoutMs);
     const ok = () => {
       if (done || !video.videoWidth) return;
       done = true;
       clearTimeout(timer);
+      cleanup();
       resolve(true);
     };
     video.addEventListener("loadeddata", ok);
@@ -69,6 +78,9 @@ export class MediaStreamManager {
     this.deviceMap = { environment: null, user: null };
     this.lastLatencyMs = 0;
     this._switchLock = false;
+    this._bootSeq = 0;
+    this._readyWatchdog = null;
+    this._autoRetried = false;
   }
 
   _setStatus(status, latencyMs, extra) {
@@ -88,6 +100,26 @@ export class MediaStreamManager {
 
   getStatus() {
     return this.status;
+  }
+
+  _clearReadyWatchdog() {
+    if (this._readyWatchdog) {
+      clearTimeout(this._readyWatchdog);
+      this._readyWatchdog = null;
+    }
+  }
+
+  forceReset(reason = "corrupt") {
+    this._bootSeq += 1;
+    this._clearReadyWatchdog();
+    stopTracks(this.stream);
+    this.stream = null;
+    this.track = null;
+    if (this.videoEl) this.videoEl.srcObject = null;
+    this.hideFreeze();
+    this._switchLock = false;
+    this._setStatus(ENGINE_STATUS.ERROR, 0, `forceReset: ${reason}`);
+    return true;
   }
 
   _constraints(facing) {
@@ -206,17 +238,42 @@ export class MediaStreamManager {
       this._setStatus(ENGINE_STATUS.ERROR, 0, "no mediaDevices");
       return false;
     }
+    const seq = ++this._bootSeq;
     const t0 = performance.now();
     this._setStatus(ENGINE_STATUS.INITIALIZING, 0, `start ${facing}`);
+
+    this._clearReadyWatchdog();
+    this._readyWatchdog = setTimeout(() => {
+      if (seq !== this._bootSeq) return;
+      if (this.status === ENGINE_STATUS.READY) return;
+      const shouldRetry = !this._autoRetried;
+      this.forceReset(`READY timeout >${READY_TIMEOUT_MS}ms`);
+      if (shouldRetry) {
+        this._autoRetried = true;
+        logStatus(ENGINE_STATUS.ERROR, READY_TIMEOUT_MS, "auto-retry after forceReset");
+        this.start(facing);
+      }
+    }, READY_TIMEOUT_MS);
+
     try {
       const stream = await this._acquire(facing);
+      if (seq !== this._bootSeq) {
+        stopTracks(stream);
+        return false;
+      }
       const ok = await this._bindStream(stream, facing);
+      if (seq !== this._bootSeq) return false;
       if (!ok) throw new Error("no frame");
       await this.mapDevices();
+      if (seq !== this._bootSeq) return false;
+      this._clearReadyWatchdog();
+      this._autoRetried = false;
       this._setStatus(ENGINE_STATUS.READY, performance.now() - t0, `facing=${this.facing}`);
       return true;
     } catch (err) {
-      this._setStatus(ENGINE_STATUS.ERROR, performance.now() - t0, err?.name);
+      if (seq !== this._bootSeq) return false;
+      this._clearReadyWatchdog();
+      this.forceReset(err?.name || "boot error");
       return false;
     }
   }
@@ -224,7 +281,7 @@ export class MediaStreamManager {
   async switchFacing(toFacing) {
     const to = toFacing || (this.facing === "user" ? "environment" : "user");
     if (this._switchLock || this.status === ENGINE_STATUS.SWITCHING) return false;
-    if (this.status !== ENGINE_STATUS.READY && this.status !== ENGINE_STATUS.ERROR) return false;
+    if (this.status !== ENGINE_STATUS.READY) return false;
     if (to === this.facing) return true;
 
     const t0 = performance.now();
@@ -265,8 +322,7 @@ export class MediaStreamManager {
           });
           this.facing = to;
           this.videoEl?.classList.toggle("is-mirror", to === "user");
-          const framed = await waitFrame(this.videoEl, 800);
-          if (framed) return finishOk();
+          if (await waitFrame(this.videoEl, 800)) return finishOk();
         } catch {
           /* fallback */
         }
@@ -275,7 +331,7 @@ export class MediaStreamManager {
     } catch (err) {
       this._switchLock = false;
       this.hideFreeze();
-      this._setStatus(ENGINE_STATUS.ERROR, performance.now() - t0, err?.message || err?.name);
+      this.forceReset(err?.message || err?.name);
       try {
         const s = await this._acquire(from);
         if (await this._bindStream(s, from)) {
@@ -287,12 +343,15 @@ export class MediaStreamManager {
   }
 
   stop() {
+    this._bootSeq += 1;
+    this._clearReadyWatchdog();
     stopTracks(this.stream);
     this.stream = null;
     this.track = null;
     if (this.videoEl) this.videoEl.srcObject = null;
     this.hideFreeze();
     this._switchLock = false;
+    this._autoRetried = false;
     this.status = ENGINE_STATUS.IDLE;
     logStatus(ENGINE_STATUS.IDLE, 0, "stopped");
   }

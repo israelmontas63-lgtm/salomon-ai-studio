@@ -1,14 +1,16 @@
 /**
- * Salomón CameraEngine v20.0.0 — MediaStreamManager (WebRTC / native pipeline).
+ * Salomón CameraEngine v20.1.0 — MediaStreamManager (STABLE_PRODUCTION_READY).
  * Estados: INITIALIZING | READY | SWITCHING | ERROR
- * Switch: freeze canvas → applyConstraints(deviceId) → fallback stop/restart.
+ * Filtro: forceReset si no READY en <2000ms.
  */
 (function (global) {
   "use strict";
 
-  var VERSION = "20.0.0";
+  var VERSION = "20.1.0";
+  var STABLE_PRODUCTION_READY = true;
   var HARDWARE_GAP_MS = 320;
   var FADE_MS = 200;
+  var READY_TIMEOUT_MS = 2000;
 
   var STATUS = {
     IDLE: "IDLE",
@@ -49,16 +51,23 @@
       if (!video) return resolve(false);
       if (video.readyState >= 2 && video.videoWidth > 0) return resolve(true);
       var done = false;
+      function cleanup() {
+        try {
+          video.removeEventListener("loadeddata", ok);
+          video.removeEventListener("playing", ok);
+        } catch (e) {}
+      }
       var timer = setTimeout(function () {
-        if (!done) {
-          done = true;
-          resolve(video.readyState >= 2 && video.videoWidth > 0);
-        }
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve(video.readyState >= 2 && video.videoWidth > 0);
       }, timeoutMs || 2500);
       function ok() {
         if (done || !video.videoWidth) return;
         done = true;
         clearTimeout(timer);
+        cleanup();
         resolve(true);
       }
       video.addEventListener("loadeddata", ok);
@@ -66,9 +75,6 @@
     });
   }
 
-  /**
-   * MediaStreamManager — mapa deviceId + open/switch con constraints advanced.
-   */
   function MediaStreamManager(options) {
     options = options || {};
     this.videoEl = options.videoEl || null;
@@ -83,6 +89,9 @@
     this.devicesMapped = false;
     this.lastLatencyMs = 0;
     this._switchLock = false;
+    this._bootSeq = 0;
+    this._readyWatchdog = null;
+    this._autoRetried = false;
   }
 
   MediaStreamManager.prototype._setStatus = function (status, latencyMs, extra) {
@@ -108,7 +117,31 @@
     return this.status;
   };
 
-  /** Constraints nativos con deviceId / facingMode + advanced. */
+  MediaStreamManager.prototype._clearReadyWatchdog = function () {
+    if (this._readyWatchdog) {
+      clearTimeout(this._readyWatchdog);
+      this._readyWatchdog = null;
+    }
+  };
+
+  /** Filtro de seguridad: limpia estado corrupto / streams huérfanos. */
+  MediaStreamManager.prototype.forceReset = function (reason) {
+    this._bootSeq += 1;
+    this._clearReadyWatchdog();
+    stopTracks(this.stream);
+    this.stream = null;
+    this.track = null;
+    if (this.videoEl) {
+      try {
+        this.videoEl.srcObject = null;
+      } catch (e) {}
+    }
+    this.hideFreeze();
+    this._switchLock = false;
+    this._setStatus(STATUS.ERROR, 0, "forceReset: " + (reason || "corrupt"));
+    return true;
+  };
+
   MediaStreamManager.prototype._constraints = function (facing) {
     var id = this.deviceMap[facing];
     if (id) {
@@ -134,25 +167,26 @@
   };
 
   MediaStreamManager.prototype._acquire = function (facing) {
-    var self = this;
     var primary = this._constraints(facing);
-    return navigator.mediaDevices.getUserMedia(primary).catch(function () {
-      return navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: facing },
+    return navigator.mediaDevices
+      .getUserMedia(primary)
+      .catch(function () {
+        return navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: facing },
+        });
+      })
+      .catch(function () {
+        return navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { exact: facing } },
+        });
+      })
+      .catch(function () {
+        return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
       });
-    }).catch(function () {
-      return navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: { exact: facing } },
-      });
-    }).catch(function () {
-      // último recurso: cualquier cámara
-      return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
-    });
   };
 
-  /** Tras primer permiso: mapear frontal/trasera por label + facingMode. */
   MediaStreamManager.prototype.mapDevices = function () {
     var self = this;
     if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
@@ -164,18 +198,14 @@
       });
       var envId = null;
       var userId = null;
-
       videos.forEach(function (d) {
         var label = (d.label || "").toLowerCase();
         if (!userId && /front|user|selfie|facing\s*front|frontal/i.test(label)) userId = d.deviceId;
         if (!envId && /back|rear|environment|facing\s*back|trasera|world/i.test(label)) envId = d.deviceId;
       });
-
-      // Heurística: 2+ cámaras sin label útil → [0]=trasera, [1]=frontal (Android común)
       if (!envId && videos[0]) envId = videos[0].deviceId;
       if (!userId && videos[1]) userId = videos[1].deviceId;
       if (!userId && videos[0] && videos[0].deviceId !== envId) userId = videos[0].deviceId;
-
       self.deviceMap.environment = envId;
       self.deviceMap.user = userId || envId;
       self.devicesMapped = !!(envId || userId);
@@ -185,7 +215,6 @@
   };
 
   MediaStreamManager.prototype._bindStream = function (stream, facing) {
-    var self = this;
     var video = this.videoEl;
     stopTracks(this.stream);
     this.stream = stream;
@@ -236,7 +265,23 @@
     if (this.freezeEl) this.freezeEl.classList.remove("is-visible");
   };
 
-  /** Arranque: permiso → enumerateDevices → stream READY. */
+  MediaStreamManager.prototype._bootOnce = function (facing, seq) {
+    var self = this;
+    return this._acquire(facing).then(function (stream) {
+      if (seq !== self._bootSeq) {
+        stopTracks(stream);
+        return false;
+      }
+      return self._bindStream(stream, facing).then(function (ok) {
+        if (seq !== self._bootSeq) return false;
+        if (!ok) throw new Error("no frame");
+        return self.mapDevices().then(function () {
+          return seq === self._bootSeq;
+        });
+      });
+    });
+  };
+
   MediaStreamManager.prototype.start = function (facing) {
     var self = this;
     facing = facing || "environment";
@@ -244,41 +289,44 @@
       this._setStatus(STATUS.ERROR, 0, "no mediaDevices");
       return Promise.resolve(false);
     }
+
+    var seq = ++this._bootSeq;
     var t0 = performance.now();
     this._setStatus(STATUS.INITIALIZING, 0, "start " + facing);
 
-    return this._acquire(facing)
-      .then(function (stream) {
-        return self._bindStream(stream, facing).then(function (ok) {
-          if (!ok) throw new Error("no frame");
-          return self.mapDevices().then(function () {
-            // Re-bind con deviceId exacto si el mapa difiere y tenemos id
-            var wantId = self.deviceMap[facing];
-            var curId = self.track && self.track.getSettings ? self.track.getSettings().deviceId : null;
-            if (wantId && curId && wantId !== curId) {
-              return self._acquire(facing).then(function (s2) {
-                return self._bindStream(s2, facing);
-              });
-            }
-            return true;
-          });
-        });
-      })
-      .then(function () {
-        var ms = performance.now() - t0;
-        self._setStatus(STATUS.READY, ms, "facing=" + self.facing);
+    this._clearReadyWatchdog();
+    this._readyWatchdog = setTimeout(function () {
+      if (seq !== self._bootSeq) return;
+      if (self.status === STATUS.READY) return;
+      var shouldRetry = !self._autoRetried;
+      self.forceReset("READY timeout >" + READY_TIMEOUT_MS + "ms");
+      if (shouldRetry) {
+        self._autoRetried = true;
+        logStatus(STATUS.ERROR, READY_TIMEOUT_MS, "auto-retry after forceReset");
+        self.start(facing);
+      }
+    }, READY_TIMEOUT_MS);
+
+    return this._bootOnce(facing, seq)
+      .then(function (ok) {
+        if (seq !== self._bootSeq) return false;
+        self._clearReadyWatchdog();
+        if (!ok) {
+          self.forceReset("boot failed");
+          return false;
+        }
+        self._autoRetried = false;
+        self._setStatus(STATUS.READY, performance.now() - t0, "facing=" + self.facing);
         return true;
       })
       .catch(function (err) {
-        self._setStatus(STATUS.ERROR, performance.now() - t0, err && err.name);
+        if (seq !== self._bootSeq) return false;
+        self._clearReadyWatchdog();
+        self.forceReset((err && err.name) || "boot error");
         return false;
       });
   };
 
-  /**
-   * Switch nativo: freeze → applyConstraints(deviceId) → fallback restart.
-   * Reemplaza cualquier switchCamera previo.
-   */
   MediaStreamManager.prototype.switchFacing = function (toFacing) {
     var self = this;
     toFacing = toFacing || (this.facing === "user" ? "environment" : "user");
@@ -286,7 +334,7 @@
       logStatus(this.status, 0, "switch blocked");
       return Promise.resolve(false);
     }
-    if (this.status !== STATUS.READY && this.status !== STATUS.ERROR) {
+    if (this.status !== STATUS.READY) {
       logStatus(this.status, 0, "switch requires READY");
       return Promise.resolve(false);
     }
@@ -296,8 +344,6 @@
     var from = this.facing;
     this._switchLock = true;
     this._setStatus(STATUS.SWITCHING, 0, from + "→" + toFacing);
-
-    // Buffer profesional: congelar ANTES de tocar el hardware
     this.showFreeze();
 
     var targetId = this.deviceMap[toFacing];
@@ -306,9 +352,8 @@
       return delay(40).then(function () {
         self.hideFreeze();
         return delay(FADE_MS).then(function () {
-          var ms = performance.now() - t0;
           self._switchLock = false;
-          self._setStatus(STATUS.READY, ms, "switch " + from + "→" + self.facing);
+          self._setStatus(STATUS.READY, performance.now() - t0, "switch " + from + "→" + self.facing);
           return true;
         });
       });
@@ -337,7 +382,6 @@
         });
     }
 
-    // Intento 1 — applyConstraints en el track activo (estilo nativo)
     var tryApply = Promise.resolve(false);
     if (this.track && targetId && typeof this.track.applyConstraints === "function") {
       tryApply = this.track
@@ -361,15 +405,14 @@
     return tryApply
       .then(function (applied) {
         if (applied) return finishOk();
-        // Intento 2 — nuevo getUserMedia con deviceId (sin leave open dual)
         return failsafeRestart();
       })
       .catch(function (err) {
         self._switchLock = false;
         self.hideFreeze();
-        self._setStatus(STATUS.ERROR, performance.now() - t0, err && (err.message || err.name));
-        // Recuperar cámara anterior si es posible
-        return self._acquire(from)
+        self.forceReset(err && (err.message || err.name));
+        return self
+          ._acquire(from)
           .then(function (s) {
             return self._bindStream(s, from).then(function (ok) {
               if (ok) self._setStatus(STATUS.READY, performance.now() - t0, "recovered " + from);
@@ -383,6 +426,8 @@
   };
 
   MediaStreamManager.prototype.stop = function () {
+    this._bootSeq += 1;
+    this._clearReadyWatchdog();
     stopTracks(this.stream);
     this.stream = null;
     this.track = null;
@@ -393,6 +438,7 @@
     }
     this.hideFreeze();
     this._switchLock = false;
+    this._autoRetried = false;
     this.status = STATUS.IDLE;
     logStatus(STATUS.IDLE, 0, "stopped");
   };
@@ -421,9 +467,11 @@
   global.SalomonMediaStreamManager = MediaStreamManager;
   global.SalomonCameraEngine = {
     version: VERSION,
+    STABLE_PRODUCTION_READY: STABLE_PRODUCTION_READY,
+    READY_TIMEOUT_MS: READY_TIMEOUT_MS,
     STATUS: STATUS,
     MediaStreamManager: MediaStreamManager,
   };
 
-  logStatus("BOOT", 0, "v" + VERSION);
+  logStatus("BOOT", 0, "v" + VERSION + " STABLE_PRODUCTION_READY");
 })(typeof window !== "undefined" ? window : this);

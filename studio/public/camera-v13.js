@@ -5,7 +5,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "20.0.0";
+  var VERSION = "20.1.0";
   var Manager = window.SalomonMediaStreamManager;
   if (!Manager) {
     console.error("[CameraEngine] MediaStreamManager no cargado — incluye camera-engine.js antes");
