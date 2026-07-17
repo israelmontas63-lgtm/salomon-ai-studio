@@ -184,6 +184,7 @@
       "/?_salomon_force=" + stamp,
       "/salomon-ui-shield.css?v=p-" + stamp,
       "/salomon-update.js?v=p-" + stamp,
+      "/salomon-self-heal.js?v=p-" + stamp,
       "/salomon-ui-shield.js?v=p-" + stamp,
       "/salomon-orchestrator-bridge.js?v=p-" + stamp,
       "/vision-overlay.js?v=p-" + stamp,
