@@ -1544,6 +1544,12 @@ def camera_engine_js() -> FileResponse:
     return _archivo_studio("camera-engine.js", "application/javascript")
 
 
+@app.get("/salomon-security-kernel.js")
+def salomon_security_kernel_js() -> FileResponse:
+    """Salomón Inmortal v23 — sandbox proxy, limiter y telemetría (sobre el Core)."""
+    return _archivo_studio("salomon-security-kernel.js", "application/javascript")
+
+
 @app.get("/camera-v13.js")
 def camera_v13_js() -> FileResponse:
     """Cámara Salomón — UI shell sobre CameraEngine (sin Bridge/agente)."""

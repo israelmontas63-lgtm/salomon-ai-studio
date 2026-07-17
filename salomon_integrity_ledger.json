@@ -1,0 +1,97 @@
+{
+  "protocol": "SALOMON_INMORTAL",
+  "protocol_version": "23.0.0",
+  "parent_protocol": "SALOMON_GUARDIAN",
+  "architect": "Israel",
+  "authorization_word": "AUTORIZADO",
+  "defense_layer": {
+    "security_kernel": "studio/dist/salomon-security-kernel.js",
+    "sandbox": true,
+    "hardware_proxy": true,
+    "resource_limiter": true,
+    "anomaly_telemetry": true,
+    "read_only_golden_lock": true
+  },
+  "golden_state": {
+    "id": "camera_engine_v20.1.0",
+    "version": "20.1.0",
+    "stability": "STABLE_PRODUCTION_READY",
+    "git_commit": "79597c113c6a5abf96bd5db39f581a3a681af910",
+    "approved_by": "Israel",
+    "approved_at": "2026-07-17T17:15:00Z",
+    "label": "camera-engine-v20.1-stable-production-ready",
+    "immutable": true,
+    "read_only_lock": true,
+    "notes": "Estado Dorado INMUTABLE bajo Inmortal. Kernel de seguridad se envuelve POR ENCIMA; no reescribe el Core."
+  },
+  "protected_paths": [
+    "studio/dist/camera-engine.js",
+    "studio/dist/camera-v13.js",
+    "studio/dist/camera-v13.css",
+    "studio/src/features/camera_v13/**",
+    "studio/public/camera-engine.js",
+    "studio/public/camera-v13.js",
+    "studio/public/camera-v13.css",
+    "studio/public/features/camera_v13/**",
+    "studio/src/**",
+    "studio/features/**",
+    "app.py",
+    "version.json"
+  ],
+  "file_signatures_sha256": {
+    "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
+    "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
+    "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
+    "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
+    "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
+    "version.json": "854a9a96c4e0339e2d695c3d8eaa5f0e60a8387fb69b74c50fc2321c88ba9199"
+  },
+  "invariants": [
+    "MediaStreamManager.forceReset debe existir",
+    "READY_TIMEOUT_MS === 2000",
+    "switchFacing solo si status === READY",
+    "CSS: pointer-events none si data-engine-status !== READY",
+    "Freeze canvas antes de destruir stream",
+    "STABLE_PRODUCTION_READY === true en CameraEngine",
+    "Sin dual-stream hot-swap que mate HW Redmi 13C",
+    "Security Kernel envuelve getUserMedia y switch sin editar Core",
+    "Resource Limiter: max 8 GUM/min, max 6 switch/30s, gaps mínimos"
+  ],
+  "gatekeeper": {
+    "require_impact_report": true,
+    "require_dry_run": true,
+    "require_hardware_risk_report": true,
+    "require_word": "AUTORIZADO",
+    "block_git_without_auth": true,
+    "block_write_on_signature_drift": true,
+    "read_only_golden_lock": true
+  },
+  "resource_limiter": {
+    "max_getUserMedia_per_minute": 8,
+    "max_switch_per_30s": 6,
+    "min_switch_gap_ms": 400,
+    "min_gum_gap_ms": 280
+  },
+  "history": [
+    {
+      "version": "20.1.0",
+      "commit": "79597c113c6a5abf96bd5db39f581a3a681af910",
+      "event": "GOLDEN_STATE_LOCKED",
+      "at": "2026-07-17T17:15:00Z",
+      "by": "Israel"
+    },
+    {
+      "version": "22.0.0",
+      "event": "GUARDIAN_PROTOCOL_ACTIVATED",
+      "at": "2026-07-17T16:50:00-04:00",
+      "by": "Cursor+Israel"
+    },
+    {
+      "version": "23.0.0",
+      "event": "INMORTAL_SECURITY_KERNEL_ACTIVATED",
+      "at": "2026-07-17T12:54:00-04:00",
+      "by": "Cursor+Israel",
+      "note": "Sandbox + Proxy + Limiter + Telemetría; Core v20.1.0 intacto"
+    }
+  ]
+}
