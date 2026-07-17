@@ -1053,7 +1053,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo stable-zindex-162");
+    log("activo estructura-salomon-203");
   }
 
   if (document.readyState === "loading") {
@@ -1063,7 +1063,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "stable-zindex-162",
+    version: "estructura-salomon-203",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

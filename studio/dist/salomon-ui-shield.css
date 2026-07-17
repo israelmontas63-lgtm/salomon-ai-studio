@@ -4,14 +4,20 @@
  */
 
 :root {
-  --s-gold: #d4af37;
-  --s-gold-bright: #f0d78c;
+  --dorado: #c9a227;
+  --dorado-claro: #e8c860;
+  --plateado: #c0c0c0;
+  --cobrizo: #b87333;
+  --fondo-negro: #0a0a0a;
+  --panel-negro: #141414;
+  --s-gold: #c9a227;
+  --s-gold-bright: #e8c860;
   --s-silver: #c0c0c0;
   --s-copper: #b87333;
   --s-black: #000000;
   --s-ink: #0a0a0a;
-  --s-bubble-ai: #c9a962;
-  --s-bubble-user: #f2f2f2;
+  --s-bubble-ai: #c9a227;
+  --s-bubble-user: #1e1e1e;
 }
 
 /* ——— Frontal global (maqueta) ——— */
@@ -36,17 +42,24 @@ html.salomon-ui-shield .chat-scroll {
 
 html.salomon-ui-shield .bubble--ai,
 html.salomon-ui-shield .bubble.bubble--ai {
-  background: var(--s-bubble-ai) !important;
-  color: #1a1508 !important;
-  border-radius: 18px 18px 18px 6px !important;
+  background: linear-gradient(135deg, var(--dorado-claro), var(--dorado)) !important;
+  color: #111 !important;
+  border-radius: 18px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+  max-width: 78% !important;
+  padding: 14px 18px !important;
+  margin: 6px 12px !important;
 }
 
 html.salomon-ui-shield .bubble--user,
 html.salomon-ui-shield .bubble.bubble--user {
-  background: var(--s-bubble-user) !important;
-  color: #141414 !important;
-  border-radius: 18px 18px 6px 18px !important;
+  background: #1e1e1e !important;
+  color: #fff !important;
+  border: 1px solid rgba(201, 162, 39, 0.4) !important;
+  border-radius: 18px !important;
+  max-width: 78% !important;
+  padding: 14px 18px !important;
+  margin: 6px 12px !important;
 }
 
 html.salomon-ui-shield .bottom-bar {
@@ -364,13 +377,17 @@ html.salomon-mockup-ui .studio-header .header-brand::after {
   }
 }
 
-/* Pensando: vibra + ciclo oro→plata→cobre */
+/* Pensando: vibra + ciclo oro→plata→cobre — movido al borde del disco (bloque ESTRUCTURA) */
 .studio-header[data-ss-state="thinking"] .vinyl-card__ss,
 .studio-header:has(.status-dot--thinking) .vinyl-card__ss,
 .studio-header:has(.status-dot--listening) .vinyl-card__ss,
 .studio-header:has(.status-dot--speaking) .vinyl-card__ss {
-  animation: ssThinkMetal 1.1s ease-in-out infinite;
-  -webkit-text-fill-color: transparent;
+  animation: none !important;
+  -webkit-text-fill-color: var(--dorado-claro) !important;
+  color: var(--dorado-claro) !important;
+  background: none !important;
+  filter: none !important;
+  transform: none !important;
 }
 
 @keyframes ssThinkMetal {
@@ -976,4 +993,285 @@ html.salomon-ui-shield .camera-backdrop {
 
 .ui-bubble-menu button:active {
   background: rgba(212, 175, 55, 0.15);
+}
+
+/* ============================================
+   ESTRUCTURA SALOMÓN — maqueta aprobada (overlay)
+   ============================================ */
+
+/* Logo SS — respirar / pensando (borde del disco) */
+.studio-header .vinyl-card,
+.studio-header .vinyl-card__disc {
+  width: 70px !important;
+  height: 70px !important;
+  border-radius: 50% !important;
+  border: 2px solid var(--dorado) !important;
+  background: radial-gradient(circle at 35% 30%, #2a2a2a, #0a0a0a 70%) !important;
+  box-shadow: 0 0 8px rgba(201, 162, 39, 0.4) !important;
+  animation: logo-respirar 4s ease-in-out infinite;
+}
+
+.studio-header .vinyl-card__ss {
+  font-family: Georgia, "Cormorant Garamond", serif !important;
+  font-size: 22px !important;
+  font-weight: bold !important;
+  letter-spacing: 0.06em !important;
+  color: var(--dorado-claro) !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--dorado-claro) !important;
+  filter: none !important;
+  animation: none !important;
+}
+
+@keyframes logo-respirar {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(201, 162, 39, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(201, 162, 39, 0.55);
+  }
+}
+
+.studio-header[data-ss-state="thinking"] .vinyl-card__disc,
+.studio-header:has(.status-dot--thinking) .vinyl-card__disc,
+.studio-header:has(.status-dot--listening) .vinyl-card__disc,
+.studio-header:has(.status-dot--speaking) .vinyl-card__disc {
+  animation: logo-pensando 1.4s linear infinite !important;
+}
+
+@keyframes logo-pensando {
+  0% {
+    border-color: var(--dorado);
+    box-shadow: 0 0 16px rgba(201, 162, 39, 0.7);
+    transform: rotate(0deg);
+  }
+  33% {
+    border-color: var(--plateado);
+    box-shadow: 0 0 16px rgba(192, 192, 192, 0.7);
+    transform: rotate(120deg);
+  }
+  66% {
+    border-color: var(--cobrizo);
+    box-shadow: 0 0 16px rgba(184, 115, 51, 0.7);
+    transform: rotate(240deg);
+  }
+  100% {
+    border-color: var(--dorado);
+    box-shadow: 0 0 16px rgba(201, 162, 39, 0.7);
+    transform: rotate(360deg);
+  }
+}
+
+/* Menús H / Usuario — iconos circulares */
+html.salomon-mockup-ui .studio-header .header-menu-btn,
+html.salomon-ui-shield .studio-header .header-menu-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--dorado) !important;
+  color: var(--dorado-claro) !important;
+  background: rgba(20, 20, 20, 0.6) !important;
+  box-shadow: 0 0 8px rgba(201, 162, 39, 0.5) !important;
+  transition: box-shadow 0.3s ease, transform 0.2s ease !important;
+}
+
+html.salomon-mockup-ui .studio-header .header-menu-btn:active,
+html.salomon-ui-shield .studio-header .header-menu-btn:active {
+  transform: scale(0.92) !important;
+}
+
+.glass-panel,
+.drawer-panel,
+[class*="drawer"] .panel,
+.menu-desplegable {
+  background: rgba(20, 20, 20, 0.55) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(201, 162, 39, 0.4) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  animation: menu-aparecer 0.2s ease-out;
+}
+
+@keyframes menu-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Campo de texto */
+.bottom-bar .input-row,
+.bottom-bar form.chat-input,
+.bottom-bar .chat-input {
+  width: calc(100% - 24px) !important;
+  margin: 0 12px 10px !important;
+  padding: 10px 16px !important;
+  border-radius: 24px !important;
+  background: var(--fondo-negro) !important;
+  border: 1.5px solid rgba(201, 162, 39, 0.5) !important;
+  max-width: none !important;
+  animation: subir-teclado 0.25s ease-out !important;
+}
+
+.bottom-bar .chat-input:focus-within,
+.bottom-bar .input-row:focus-within,
+.campo-texto-contenedor.activo {
+  border-color: var(--dorado-claro) !important;
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.5) !important;
+}
+
+.bottom-bar .chat-input input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.bottom-bar .send-btn {
+  background: transparent !important;
+  width: 36px !important;
+  height: 36px !important;
+  box-shadow: none !important;
+}
+
+.bottom-bar .send-btn::after {
+  border-color: transparent transparent transparent var(--dorado) !important;
+}
+
+@keyframes subir-teclado {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Botones inferiores — proporción maqueta */
+.controls-row .control-btn:not(.control-btn--main) {
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--dorado) !important;
+  background: var(--fondo-negro) !important;
+}
+
+html.salomon-ui-shield .controls-row .control-btn--main {
+  width: 76px !important;
+  height: 76px !important;
+  margin-top: -38px !important;
+  margin-left: -38px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at 35% 30%, var(--dorado-claro), var(--dorado)) !important;
+  box-shadow: 0 0 14px rgba(201, 162, 39, 0.5) !important;
+  border: none !important;
+}
+
+html.salomon-ui-shield .controls-row {
+  min-height: 76px !important;
+  padding: 18px 0 8px !important;
+  justify-content: space-evenly !important;
+}
+
+/* Anillo dictado (oro → plata → cobre) */
+.ui-voice-orbit {
+  position: absolute !important;
+  width: 44px !important;
+  height: 44px !important;
+  inset: auto !important;
+  top: 50% !important;
+  left: 50% !important;
+  margin: -22px 0 0 -22px !important;
+  border-radius: 50% !important;
+  border: 3px solid transparent !important;
+  border-top-color: var(--dorado-claro) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+}
+
+.voice-btn--spinning .ui-voice-orbit,
+.control-btn--recording .ui-voice-orbit,
+.voice-btn[data-ui-mode="dictation"] .ui-voice-orbit {
+  opacity: 1 !important;
+  animation: girar-anillo 2.2s linear infinite, cambiar-color-anillo 3s ease-in-out infinite !important;
+}
+
+@keyframes girar-anillo {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cambiar-color-anillo {
+  0% {
+    border-top-color: var(--dorado-claro);
+  }
+  33% {
+    border-top-color: var(--plateado);
+  }
+  66% {
+    border-top-color: var(--cobrizo);
+  }
+  100% {
+    border-top-color: var(--dorado-claro);
+  }
+}
+
+/* Destello nube — modo conversación */
+.ui-voice-cloud {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 76px !important;
+  height: 76px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(
+    circle,
+    rgba(232, 200, 96, 0.9) 0%,
+    rgba(201, 162, 39, 0.3) 60%,
+    transparent 80%
+  ) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.voice-btn[data-ui-flash="1"] .ui-voice-cloud {
+  animation: destello-expandir 0.7s ease-out forwards !important;
+}
+
+@keyframes destello-expandir {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* Menú contextual mensaje */
+.ui-bubble-menu {
+  flex-direction: row !important;
+  gap: 6px !important;
+  padding: 6px 10px !important;
+  border-radius: 12px !important;
+  background: rgba(20, 20, 20, 0.85) !important;
+  animation: menu-aparecer 0.15s ease-out !important;
+}
+
+.ui-bubble-menu button {
+  color: var(--dorado-claro) !important;
+  font-size: 13px !important;
+  padding: 4px 6px !important;
+  text-align: center !important;
 }
