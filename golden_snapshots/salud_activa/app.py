@@ -59,6 +59,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/eficiencia",
         "/api/identidad",
         "/api/web/arquitecto",
+        "/api/pwa/estado",
         "/api/media/estado",
     }
 )
@@ -539,6 +540,14 @@ def _salud_payload() -> dict:
         }
     except Exception:
         identidad = {"active": False}
+    pwa = {
+        "active": True,
+        "version": "97.0.0",
+        "service_worker": "/service-worker.js",
+        "display": "standalone",
+        "theme_color": "#000000",
+        "installable": True,
+    }
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -552,6 +561,7 @@ def _salud_payload() -> dict:
         "multiagente": multiagente,
         "eficiencia": eficiencia,
         "identidad": identidad,
+        "pwa": pwa,
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
 
@@ -2014,6 +2024,42 @@ def drawers_js() -> FileResponse:
 @app.get("/sw.js")
 def service_worker() -> FileResponse:
     return _archivo_studio("sw.js", "application/javascript")
+
+
+@app.get("/service-worker.js")
+def service_worker_nativo() -> FileResponse:
+    """PWA nativa v97 — Service Worker canónico."""
+    resp = _archivo_studio("service-worker.js", "application/javascript")
+    # Cabecera para scope raíz
+    if hasattr(resp, "headers"):
+        resp.headers["Service-Worker-Allowed"] = "/"
+        resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
+@app.get("/pwa-nativa.js")
+def pwa_nativa_js() -> FileResponse:
+    return _archivo_studio("pwa-nativa.js", "application/javascript")
+
+
+@app.get("/api/pwa/estado")
+def api_pwa_estado() -> dict:
+    return {
+        "protocol": "PWA_NATIVA_INSTALLABLE",
+        "version": "97.0.0",
+        "active": True,
+        "manifest": {
+            "name": "Salomón AI",
+            "short_name": "Salomón",
+            "display": "standalone",
+            "theme_color": "#000000",
+        },
+        "service_worker": "/service-worker.js",
+        "service_worker_legacy": "/sw.js",
+        "core_endpoints": ["/api/identidad", "/api/web/arquitecto", "/api/eficiencia"],
+        "installable": True,
+        "owner": "Israel Monta - Salomón AI Studio",
+    }
 
 
 @app.get("/icons.svg")

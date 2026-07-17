@@ -2,16 +2,18 @@
   "id": "/",
   "name": "Salomón AI",
   "short_name": "Salomón",
-  "description": "Asistente de inteligencia artificial — negro plateado y oro.",
-  "start_url": "/",
+  "description": "Salomón AI Studio — inteligencia creada por Israel Monta. PWA nativa instalable.",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#1A1A1A",
-  "theme_color": "#C5A059",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "lang": "es",
   "dir": "ltr",
-  "categories": ["productivity", "utilities"],
+  "categories": ["productivity", "utilities", "education"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192-v2.png",
@@ -42,6 +44,14 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Salud Viviente",
+      "short_name": "Salud",
+      "url": "/api/salud?view=dashboard",
+      "description": "Estado SALOMÓN VIVIENTE"
     }
   ]
 }

@@ -295,11 +295,13 @@
 
   function registerSw() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=30").then(function (reg) {
+    navigator.serviceWorker.register("/service-worker.js?v=97").then(function (reg) {
       try {
         reg.update();
       } catch (e) {}
-    }).catch(function () {});
+    }).catch(function () {
+      navigator.serviceWorker.register("/sw.js?v=97").catch(function () {});
+    });
   }
 
   function boot() {

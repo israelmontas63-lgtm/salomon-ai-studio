@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T20:05:00Z",
-  "timestamp": 1752792300,
-  "version": "96.0.0",
+  "timestamp_iso": "2026-07-17T20:15:00Z",
+  "timestamp": 1752792900,
+  "version": "97.0.0",
   "channel": "main",
-  "label": "identidad-web-architect",
+  "label": "pwa-nativa-installable",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "IDENTIDAD_ARQUITECTURA_WEB",
-  "notes": "Israel Monta ownership + Web Architect Engine (HTML/CSS/JS/Flask/React) Free Tier safe. CameraEngine untouched."
+  "protocol": "PWA_NATIVA_INSTALLABLE",
+  "notes": "PWA standalone theme #000000, service-worker.js shell cache, identidad/web en nucleo PWA. CameraEngine untouched."
 }
