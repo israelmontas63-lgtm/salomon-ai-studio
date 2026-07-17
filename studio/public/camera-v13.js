@@ -1,6 +1,6 @@
 /**
  * Salomón Camera v13.0.0 — runtime aislado (Live).
- * Independiente del asistente / Bridge / dictado / modoInterfaz del shield.
+ * Independiente del asistente / Bridge / dictado / estado del shield.
  * Controles: Candado · Cámara · Giro · Disparador.
  */
 (function () {
