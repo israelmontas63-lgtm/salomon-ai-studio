@@ -152,6 +152,13 @@ def _registrar_skills_internas() -> None:
         prioridad=36,
     ))
     registrar_skill(Skill(
+        id="sce_evolucion",
+        nombre="SCE — Criterio de Evolución",
+        descripcion="Filtro de valor: aprueba mejoras útiles y bloquea riesgos al núcleo",
+        intenciones=frozenset({Intencion.TECNICO, Intencion.AGENTE, Intencion.CHAT}),
+        prioridad=12,
+    ))
+    registrar_skill(Skill(
         id="agente",
         nombre="Agente autónomo",
         descripcion="Correcciones en archivos del proyecto",

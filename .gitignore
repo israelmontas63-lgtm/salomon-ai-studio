@@ -40,8 +40,9 @@ data/modelos/
 tmp/
 temp/
 
-# Basura local
-node_modules/
+salomon_integrity_attempts.jsonl
+salomon_evolution_ledger.jsonl
+
 _integrity_backup_dist/
 /index.html
 maqueta-estructura-salomon.html

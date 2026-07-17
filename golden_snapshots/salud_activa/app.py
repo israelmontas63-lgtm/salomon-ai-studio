@@ -61,6 +61,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/web/arquitecto",
         "/api/pwa/estado",
         "/api/auditoria/preflight",
+        "/api/sce",
         "/api/media/estado",
     }
 )
@@ -549,6 +550,13 @@ def _salud_payload() -> dict:
         "theme_color": "#000000",
         "installable": True,
     }
+    sce: dict = {"active": False}
+    try:
+        from cognicion.evolucion import estado_sce
+
+        sce = estado_sce()
+    except Exception:
+        sce = {"active": False}
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -563,6 +571,7 @@ def _salud_payload() -> dict:
         "eficiencia": eficiencia,
         "identidad": identidad,
         "pwa": pwa,
+        "sce": sce,
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
 
@@ -2062,6 +2071,30 @@ def api_pwa_estado() -> dict:
         "installable": True,
         "owner": "Israel Monta - Salomon AI Studio",
     }
+
+
+@app.get("/api/sce")
+def api_sce_estado() -> dict:
+    """Sistema de Criterio de Evolución (v100)."""
+    from cognicion.evolucion import estado_sce
+
+    return estado_sce()
+
+
+class SceEvaluarRequest(BaseModel):
+    propuesta: str = Field(..., min_length=1, max_length=4000)
+    paquete: str | None = None
+    autorizado: bool = False
+
+
+@app.post("/api/sce/evaluar")
+def api_sce_evaluar(body: SceEvaluarRequest) -> dict:
+    from cognicion.evolucion import analizar_valor
+
+    return analizar_valor(
+        body.propuesta,
+        contexto={"paquete": body.paquete or "", "autorizado": body.autorizado},
+    )
 
 
 @app.get("/api/auditoria/preflight")

@@ -109,6 +109,15 @@ def main() -> int:
         str(eff.get("colsub_caps")),
     )
 
+    from cognicion.evolucion import analizar_valor, estado_sce
+
+    sce_ok = estado_sce().get("active") and estado_sce().get("version") == "100.0.0"
+    check("sce_activo", bool(sce_ok), "SCE v100")
+    a = analizar_valor("añadir multilingüismo y síntesis de voz TTS vía API")
+    check("sce_aprueba_mejora", a.get("decision") == "aprobar", a.get("mensaje", "")[:80])
+    b = analizar_valor("instalar torch y transformers en runtime")
+    check("sce_bloquea_riesgo", b.get("decision") == "bloquear", b.get("mensaje", "")[:80])
+
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report["ok"] else 1
 

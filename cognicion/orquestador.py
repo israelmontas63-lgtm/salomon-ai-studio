@@ -264,6 +264,21 @@ class MotorCognicion:
         except Exception as exc:
             meta["cognicion"]["web_architect_error"] = type(exc).__name__
 
+        # SCE — Criterio de Evolución (v100)
+        try:
+            from cognicion.evolucion import bloque_contexto_sce, es_propuesta_evolucion, analizar_valor
+
+            if es_propuesta_evolucion(entrada):
+                veredicto = analizar_valor(entrada)
+                bloques.append(bloque_contexto_sce(entrada))
+                meta["cognicion"]["sce"] = {
+                    "decision": veredicto.get("decision"),
+                    "aprobado": veredicto.get("aprobado"),
+                    "mensaje": veredicto.get("mensaje"),
+                }
+        except Exception as exc:
+            meta["cognicion"]["sce_error"] = type(exc).__name__
+
         # Multimodal Core — lazy (Agent_Visual path; no eager import al boot)
         from cognicion.multimodal import es_generacion_visual
         from cognicion.vision.busqueda_visual import es_busqueda_visual

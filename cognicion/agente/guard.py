@@ -26,10 +26,35 @@ ALTERNATIVAS_LIGERAS = {
 
 
 def validar_dependencia_render(paquete: str) -> dict[str, Any]:
-    """Agent_Guard: bloquea libs que colapsan Render Starter."""
+    """Agent_Guard: bloquea libs que colapsan Render Starter (+ SCE)."""
     nombre = (paquete or "").strip().lower().split("==")[0].split(">=")[0].split("[")[0].strip()
     if not nombre:
         return {"ok": False, "error": "paquete_vacio", "agente": "Agent_Guard"}
+
+    # SCE: evaluación de evolución antes de aceptar la dep
+    try:
+        from cognicion.evolucion import analizar_valor
+
+        # Sin paquete en contexto: SCE lee el nombre en el texto (evita bucle)
+        sce = analizar_valor(
+            f"instalar biblioteca {nombre} en el entorno Free Tier",
+        )
+        if sce.get("decision") == "bloquear":
+            return {
+                "ok": False,
+                "bloqueado": True,
+                "paquete": nombre,
+                "motivo": "sce_rechazo",
+                "sce": sce,
+                "mensaje": sce.get("mensaje"),
+                "alternativa": ALTERNATIVAS_LIGERAS.get(
+                    nombre, "usar API externa vía variable de entorno"
+                ),
+                "agente": "Agent_Guard+SCE",
+            }
+    except Exception:
+        sce = None
+
     if nombre in LIBS_BLOQUEADAS_RENDER:
         return {
             "ok": False,
@@ -45,6 +70,7 @@ def validar_dependencia_render(paquete: str) -> dict[str, Any]:
         "ok": True,
         "paquete": nombre,
         "bloqueado": False,
+        "sce": sce,
         "nota": "Añadir manualmente a requirements.txt tras revisión; nunca pip install en runtime Live.",
         "agente": "Agent_Guard",
     }

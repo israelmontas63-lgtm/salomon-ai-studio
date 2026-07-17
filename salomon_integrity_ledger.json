@@ -1,6 +1,6 @@
 {
   "protocol": "SALOMON_VIVIENTE",
-  "protocol_version": "98.0.0",
+  "protocol_version": "100.0.0",
   "parent_protocol": "NEURAL_INTEGRITY_LOCK",
   "architect": "Israel",
   "authorization_word": "AUTORIZADO",
@@ -28,7 +28,7 @@
       "studio/src/features/camera_v13/MediaStreamManager.js",
       "studio/src/features/camera_v13/CameraV13.jsx"
     ],
-    "golden_snapshot_id": "viviente_v98+preflight+camera_engine_v20.1.0",
+    "golden_snapshot_id": "viviente_v100+sce+camera_engine_v20.1.0",
     "notes": "Cualquier drift de checksum vs file_signatures_sha256 = bloqueo sin AUTORIZADO."
   },
   "defense_layer": {
@@ -73,7 +73,7 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "918c2873c4ca69be878fa26cae81408009769527327d630d8d71c6f204a0a972",
+    "app.py": "b0d1534e39b8721bf16d8cc8bd2c30d001938a7c4cd46bea1ac2e6fa67b2cc29",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
@@ -81,7 +81,7 @@
     "studio/dist/salomon-security-kernel.js": "66804a6fa7f41bbec296b29d37c4b4a6de766766b1006ec26ee8610037c70dfd",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
-    "version.json": "49852d39703f4db2c357741a6f2f007f2a86ef9931c292b1f34cc99ffba4ae48"
+    "version.json": "02946c273434232576d45d5596aaf78739e22f689ccdf2d3c91bfbd5e1300136"
   },
   "invariants": [
     "MediaStreamManager.forceReset debe existir",
@@ -215,6 +215,13 @@
       "at": "2026-07-17T16:25:00-04:00",
       "by": "Israel+Cursor",
       "note": "Preflight green; manifest ASCII-safe; agents dry-run; SW/media policy OK"
+    },
+    {
+      "version": "100.0.0",
+      "event": "SCE_EVOLUCION",
+      "at": "2026-07-17T16:45:00-04:00",
+      "by": "Israel+Cursor",
+      "note": "Sistema de Criterio de Evolucion: filtro de valor aprobar/bloquear; ADN Israel Monta"
     }
   ]
 }

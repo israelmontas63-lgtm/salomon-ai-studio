@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T20:30:00Z",
-  "timestamp": 1752793800,
-  "version": "98.0.0",
+  "timestamp_iso": "2026-07-17T20:45:00Z",
+  "timestamp": 1752794700,
+  "version": "100.0.0",
   "channel": "main",
-  "label": "auditoria-integridad-preflight",
+  "label": "sce-criterio-evolucion",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "AUDITORIA_INTEGRIDAD_PREFLIGHT",
-  "notes": "Preflight audit green. Manifest ASCII-safe. Agents dry-run OK. SW no conflict with visual APIs. CameraEngine untouched."
+  "protocol": "SCE_EVOLUCION",
+  "notes": "Sistema de Criterio de Evolucion (SCE): aprueba mejoras utiles, bloquea riesgos. CameraEngine untouched. Owner Israel Monta."
 }
