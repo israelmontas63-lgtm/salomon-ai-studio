@@ -14,7 +14,7 @@
 
   var camera = {
     stream: null,
-    facing: "environment",
+    facing: "user", // selfie por defecto (facingMode: user)
     open: false,
     capturing: false,
     flipping: false,
@@ -266,10 +266,56 @@
     document.documentElement.classList.add("salomon-cam-mode");
   }
 
+  /** Controles permitidos en CAPTURA (resto del DOM = muro de eventos) */
+  function isCaptureExemptTarget(t) {
+    if (!t || !t.closest) return false;
+    return !!(
+      t.closest(".control-btn--main") ||
+      t.closest(".voice-btn-wrap") ||
+      t.closest(".ui-smart-cam-btn") ||
+      t.closest('.control-btn[aria-label="Cámara"]') ||
+      t.closest(".ui-camera-close") ||
+      t.closest("#ui-smart-button") ||
+      t.closest(".ui-smart-button") ||
+      t.closest("#salomon-update-btn") ||
+      t.closest(".salomon-update-slot")
+    );
+  }
+
   /**
-   * Gate duro CAPTURA vs CHAT en el botón grande.
-   * camera.open → tomar_foto + React no recibe el gesto
-   * !camera.open → no interceptar (VoiceButton / chat)
+   * Muro total: con cámara activa, todo toque fuera del disparador/cierres
+   * recibe preventDefault + stopPropagation (el chat/React no ve el gesto).
+   */
+  function installCaptureEventWall() {
+    if (document.documentElement.dataset.uiCamWall === "1") return;
+    document.documentElement.dataset.uiCamWall = "1";
+    var types = [
+      "touchstart",
+      "touchend",
+      "touchmove",
+      "pointerdown",
+      "pointerup",
+      "pointermove",
+      "click",
+      "mousedown",
+      "mouseup",
+    ];
+    function wall(e) {
+      if (!camera.open) return;
+      if (isCaptureExemptTarget(e.target)) return;
+      if (e.cancelable) e.preventDefault();
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+    }
+    types.forEach(function (type) {
+      document.addEventListener(type, wall, CAPTURE_OPTS);
+    });
+    log("muro de eventos CAPTURA instalado");
+  }
+
+  /**
+   * Botón grande → exclusivamente capturePhoto() si cámara activa.
+   * React VoiceButton no recibe el gesto.
    */
   function wireMainShutterGate(main) {
     if (!main || main.dataset.uiShutterGate === "1") return;
@@ -283,13 +329,12 @@
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
       e.stopPropagation();
-      // Disparo solo en down/start (no en up/click duplicado)
       if (e.type === "pointerup" || e.type === "touchend" || e.type === "click") return;
       if (e.type === "pointerdown" && e.pointerType === "touch") return;
       var now = Date.now();
       if (now - lastShot < 480) return;
       lastShot = now;
-      log("disparador → tomar_foto");
+      log("disparador → capturePhoto (facing=" + camera.facing + ")");
       capturePhoto();
     }
 
@@ -441,8 +486,8 @@
   function updateCamActiveBadge() {
     var badge = document.getElementById("ui-camera-active-badge");
     if (!badge) return;
-    var face = camera.facing === "user" ? "frontal" : "trasera";
-    badge.textContent = "CÁMARA ACTIVA — " + face;
+    badge.textContent =
+      camera.facing === "user" ? "CÁMARA ACTIVA — SELFIE" : "CÁMARA ACTIVA — TRASERA";
   }
 
   function syncCameraUiState() {
@@ -621,121 +666,54 @@
     }
   }
 
+  /** Nodo overlay: solo voltear (el disparo es exclusivo del botón central) */
   function wireSmartButton(btn) {
     if (!btn || btn.dataset.neuralBound === "1") return;
     btn.dataset.neuralBound = "1";
-    var holdTimer = null;
-    var held = false;
-    var tracking = false;
-    var viaTouch = false;
-    var startX = 0;
-    var startY = 0;
+    var lastFlip = 0;
 
-    function clearHold() {
-      if (holdTimer) clearTimeout(holdTimer);
-      holdTimer = null;
-    }
-
-    function onDown(e) {
-      if (e.type === "mousedown" && e.button !== 0) return;
-      // Evitar doble ruta touch + pointer en el mismo gesto
-      if (e.type === "pointerdown" && (e.pointerType === "touch" || viaTouch)) return;
-      if (tracking) return;
-      tracking = true;
-      viaTouch = e.type === "touchstart" || e.pointerType === "touch";
-      held = false;
-      startX = e.clientX != null ? e.clientX : (e.touches && e.touches[0] && e.touches[0].clientX) || 0;
-      startY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
-      try {
-        if (e.pointerId != null) btn.setPointerCapture(e.pointerId);
-      } catch (err) {}
-      clearHold();
-      holdTimer = setTimeout(function () {
-        held = true;
-        capturePhoto();
-      }, HOLD_CAPTURE_MS);
+    function flip(e) {
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
-    }
-
-    function onMove(e) {
-      if (!tracking) return;
-      if (e.type === "pointermove" && viaTouch) return;
-      var x = e.clientX != null ? e.clientX : (e.touches && e.touches[0] && e.touches[0].clientX) || startX;
-      var y = e.clientY != null ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY) || startY;
-      if (Math.abs(x - startX) > 16 || Math.abs(y - startY) > 16) clearHold();
-    }
-
-    function onUp(e) {
-      if (!tracking) return;
-      if (e.type === "pointerup" && viaTouch) return;
-      tracking = false;
-      clearHold();
-      if (e.cancelable) e.preventDefault();
-      e.stopImmediatePropagation();
-      var wasHeld = held;
-      viaTouch = false;
-      // Toque corto = ciclo trasera/frontal · mantener = disparo
-      if (wasHeld) return;
+      e.stopPropagation();
+      if (e.type !== "touchstart" && e.type !== "pointerdown") return;
+      if (e.type === "pointerdown" && e.pointerType === "touch") return;
+      var now = Date.now();
+      if (now - lastFlip < 400) return;
+      lastFlip = now;
       toggleCameraDirection();
     }
 
-    function onCancel(e) {
-      if (e && e.type === "pointercancel" && viaTouch) return;
-      tracking = false;
-      viaTouch = false;
-      clearHold();
-    }
-
-    btn.addEventListener("touchstart", onDown, CAPTURE_OPTS);
-    btn.addEventListener("touchmove", onMove, CAPTURE_OPTS);
-    btn.addEventListener("touchend", onUp, CAPTURE_OPTS);
-    btn.addEventListener("touchcancel", onCancel, CAPTURE_OPTS);
-    btn.addEventListener("pointerdown", onDown, CAPTURE_OPTS);
-    btn.addEventListener("pointermove", onMove, CAPTURE_OPTS);
-    btn.addEventListener("pointerup", onUp, CAPTURE_OPTS);
-    btn.addEventListener("pointercancel", onCancel, CAPTURE_OPTS);
-    btn.addEventListener(
-      "click",
-      function (e) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-      },
-      CAPTURE_OPTS
-    );
+    ["touchstart", "pointerdown", "click"].forEach(function (type) {
+      btn.addEventListener(type, flip, CAPTURE_OPTS);
+    });
   }
 
-  function bindTapToShoot(stage) {
-    var lastTs = 0;
-    function shoot(ev) {
+  /** Preview: toques ignorados (no disparan ni llegan al chat) */
+  function bindStageIgnore(stage) {
+    function kill(ev) {
       if (ev.target && ev.target.closest && ev.target.closest(".ui-smart-button, .ui-camera-close")) {
         return;
       }
-      // Dedup touchstart→pointerdown en el mismo gesto
-      var now = performance.now();
-      if (now - lastTs < 40) return;
-      lastTs = now;
       if (ev.cancelable) ev.preventDefault();
       ev.stopImmediatePropagation();
-      capturePhoto();
+      ev.stopPropagation();
     }
-    // Prioridad: touchstart (antes que click ~300ms en móvil)
-    stage.addEventListener("touchstart", shoot, CAPTURE_OPTS);
-    stage.addEventListener("pointerdown", function (ev) {
-      if (ev.pointerType === "touch") return; // ya manejado por touchstart
-      shoot(ev);
-    }, CAPTURE_OPTS);
+    ["touchstart", "touchend", "pointerdown", "pointerup", "click"].forEach(function (type) {
+      stage.addEventListener(type, kill, CAPTURE_OPTS);
+    });
   }
 
   function openNeuralCamera(opts) {
     opts = opts || {};
     if (opts.mode) camera.mode = opts.mode;
+    // Selfie forzada por defecto (facingMode: user)
     if (!opts.keepFacing && !camera.open) {
-      camera.facing = "environment";
+      camera.facing = "user";
     }
     closeCamera(true);
-    // Tras cerrar residual: aislar chat/voz antes del stream
     pauseChatForCapture();
+    installCaptureEventWall();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       log("cámara no disponible");
       document.documentElement.classList.remove("salomon-cam-mode");
@@ -743,10 +721,17 @@
     }
     var seq = ++camera.openSeq;
     haptic(10);
+    var facing = camera.facing || "user";
     navigator.mediaDevices
       .getUserMedia({
-        video: { facingMode: { ideal: camera.facing } },
+        video: { facingMode: { exact: facing } },
         audio: false,
+      })
+      .catch(function () {
+        return navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: facing } },
+          audio: false,
+        });
       })
       .then(function (stream) {
         // Descartar streams huérfanos (apertura supersedida / cerrada)
@@ -782,7 +767,7 @@
         var stage = document.createElement("div");
         stage.className = "ui-camera-stage";
         stage.appendChild(video);
-        bindTapToShoot(stage);
+        bindStageIgnore(stage);
 
         var smart = document.createElement("button");
         smart.type = "button";
@@ -800,7 +785,7 @@
         badge.className = "ui-camera-active-badge";
         badge.setAttribute("aria-live", "polite");
         badge.textContent =
-          "CÁMARA ACTIVA — " + (camera.facing === "user" ? "frontal" : "trasera");
+          camera.facing === "user" ? "CÁMARA ACTIVA — SELFIE" : "CÁMARA ACTIVA — TRASERA";
 
         var closeBtn = document.createElement("button");
         closeBtn.type = "button";
@@ -829,7 +814,7 @@
         var hint = document.createElement("div");
         hint.className = "ui-camera-hint";
         hint.textContent =
-          "Tap pantalla o voz = disparar · nodo = voltear · icono cámara = cerrar";
+          "Solo botón central = disparar · nodo = voltear · icono cámara = cerrar";
 
         overlay.appendChild(stage);
         overlay.appendChild(flash);
@@ -1041,6 +1026,7 @@
 
   function boot() {
     document.documentElement.classList.add("salomon-ui-shield");
+    installCaptureEventWall();
     tick();
     var n = 0;
     var id = setInterval(function () {
@@ -1066,7 +1052,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo capture-gate-2");
+    log("activo capture-wall-3");
   }
 
   if (document.readyState === "loading") {
@@ -1076,7 +1062,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "capture-gate-2",
+    version: "capture-wall-3",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

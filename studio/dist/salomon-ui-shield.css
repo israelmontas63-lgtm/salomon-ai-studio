@@ -659,7 +659,15 @@ html.salomon-cam-mode .controls-row .control-btn--main.is-cam-shutter {
   transform: scale(1.04);
 }
 
-/* CAPTURA: chat/escritura aislados — solo disparador + cerrar cámara */
+/* CAPTURA: muro visual — chat bajo el overlay no recibe toques */
+html.salomon-cam-mode #root {
+  pointer-events: none !important;
+}
+
+html.salomon-cam-mode .bottom-bar {
+  pointer-events: auto !important;
+}
+
 html.salomon-cam-mode .bottom-bar form.chat-input,
 html.salomon-cam-mode .bottom-bar .chat-input {
   display: none !important;
@@ -675,6 +683,10 @@ html.salomon-cam-mode .controls-row .control-btn[aria-label="Texto"] {
 
 html.salomon-cam-mode .send-btn {
   pointer-events: none !important;
+}
+
+html.salomon-cam-mode .ui-camera-overlay {
+  pointer-events: auto !important;
 }
 
 /* Preview no tapa la franja del footer */
