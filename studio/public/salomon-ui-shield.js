@@ -1,5 +1,5 @@
 /**
- * Salomón AI Studio — UI Shield v1
+ * SalomÃ³n AI Studio â€” UI Shield v1
  * Interacciones visuales sobre UI estable (sin tocar Gemini/clima/prompt).
  */
 (function () {
@@ -15,7 +15,7 @@
   var camera = {
     stream: null,
     facing: "environment",
-    phase: "closed", // closed | rear | selfie — ciclo UI (no depende del hardware)
+    phase: "closed", // closed | rear | selfie â€” ciclo UI (no depende del hardware)
     open: false,
     capturing: false,
     flipping: false,
@@ -52,7 +52,7 @@
     if (now - lastShotAt < SHOT_COOLDOWN_MS) return false;
     if (!camera.open || camera.capturing) return false;
     if (camera.pinch.active || camera.pinch.moved) return false;
-    // Selfie: permitir foto aunque flipping aún corra (si hay video)
+    // Selfie: permitir foto aunque flipping aÃºn corra (si hay video)
     if (camera.flipping && camera.phase !== "selfie") return false;
     lastShotAt = now;
     return true;
@@ -66,7 +66,7 @@
     return true;
   }
 
-  /** Solo un evento “útil” por gesto táctil (evita touchend+click doble) */
+  /** Solo un evento â€œÃºtilâ€ por gesto tÃ¡ctil (evita touchend+click doble) */
   function isPrimaryGesture(e) {
     if (!e) return false;
     if (e.type === "touchend") return true;
@@ -76,7 +76,7 @@
     }
     if (e.type === "click") {
       if (e.pointerType === "touch") return false;
-      // click sintético tras touch: detail suele ser 1; si hubo touch reciente, ignorar
+      // click sintÃ©tico tras touch: detail suele ser 1; si hubo touch reciente, ignorar
       if (Date.now() - lastCamTap < 700 || Date.now() - lastShotAt < 700) return false;
       return true;
     }
@@ -91,14 +91,14 @@
     } catch (e) {}
   }
 
-  /* ——— Header: H izq (tools) / Perfil der (cuenta) + swap de clicks ——— */
+  /* â€”â€”â€” Header: H izq (tools) / Perfil der (cuenta) + swap de clicks â€”â€”â€” */
   function styleHeader() {
     var header = document.querySelector(".studio-header");
     if (!header) return false;
     var btns = header.querySelectorAll(".header-menu-btn");
     if (btns.length < 2) return false;
 
-    // Ocultar subtítulo
+    // Ocultar subtÃ­tulo
     var sub = header.querySelector(".logo-subtitle");
     if (sub) sub.style.display = "none";
 
@@ -106,7 +106,7 @@
     injectHeaderIcon(btns[0], "h", ICON_H, "Herramientas");
     injectHeaderIcon(btns[1], "user", ICON_USER, "Cuenta y Planes");
 
-    // Swap: React left=account, right=tools → UI left=tools, right=account
+    // Swap: React left=account, right=tools â†’ UI left=tools, right=account
     if (header.dataset.uiSwap !== "1") {
       header.dataset.uiSwap = "1";
       btns[0].addEventListener(
@@ -235,7 +235,7 @@
     if (menu) menu.classList.add("menu-contextual-mensaje");
   }
 
-  /* ——— Bottom controls: camera / voice fx / text ——— */
+  /* â€”â€”â€” Bottom controls: camera / voice fx / text â€”â€”â€” */
   function enhanceControls() {
     var row = document.querySelector(".controls-row");
     if (!row) return false;
@@ -246,7 +246,7 @@
     var main = row.querySelector(".control-btn--main") || btns[1];
     var textBtn = btns[btns.length - 1];
 
-    // Ciclo cámara: cerrado → trasera → selfie → cerrado (un solo gesto)
+    // Ciclo cÃ¡mara: cerrado â†’ trasera â†’ selfie â†’ cerrado (un solo gesto)
     if (cam.dataset.uiCam !== "1") {
       cam.dataset.uiCam = "1";
       cam.classList.add("ui-smart-cam-btn", "boton-camara");
@@ -397,6 +397,25 @@
     }
     document.documentElement.classList.add("salomon-cam-mode");
     document.documentElement.setAttribute("data-salomon-camera-only", "1");
+    document.documentElement.setAttribute("data-salomon-layer", "camera");
+    setAgentLayerInert(true);
+  }
+
+  function setAgentLayerInert(on) {
+    var root = document.getElementById("root");
+    if (root) {
+      try {
+        if (on) root.setAttribute("inert", "");
+        else root.removeAttribute("inert");
+      } catch (e) {}
+      root.setAttribute("aria-hidden", on ? "true" : "false");
+      root.setAttribute("data-salomon-layer", on ? "agent-paused" : "agent");
+    }
+    var header = document.querySelector(".studio-header");
+    if (header) {
+      header.setAttribute("aria-hidden", on ? "true" : "false");
+      header.setAttribute("data-salomon-layer", on ? "agent-paused" : "agent");
+    }
   }
 
   function lockAgentOut() {
@@ -429,6 +448,8 @@
       camera.agentLockTimer = 0;
     }
     document.documentElement.removeAttribute("data-salomon-camera-only");
+    document.documentElement.setAttribute("data-salomon-layer", "agent");
+    setAgentLayerInert(false);
     try {
       window.dispatchEvent(new CustomEvent("salomon:camera-agent-lock", { detail: { lock: false } }));
     } catch (e) {}
@@ -443,7 +464,7 @@
       t.closest(".boton-central") ||
       t.closest(".ui-smart-cam-btn") ||
       t.closest(".boton-camara") ||
-      t.closest('.control-btn[aria-label="Cámara"]') ||
+      t.closest('.control-btn[aria-label="CÃ¡mara"]') ||
       t.closest(".ui-write-btn") ||
       t.closest(".boton-texto") ||
       t.closest(".ui-camera-close") ||
@@ -473,7 +494,7 @@
 
   /**
    * Muro CAPTURA: chat no recibe gestos.
-   * Gatillo de pantalla solo sobre preview/área de cámara (no footer).
+   * Gatillo de pantalla solo sobre preview/Ã¡rea de cÃ¡mara (no footer).
    */
   function installCaptureEventWall() {
     if (document.documentElement.dataset.uiCamWall === "1") return;
@@ -511,7 +532,7 @@
       e.stopImmediatePropagation();
       e.stopPropagation();
       if (!canTakeShot()) return;
-      log("pantalla → capturePhoto");
+      log("pantalla â†’ capturePhoto");
       capturePhoto();
     }
     document.addEventListener("touchend", onScreenShutter, CAPTURE_OPTS);
@@ -534,7 +555,7 @@
           if (e.cancelable) e.preventDefault();
           e.stopImmediatePropagation();
           if (!canTakeShot()) return;
-          log("volumen → capturePhoto");
+          log("volumen â†’ capturePhoto");
           capturePhoto();
         }
       }
@@ -544,7 +565,7 @@
     log("muro CAPTURA + gatillos pantalla/volumen v2");
   }
 
-  /** Botón central / mic = disparador con icono cámara */
+  /** BotÃ³n central / mic = disparador con icono cÃ¡mara */
   function wireMainShutterGate(main) {
     if (!main || main.dataset.uiShutterGate === "1") return;
     main.dataset.uiShutterGate = "1";
@@ -558,7 +579,7 @@
       e.stopImmediatePropagation();
       e.stopPropagation();
       if (!canTakeShot()) return;
-      log("mic/shutter → capturePhoto (facing=" + camera.facing + ")");
+      log("mic/shutter â†’ capturePhoto (facing=" + camera.facing + ")");
       capturePhoto();
     }
 
@@ -625,7 +646,7 @@
             sum += v * v;
           }
           var rms = Math.sqrt(sum / data.length);
-          // Suave → lento; fuerte → agitado
+          // Suave â†’ lento; fuerte â†’ agitado
           var speed = Math.max(0.45, 2.8 - rms * 6);
           btn.style.setProperty("--ui-voice-speed", speed.toFixed(2) + "s");
           var turb = 0.5 + rms * 2.2;
@@ -675,7 +696,7 @@
       input.placeholder = "Escribe tu mensaje...";
     }
     input.setAttribute("aria-label", "Escribe tu mensaje");
-    // Quitar íconos extra a la derecha del texto (salvo send)
+    // Quitar Ã­conos extra a la derecha del texto (salvo send)
     var form = input.closest("form, .input-row, .chat-input");
     if (form) {
       form.querySelectorAll("button, span, i").forEach(function (el) {
@@ -684,20 +705,20 @@
         if (el.closest(".send-btn")) return;
         var aria = (el.getAttribute("aria-label") || "").toLowerCase();
         var txt = (el.textContent || "").trim();
-        if (/adjunt|emoji|clip|mic|📎|😊|＋|\+/.test(aria + txt) || el.classList.contains("attach")) {
+        if (/adjunt|emoji|clip|mic|ðŸ“Ž|ðŸ˜Š|ï¼‹|\+/.test(aria + txt) || el.classList.contains("attach")) {
           el.style.display = "none";
         }
       });
     }
   }
 
-  /* ——— Unidad neuronal de cámara — ciclo limpio ——— */
+  /* â€”â€”â€” Unidad neuronal de cÃ¡mara â€” ciclo limpio â€”â€”â€” */
 
   /**
-   * Ciclo icono cámara:
-   * 1) cerrado → TRASERA
-   * 2) trasera → SELFIE (espejo)
-   * 3) selfie → RECOGER cámara → solo modo agente
+   * Ciclo icono cÃ¡mara:
+   * 1) cerrado â†’ TRASERA
+   * 2) trasera â†’ SELFIE (espejo)
+   * 3) selfie â†’ RECOGER cÃ¡mara â†’ solo modo agente
    */
   function onFooterCameraTap() {
     if (!canCycleCam()) return;
@@ -715,8 +736,8 @@
       return;
     }
 
-    // selfie (u otra): un toque recoge la cámara → modo agente
-    log("selfie → recoger cámara (modo agente)");
+    // selfie (u otra): un toque recoge la cÃ¡mara â†’ modo agente
+    log("selfie â†’ recoger cÃ¡mara (modo agente)");
     closeCamera();
   }
 
@@ -724,7 +745,7 @@
     camera.phase = "selfie";
     camera.facing = "user";
     resetCameraZoom();
-    log("ciclo → selfie (espejo)");
+    log("ciclo â†’ selfie (espejo)");
     haptic(8);
     syncCameraUiState();
     // Aplicar espejo de inmediato (aunque el stream tarde)
@@ -749,7 +770,7 @@
   function syncCameraUiState() {
     var cam =
       document.querySelector(".controls-row .ui-smart-cam-btn") ||
-      document.querySelector('.controls-row .control-btn[aria-label="Cámara"]');
+      document.querySelector('.controls-row .control-btn[aria-label="CÃ¡mara"]');
     var active = !!camera.open;
     var selfie = active && (camera.phase === "selfie" || camera.facing === "user");
     document.documentElement.classList.toggle("salomon-cam-mode", active);
@@ -770,13 +791,13 @@
       cam.dataset.phase = camera.phase || "closed";
       if (!active) {
         cam.title = "";
-        cam.setAttribute("aria-label", "Cámara");
+        cam.setAttribute("aria-label", "CÃ¡mara");
       } else if (selfie) {
         cam.title = "";
-        cam.setAttribute("aria-label", "Cámara");
+        cam.setAttribute("aria-label", "CÃ¡mara");
       } else {
         cam.title = "";
-        cam.setAttribute("aria-label", "Cámara");
+        cam.setAttribute("aria-label", "CÃ¡mara");
       }
     }
     var main = document.querySelector(".controls-row .control-btn--main");
@@ -792,7 +813,7 @@
         main.classList.add("is-cam-live");
       } else {
         main.title = "";
-        main.setAttribute("aria-label", "Núcleo Salomón");
+        main.setAttribute("aria-label", "NÃºcleo SalomÃ³n");
         main.dataset.captureMode = "0";
         main.classList.remove("is-cam-live", "is-cam-shot");
       }
@@ -824,7 +845,7 @@
     var next = camera.facing === "environment" ? "user" : "environment";
     var prevFacing = camera.facing;
     camera.facing = next;
-    log("facing →", camera.facing);
+    log("facing â†’", camera.facing);
     haptic(8);
     syncCameraUiState();
     swapFacingInPlace(prevFacing);
@@ -856,7 +877,7 @@
         });
       })
       .catch(function () {
-        // Último recurso: cualquier cámara; UI sigue en selfie/espejo
+        // Ãšltimo recurso: cualquier cÃ¡mara; UI sigue en selfie/espejo
         return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       })
       .then(function (stream) {
@@ -911,7 +932,7 @@
         flash.classList.remove("is-on");
       }, 180);
     });
-    // Remolino plateado suave en botón inteligente / mic
+    // Remolino plateado suave en botÃ³n inteligente / mic
     var main = document.querySelector(".controls-row .control-btn--main");
     var smart = document.getElementById("ui-smart-button");
     [main, smart].forEach(function (el) {
@@ -959,7 +980,7 @@
     }
     if (stage) stage.dataset.zoom = String(camera.zoom.toFixed(2));
 
-    // Zoom óptico/hardware si el track lo soporta (cámara trasera)
+    // Zoom Ã³ptico/hardware si el track lo soporta (cÃ¡mara trasera)
     try {
       var track = camera.stream && camera.stream.getVideoTracks && camera.stream.getVideoTracks()[0];
       if (track && typeof track.getCapabilities === "function") {
@@ -983,7 +1004,7 @@
     applyCameraZoom(1);
   }
 
-  /** Pellizco en preview: abrir = zoom in · cerrar = zoom out (sobre todo trasera) */
+  /** Pellizco en preview: abrir = zoom in Â· cerrar = zoom out (sobre todo trasera) */
   function installPinchZoom(stage) {
     if (!stage || stage.dataset.uiPinch === "1") return;
     stage.dataset.uiPinch = "1";
@@ -1008,7 +1029,7 @@
       if (!camera.pinch.startDist) return;
       var ratio = dist / camera.pinch.startDist;
       if (Math.abs(ratio - 1) > 0.03) camera.pinch.moved = true;
-      // Abrir dedos → acerca; cerrar → aleja / normal
+      // Abrir dedos â†’ acerca; cerrar â†’ aleja / normal
       applyCameraZoom(camera.pinch.startZoom * ratio);
     }
 
@@ -1033,7 +1054,7 @@
 
   function capturePhoto() {
     if (!camera.open || camera.capturing) return;
-    // En selfie permitir foto aunque el flip aún termine (si hay frame)
+    // En selfie permitir foto aunque el flip aÃºn termine (si hay frame)
     var video = camera.videoEl || document.querySelector("#ui-camera-overlay video");
     var overlay = document.getElementById("ui-camera-overlay");
     if (!video || video.readyState < 2) {
@@ -1107,7 +1128,7 @@
     });
   }
 
-  /** Preview: toque = disparo (refuerzo; muro document también cubre) */
+  /** Preview: toque = disparo (refuerzo; muro document tambiÃ©n cubre) */
   function bindStageShutter(stage) {
     function onTap(ev) {
       if (camera.pinch.active || camera.pinch.moved) return;
@@ -1137,7 +1158,7 @@
     pauseChatForCapture();
     installCaptureEventWall();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      log("cámara no disponible");
+      log("cÃ¡mara no disponible");
       document.documentElement.classList.remove("salomon-cam-mode");
       return;
     }
@@ -1174,6 +1195,8 @@
         overlay.className = "ui-camera-overlay neural-camera";
         overlay.id = "ui-camera-overlay";
         overlay.dataset.mode = camera.mode || "photo";
+        overlay.setAttribute("data-salomon-layer", "camera");
+        overlay.setAttribute("aria-hidden", "false");
 
         var video = document.createElement("video");
         video.playsInline = true;
@@ -1213,7 +1236,7 @@
         closeBtn.type = "button";
         closeBtn.className = "ui-camera-close";
         closeBtn.setAttribute("aria-label", "Cerrar");
-        closeBtn.innerHTML = "<span aria-hidden=\"true\">×</span>";
+        closeBtn.innerHTML = "<span aria-hidden=\"true\">Ã—</span>";
         closeBtn.addEventListener(
           "touchstart",
           function (e) {
@@ -1256,7 +1279,7 @@
       })
       .catch(function (err) {
         if (seq !== camera.openSeq) return;
-        log("cámara error", err && err.name, err && err.message);
+        log("cÃ¡mara error", err && err.name, err && err.message);
         camera.open = false;
         camera.videoEl = null;
         document.documentElement.classList.remove("salomon-cam-mode");
@@ -1291,7 +1314,7 @@
     syncCameraUiState();
     if (!silent) {
       window.dispatchEvent(new CustomEvent("salomon:camera-close"));
-      log("cámara recogida → modo agente");
+      log("cÃ¡mara recogida â†’ modo agente");
     }
   }
 
@@ -1308,7 +1331,7 @@
     capturePhoto();
   }
 
-  /* ——— Burbujas: long-press menú ——— */
+  /* â€”â€”â€” Burbujas: long-press menÃº â€”â€”â€” */
   function wireBubbles() {
     document.querySelectorAll(".bubble, .bubble-row .bubble").forEach(function (bubble) {
       if (bubble.dataset.uiMenu === "1") return;
@@ -1418,16 +1441,16 @@
     document.removeEventListener("pointerdown", outsideMenu, true);
   }
 
-  /* ——— Drawer titles sync ——— */
+  /* â€”â€”â€” Drawer titles sync â€”â€”â€” */
   function polishDrawers() {
     document.querySelectorAll(".glass-panel").forEach(function (panel) {
       var isLeft = panel.classList.contains("glass-panel--left");
-      // Tras swap visual: click izq abre tools (panel derecho React)…
-      // Actualizamos títulos cuando el panel existe.
+      // Tras swap visual: click izq abre tools (panel derecho React)â€¦
+      // Actualizamos tÃ­tulos cuando el panel existe.
       var h2 = panel.querySelector(".glass-panel__header h2");
       if (!h2) return;
       if (isLeft) {
-        // Panel izquierdo React = cuenta (se abre desde botón derecho UI)
+        // Panel izquierdo React = cuenta (se abre desde botÃ³n derecho UI)
         if (h2.textContent === "Correo" || h2.textContent === "Herramientas") {
           h2.textContent = "Cuenta y Planes";
         }
@@ -1479,7 +1502,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo estructura-280");
+    log("activo capas-281");
   }
 
   if (document.readyState === "loading") {
@@ -1489,7 +1512,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "estructura-280",
+    version: "capas-281",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

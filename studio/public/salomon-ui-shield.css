@@ -662,23 +662,42 @@ html.salomon-ui-shield .controls-row .control-btn--main {
 }
 
 /*
- * Aislamiento LEGACY por z-index (sin unmount, sin display:none):
- * Chat/header detrás; cámara al frente; footer usable.
+ * AISLAMIENTO DE CAPAS (paso 3 / cam) — no deben chocar:
+ *  L1 agente  = #root / chat / header / glass  → inerte en cam
+ *  L2 cámara  = #ui-camera-overlay             → preview + pellizco + toque foto
+ *  L3 chrome  = .bottom-bar                    → solo cam / shutter / Aa
  */
+html.salomon-cam-mode {
+  --layer-agent: 1;
+  --layer-camera: 20000;
+  --layer-chrome: 20010;
+}
+
+/* L1 — Asistente: no visible, no toques, no foco */
+html.salomon-cam-mode #root,
 html.salomon-cam-mode .chat-body,
+html.salomon-cam-mode .chat-scroll,
 html.salomon-cam-mode .studio-header,
 html.salomon-cam-mode .voice-hint,
 html.salomon-cam-mode .glass-panel,
-html.salomon-cam-mode .glass-backdrop {
-  z-index: -1 !important;
-  position: relative;
+html.salomon-cam-mode .glass-backdrop,
+html.salomon-cam-mode .drawer,
+html.salomon-cam-mode .drawers,
+html.salomon-cam-mode .media-panel,
+html.salomon-cam-mode .ui-bubble-menu,
+html.salomon-cam-mode .salomon-update-slot {
+  z-index: var(--layer-agent) !important;
   pointer-events: none !important;
+  user-select: none !important;
 }
 
 html.salomon-cam-mode .chat-body,
 html.salomon-cam-mode .chat-scroll,
 html.salomon-cam-mode .bubble-row,
-html.salomon-cam-mode .bubble {
+html.salomon-cam-mode .bubble,
+html.salomon-cam-mode .studio-header,
+html.salomon-cam-mode .glass-panel,
+html.salomon-cam-mode .glass-backdrop {
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
@@ -689,27 +708,48 @@ html.salomon-cam-mode .bottom-bar .chat-input,
 html.salomon-cam-mode .bottom-bar .input-row,
 html.salomon-cam-mode .bottom-bar .send-btn {
   pointer-events: none !important;
-  opacity: 0.25 !important;
+  opacity: 0.2 !important;
+  visibility: hidden !important;
 }
 
-html.salomon-cam-mode .ui-camera-overlay {
-  z-index: 9999 !important;
+/* L2 — Cámara: ocupa el viewport encima del agente, bajo la barra */
+html.salomon-cam-mode .ui-camera-overlay,
+html.salomon-cam-mode #ui-camera-overlay {
+  position: fixed !important;
+  z-index: var(--layer-camera) !important;
   pointer-events: auto !important;
-  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
+  bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
   background: #000 !important;
+  isolation: isolate;
+  touch-action: none;
 }
 
+/* L3 — Chrome / barra: por encima de la cámara, gestos de control */
 html.salomon-cam-mode .bottom-bar {
   position: fixed !important;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  z-index: 10000 !important;
+  z-index: var(--layer-chrome) !important;
   background: linear-gradient(180deg, transparent, #000 40%) !important;
   pointer-events: auto !important;
+  isolation: isolate;
+}
+
+html.salomon-cam-mode .bottom-bar .controls-row,
+html.salomon-cam-mode .bottom-bar .control-btn,
+html.salomon-cam-mode .bottom-bar .ui-smart-cam-btn,
+html.salomon-cam-mode .bottom-bar .control-btn--main {
+  pointer-events: auto !important;
+}
+
+/* Modo agente (sin cam): overlay neuronal no debe quedar encima */
+html:not(.salomon-cam-mode) #ui-camera-overlay {
+  display: none !important;
+  pointer-events: none !important;
 }
 
 html.salomon-cam-mode .controls-row .control-btn--main.is-cam-shutter {
