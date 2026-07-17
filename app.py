@@ -98,8 +98,12 @@ app.add_middleware(
 
 _sesiones: dict[str, SalomonAI] = {}
 
-init_persistencia()
-_log.info("Persistencia inicializada")
+try:
+    init_persistencia()
+    _log.info("Persistencia inicializada")
+except Exception as exc:
+    # Fail-soft: el proceso no muere en Render si SQLite/volumen falla al import
+    _log.exception("persistencia_inicio_degradado: %s", exc)
 
 
 @app.middleware("http")
@@ -1623,10 +1627,14 @@ _media_root.mkdir(parents=True, exist_ok=True)
 (_media_root / "uploads").mkdir(exist_ok=True)
 app.mount("/media", StaticFiles(directory=_media_root), name="media_files")
 
-# Montar capas/plugins al importar (idempotente). Startup repite tras snapshot del núcleo.
-from cognicion.capas.loader import inicializar_capas as _inicializar_capas
+# Montar capas/plugins de forma tolerante (lazy / no tumba el worker).
+# Cámara es 100% cliente (JS); no hay init de hardware aquí.
+try:
+    from cognicion.capas.loader import inicializar_capas as _inicializar_capas
 
-_inicializar_capas(app)
+    _inicializar_capas(app)
+except Exception as exc:
+    _log.exception("capas_import_degradado: %s", exc)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,9 @@
 {
-  "timestamp_iso": "2026-07-17T17:15:00Z",
-  "timestamp": 1752782100,
-  "version": "20.1.0",
+  "timestamp_iso": "2026-07-17T18:15:00Z",
+  "timestamp": 1752785700,
+  "version": "24.0.0",
   "channel": "main",
-  "label": "camera-engine-v20.1-stable-production-ready",
-  "stability": "STABLE_PRODUCTION_READY"
+  "label": "render-deploy-repair-gunicorn-m",
+  "stability": "STABLE_PRODUCTION_READY",
+  "notes": "Start: python -m gunicorn (fix exit 127). Core cámara v20.1 intacto."
 }

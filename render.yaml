@@ -1,11 +1,15 @@
+# Blueprint Render — Salomón AI v24 (arranque estable)
+# Si el servicio ya existe en Dashboard, alinear Build/Start Command con este archivo.
 services:
   - type: web
     name: salomon-ai
     runtime: python
     plan: free
     rootDir: .
-    buildCommand: pip install -r requirements.txt && python -c "import numpy; print('numpy_ok', numpy.__version__)"
-    startCommand: gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    # Instala deps + verifica que gunicorn/uvicorn existan (evita exit 127)
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -c "import gunicorn, uvicorn; print('gunicorn_ok', gunicorn.__version__)"
+    # python -m gunicorn evita "gunicorn: not found" (PATH / exit 127)
+    startCommand: python -m gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 30
     healthCheckPath: /api/salud
     envVars:
       - key: PYTHON_VERSION
@@ -18,7 +22,6 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
-      # Voz TTS — valores solo en Dashboard Render (nunca hardcodear en repo)
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: ELEVENLABS_VOICE_ID
