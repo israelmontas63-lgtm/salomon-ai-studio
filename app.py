@@ -60,6 +60,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/identidad",
         "/api/web/arquitecto",
         "/api/pwa/estado",
+        "/api/auditoria/preflight",
         "/api/media/estado",
     }
 )
@@ -2049,17 +2050,54 @@ def api_pwa_estado() -> dict:
         "version": "97.0.0",
         "active": True,
         "manifest": {
-            "name": "Salomón AI",
-            "short_name": "Salomón",
+            "name": "Salomon AI",
+            "short_name": "Salomon",
             "display": "standalone",
             "theme_color": "#000000",
+            "ascii_safe": True,
         },
         "service_worker": "/service-worker.js",
         "service_worker_legacy": "/sw.js",
         "core_endpoints": ["/api/identidad", "/api/web/arquitecto", "/api/eficiencia"],
         "installable": True,
-        "owner": "Israel Monta - Salomón AI Studio",
+        "owner": "Israel Monta - Salomon AI Studio",
     }
+
+
+@app.get("/api/auditoria/preflight")
+def api_auditoria_preflight() -> dict:
+    """Auditoría de integridad y pre-flight (v98)."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parent / "scripts" / "preflight_audit_v98.py"
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=str(Path(__file__).resolve().parent),
+        )
+        import json as _json
+
+        payload = _json.loads(proc.stdout or "{}")
+        payload["exit_code"] = proc.returncode
+        payload["protocol"] = "AUDITORIA_INTEGRIDAD_PREFLIGHT"
+        payload["version"] = "98.0.0"
+        payload["estado"] = (
+            "OPERATIVO, SIN ERRORES" if payload.get("ok") and proc.returncode == 0 else "CON_HALLAZGOS"
+        )
+        return payload
+    except Exception as exc:
+        return {
+            "ok": False,
+            "protocol": "AUDITORIA_INTEGRIDAD_PREFLIGHT",
+            "version": "98.0.0",
+            "estado": "ERROR_AUDITORIA",
+            "error": f"{type(exc).__name__}: {exc}",
+        }
 
 
 @app.get("/icons.svg")

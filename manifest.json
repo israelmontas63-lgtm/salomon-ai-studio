@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Salomón AI",
-  "short_name": "Salomón",
-  "description": "Salomón AI Studio — inteligencia creada por Israel Monta. PWA nativa instalable.",
+  "name": "Salomon AI",
+  "short_name": "Salomon",
+  "description": "Salomon AI Studio by Israel Monta. Native installable PWA.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
@@ -51,7 +51,7 @@
       "name": "Salud Viviente",
       "short_name": "Salud",
       "url": "/api/salud?view=dashboard",
-      "description": "Estado SALOMÓN VIVIENTE"
+      "description": "Estado del sistema"
     }
   ]
 }

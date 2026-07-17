@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T20:15:00Z",
-  "timestamp": 1752792900,
-  "version": "97.0.0",
+  "timestamp_iso": "2026-07-17T20:30:00Z",
+  "timestamp": 1752793800,
+  "version": "98.0.0",
   "channel": "main",
-  "label": "pwa-nativa-installable",
+  "label": "auditoria-integridad-preflight",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "PWA_NATIVA_INSTALLABLE",
-  "notes": "PWA standalone theme #000000, service-worker.js shell cache, identidad/web en nucleo PWA. CameraEngine untouched."
+  "protocol": "AUDITORIA_INTEGRIDAD_PREFLIGHT",
+  "notes": "Preflight audit green. Manifest ASCII-safe. Agents dry-run OK. SW no conflict with visual APIs. CameraEngine untouched."
 }
