@@ -6,14 +6,14 @@
   "use strict";
   if (window.__SalomonPwaNativa) return;
 
-  var SW_URL = "/service-worker.js?v=104";
-  var IDENTITY_KEY = "salomon_pwa_identidad_v104";
+  var SW_URL = "/service-worker.js?v=105";
+  var IDENTITY_KEY = "salomon_pwa_identidad_v105";
   var deferredPrompt = null;
 
   function log() {
     try {
       if (localStorage.getItem("salomon_pwa_debug") === "1") {
-        console.log.apply(console, ["[PWA103]"].concat([].slice.call(arguments)));
+        console.log.apply(console, ["[PWA105]"].concat([].slice.call(arguments)));
       }
     } catch (_) {}
   }
@@ -31,7 +31,7 @@
       })
       .catch(function (err) {
         log("SW register fail", err);
-        return navigator.serviceWorker.register("/sw.js?v=104").catch(function () {
+        return navigator.serviceWorker.register("/sw.js?v=105").catch(function () {
           return null;
         });
       });

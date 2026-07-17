@@ -60,6 +60,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/identidad",
         "/api/inmune",
         "/api/conectividad",
+        "/api/auditoria/cruzada",
         "/api/web/arquitecto",
         "/api/pwa/estado",
         "/api/auditoria/preflight",
@@ -167,7 +168,13 @@ async def bloquear_rutas_sensibles_middleware(request: Request, call_next):
 
     if ruta_sensible(request.url.path):
         return JSONResponse(status_code=404, content={"detail": "No encontrado"})
-    return await call_next(request)
+    response = await call_next(request)
+    # v105: permitir cam/mic en PWA (same-origin)
+    try:
+        response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), autoplay=(self)"
+    except Exception:
+        pass
+    return response
 
 
 @app.middleware("http")
@@ -549,13 +556,14 @@ def _salud_payload() -> dict:
         identidad = {"active": False}
     pwa = {
         "active": True,
-        "version": "104.0.0",
+        "version": "105.0.0",
         "service_worker": "/service-worker.js",
         "display": "standalone",
         "theme_color": "#000000",
         "installable": True,
-        "cache": "salomon-pwa-v104",
+        "cache": "salomon-pwa-v105",
         "seal": True,
+        "permissions": ["camera", "microphone"],
     }
     sce: dict = {"active": False}
     try:
@@ -1097,6 +1105,14 @@ def api_conectividad_reconectar() -> dict:
     from cognicion.reconexion import ejecutar_reconexion_emergencia
 
     return ejecutar_reconexion_emergencia()
+
+
+@app.get("/api/auditoria/cruzada")
+def api_auditoria_cruzada() -> dict:
+    """Auditoría cruzada Cursor↔Salomón + reparación forzosa (v105)."""
+    from cognicion.auditoria_cruzada import ejecutar_auditoria_cruzada
+
+    return ejecutar_auditoria_cruzada()
 
 
 class WebArchitectRequest(BaseModel):
@@ -2133,8 +2149,8 @@ def reconexion_perifericos_js() -> FileResponse:
 @app.get("/api/pwa/estado")
 def api_pwa_estado() -> dict:
     return {
-        "protocol": "PWA_RECONEXION_EMERGENCIA",
-        "version": "104.0.0",
+        "protocol": "AUDITORIA_BLOQUEO_MUTUO_REPARACION_FORZOSA",
+        "version": "105.0.0",
         "active": True,
         "manifest": {
             "name": "Salomon AI",
@@ -2142,21 +2158,25 @@ def api_pwa_estado() -> dict:
             "display": "standalone",
             "theme_color": "#000000",
             "ascii_safe": True,
+            "permissions": ["camera", "microphone"],
         },
         "service_worker": "/service-worker.js",
         "service_worker_legacy": "/sw.js",
-        "cache": "salomon-pwa-v104",
+        "cache": "salomon-pwa-v105",
         "core_endpoints": [
             "/api/identidad",
             "/api/inmune",
             "/api/conectividad",
+            "/api/auditoria/cruzada",
             "/api/web/arquitecto",
             "/api/eficiencia",
         ],
-        "perifericos": "/reconexion-perifericos.js",
+        "perifericos": "/reconexion-perifericos.js?v=105",
+        "permissions_policy": "camera=(self), microphone=(self)",
         "installable": True,
         "owner": "Israel Monta - Salomon AI Studio",
         "external_fetch_passthrough": True,
+        "nucleo": "REPARADO_Y_SINCRONIZADO",
     }
 
 

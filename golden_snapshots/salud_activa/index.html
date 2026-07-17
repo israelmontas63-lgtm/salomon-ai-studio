@@ -10,6 +10,7 @@
     <link rel="icon" type="image/png" href="/icon-192-v2.png?v=31" sizes="192x192" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png?v=31" />
     <meta name="theme-color" content="#000000" />
+    <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(self), autoplay=(self)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Salomon" />
@@ -19,8 +20,8 @@
     <meta property="og:title" content="Salomon AI" />
     <meta property="og:description" content="Asistente de inteligencia artificial — PWA nativa." />
     <meta property="og:site_name" content="Salomon AI Studio" />
-    <link rel="manifest" href="/manifest.json?v=103" />
-    <link rel="manifest" href="/manifest.webmanifest?v=103" />
+    <link rel="manifest" href="/manifest.json?v=105" />
+    <link rel="manifest" href="/manifest.webmanifest?v=105" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -55,21 +56,25 @@
 
     <div id="root"></div>
 
-    <script src="/salomon-self-heal.js?v=103"></script>
-    <script src="/standalone-boot.js?v=103" data-salomon-boot="1"></script>
-    <script type="module" crossorigin src="/assets/index-BdcDx9nN.js?v=103"></script>
-    <script src="/drawers.js?v=103" defer></script>
+    <script>
+      /* v105: ventana de reparacion — antes de kernel/camara */
+      window.__SalomonNucleoReparacion105 = true;
+    </script>
+    <script src="/salomon-self-heal.js?v=105"></script>
+    <script src="/standalone-boot.js?v=105" data-salomon-boot="1"></script>
+    <script type="module" crossorigin src="/assets/index-BdcDx9nN.js?v=105"></script>
+    <script src="/drawers.js?v=105" defer></script>
     <script src="/media-panel.js?v=95" defer></script>
     <script src="/visual-progress.js?v=70" defer></script>
     <script src="/bca-indicator.js?v=31" defer></script>
     <script src="/salomon-orchestrator-bridge.js?v=31" defer></script>
     <script src="/camera-engine.js?v=20.1" defer></script>
     <script src="/camera-v13.js?v=20.1" defer></script>
-    <script src="/salomon-security-kernel.js?v=23" defer></script>
-    <script src="/salomon-ui-shield.js?v=103" defer></script>
+    <script src="/salomon-security-kernel.js?v=23.105" defer></script>
+    <script src="/salomon-ui-shield.js?v=105" defer></script>
     <script src="/vision-overlay.js?v=31" defer></script>
-    <script src="/pwa-nativa.js?v=103" defer></script>
-    <script src="/reconexion-perifericos.js?v=104" defer></script>
-    <script src="/salomon-update.js?v=103" defer></script>
+    <script src="/pwa-nativa.js?v=105" defer></script>
+    <script src="/reconexion-perifericos.js?v=105" defer></script>
+    <script src="/salomon-update.js?v=105" defer></script>
   </body>
 </html>

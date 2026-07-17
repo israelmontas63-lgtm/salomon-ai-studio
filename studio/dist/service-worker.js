@@ -1,10 +1,9 @@
 /**
- * Salomon PWA Nativa v103 — Service Worker (Sellado Final)
- * Shell cache-first; API chat/media siempre red.
- * Identidad + inmune + arquitecto: stale-while-revalidate.
+ * Salomon PWA Nativa v105 — Service Worker (Auditoria cruzada / reparacion)
+ * Purga caches antiguas. External fetch passthrough. Camera/mic network-first.
  * Created by Israel Monta - Salomon AI Studio
  */
-const CACHE = "salomon-pwa-v104";
+const CACHE = "salomon-pwa-v105";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -16,14 +15,14 @@ const PRECACHE = [
   "/icon-v2.svg",
   "/apple-touch-icon-v2.png",
   "/favicon-v2.ico",
-  "/salomon-theme.css?v=104",
-  "/splash.css?v=104",
-  "/thinking-animation-spec.css?v=104",
-  "/salomon-ui-shield.css?v=104",
-  "/standalone-boot.js?v=104",
-  "/salomon-update.js?v=104",
-  "/pwa-nativa.js?v=104",
-  "/reconexion-perifericos.js?v=104",
+  "/salomon-theme.css?v=105",
+  "/splash.css?v=105",
+  "/thinking-animation-spec.css?v=105",
+  "/salomon-ui-shield.css?v=105",
+  "/standalone-boot.js?v=105",
+  "/salomon-update.js?v=105",
+  "/pwa-nativa.js?v=105",
+  "/reconexion-perifericos.js?v=105",
   "/visual-progress.js?v=70",
   "/api/identidad",
   "/api/inmune",

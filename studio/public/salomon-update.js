@@ -295,12 +295,12 @@
 
   function registerSw() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/service-worker.js?v=104").then(function (reg) {
+    navigator.serviceWorker.register("/service-worker.js?v=105").then(function (reg) {
       try {
         reg.update();
       } catch (e) {}
     }).catch(function () {
-      navigator.serviceWorker.register("/sw.js?v=104").catch(function () {});
+      navigator.serviceWorker.register("/sw.js?v=105").catch(function () {});
     });
   }
 

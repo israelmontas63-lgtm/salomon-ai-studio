@@ -112,6 +112,12 @@
    */
   function resourceAllow(kind) {
     var t = now();
+    // v105: ventana de reparación forzosa — no bloquear mic/cam al arrancar PWA
+    try {
+      if (global.__SalomonNucleoReparacion105) {
+        return { ok: true };
+      }
+    } catch (eRep) {}
     if (kind === "getUserMedia") {
       if (t - state.lastGumAt < MIN_GUM_GAP_MS) {
         redAlert("GUM_BURST", { gap: t - state.lastGumAt });

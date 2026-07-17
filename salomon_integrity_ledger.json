@@ -1,6 +1,6 @@
 {
   "protocol": "SALOMON_VIVIENTE",
-  "protocol_version": "104.0.0",
+  "protocol_version": "105.0.0",
   "parent_protocol": "NEURAL_INTEGRITY_LOCK",
   "architect": "Israel",
   "authorization_word": "AUTORIZADO",
@@ -28,7 +28,7 @@
       "studio/src/features/camera_v13/MediaStreamManager.js",
       "studio/src/features/camera_v13/CameraV13.jsx"
     ],
-    "golden_snapshot_id": "viviente_v104+reconexion+camera_engine_v20.1.0",
+    "golden_snapshot_id": "viviente_v105+auditoria_cruzada+camera_engine_v20.1.0",
     "notes": "Cualquier drift de checksum vs file_signatures_sha256 = bloqueo sin AUTORIZADO."
   },
   "defense_layer": {
@@ -73,15 +73,15 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "83846da4bfd2e74c0bb1ddfa66ee1ff7f620ef6302bddab279182d3a806d0c2e",
+    "app.py": "66e543f6e8729dfebe761a3a96b139db94c700ca40625b37af1abdc67060193f",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
-    "studio/dist/index.html": "fdfa5ca12ae60b8b21b42cbbdfef10b50e36e7370f53dde20fce71e2d4dafb4c",
-    "studio/dist/salomon-security-kernel.js": "66804a6fa7f41bbec296b29d37c4b4a6de766766b1006ec26ee8610037c70dfd",
+    "studio/dist/index.html": "f1715c6d58ba913417e40a5ab33253e195322de1e0a9d1ec9f0247720033db8b",
+    "studio/dist/salomon-security-kernel.js": "cf42ef62d1ec2b9fd181dc2ca64cd2f2ca58e32fd314aeed204534d7886b95ec",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
-    "version.json": "f62cdc7959d1235886b71caf044d228fcab15bedd18f24313083b389119e4295"
+    "version.json": "fdd8f5e1a5a439653e4d36f567e46bc5dc2a641e47d91d41c6c3ff8b77568270"
   },
   "invariants": [
     "MediaStreamManager.forceReset debe existir",
@@ -250,6 +250,13 @@
       "at": "2026-07-17T17:40:00-04:00",
       "by": "Israel+Cursor",
       "note": "Puerto 800→8000; memoria local+fallback; MediaDevices; SW external passthrough"
+    },
+    {
+      "version": "105.0.0",
+      "event": "AUDITORIA_BLOQUEO_MUTUO_REPARACION_FORZOSA",
+      "at": "2026-07-17T17:50:00-04:00",
+      "by": "Israel+Cursor",
+      "note": "Cross-audit; manifest camera/mic; SW v105; kernel repair window; Permissions-Policy"
     }
   ]
 }

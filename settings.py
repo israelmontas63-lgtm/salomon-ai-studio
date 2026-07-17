@@ -175,15 +175,28 @@ TESSERACT_CMD = os.getenv("TESSERACT_CMD", "").strip()
 
 # ── Túnel móvil (localtunnel) + puerto canónico v104 ───────────────────────
 def _puerto_env_default() -> int:
-    """800 tipográfico → 8000; Render usa PORT."""
-    raw = os.getenv("PORT") or os.getenv("COLSUB_PORT") or "8000"
-    try:
-        p = int(str(raw).strip())
-    except Exception:
-        p = 8000
-    if p == 800:
-        p = 8000
-    return p if 1 <= p <= 65535 else 8000
+    """Puerto dinámico HA: PORT → COLSUB_PORT → libre; tipografía 800→8000."""
+    import socket
+
+    raw = os.getenv("PORT") or os.getenv("COLSUB_PORT")
+    if raw is not None and str(raw).strip() != "":
+        try:
+            p = int(str(raw).strip())
+        except Exception:
+            p = 8000
+        if p == 800:
+            p = 8000
+        if 1 <= p <= 65535:
+            return p
+    for candidate in (8000, 8001, 8080, 8888, 10000):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(("0.0.0.0", candidate))
+                return candidate
+        except OSError:
+            continue
+    return 8000
 
 
 COLSUB_PORT = _puerto_env_default()
