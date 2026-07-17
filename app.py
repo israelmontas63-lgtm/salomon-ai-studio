@@ -56,6 +56,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/cognicion/cognitive-core",
         "/api/cognicion/multimodal",
         "/api/agentes/estado",
+        "/api/eficiencia",
         "/api/media/estado",
     }
 )
@@ -63,44 +64,69 @@ RUTAS_API_PUBLICAS = frozenset(
 
 @app.on_event("startup")
 def _iniciar_nucleo_os() -> None:
-    """Inicialización tolerante: un fallo parcial no tumba el proceso en Render."""
-    # Salomón Viviente — SystemGuard (inmune); nunca tumba el boot
+    """Boot Ultra-Light (Render Free): deferir orquesta/snapshots pesados."""
+    try:
+        from settings import BOOT_LIGHT, RENDER_FREE_TIER
+
+        light = BOOT_LIGHT or RENDER_FREE_TIER
+    except Exception:
+        light = True
+
+    # SystemGuard — verify only en Free Tier (sin heal/copia agresiva al boot)
     try:
         import SystemGuard as _sg
 
-        _guard = _sg.boot_guard(auto_heal=True)
+        _guard = _sg.boot_guard(auto_heal=not light)
         evento(
             _log,
             "system_guard_boot",
             ok=_guard.get("integrity", {}).get("ok"),
             viviente=True,
             protocol=_guard.get("protocol"),
+            boot_light=light,
         )
     except Exception as exc:
         _log.warning("system_guard_boot_omitido: %s", exc)
 
     try:
         from cognicion.nucleo import obtener_nucleo
-        from cognicion.seguridad import obtener_motor
-        from cognicion.seguridad.recuperacion import crear_snapshot
         from cognicion.capas.loader import inicializar_capas
-        from cognicion.orquesta.colas import obtener_orquestador_carga
 
         obtener_nucleo()
-        obtener_motor()
-        try:
-            crear_snapshot(motivo="inicio_sistema")
-        except Exception as exc:
-            _log.warning("snapshot_inicio_omitido: %s", exc)
+        # Motor de seguridad: lazy en primer request API (ahorra RAM al wake)
+        if not light:
+            from cognicion.seguridad import obtener_motor
+            from cognicion.seguridad.recuperacion import crear_snapshot
+
+            obtener_motor()
+            try:
+                crear_snapshot(motivo="inicio_sistema")
+            except Exception as exc:
+                _log.warning("snapshot_inicio_omitido: %s", exc)
+
         inicializar_capas(app)
-        orq = obtener_orquestador_carga()
-        evento(
-            _log,
-            "colsub_orquestador_activo",
-            activo=orq.activo,
-            arquitectura="colas",
-        )
-        evento(_log, "nucleo_iniciado")
+
+        # Orquestador de carga: NO arrancar hilo en Free Tier hasta primer uso
+        if not light:
+            from cognicion.orquesta.colas import obtener_orquestador_carga
+
+            orq = obtener_orquestador_carga()
+            evento(
+                _log,
+                "colsub_orquestador_activo",
+                activo=orq.activo,
+                arquitectura="colas",
+            )
+        else:
+            evento(_log, "boot_light_activo", free_tier=True, orquesta="diferida")
+
+        try:
+            from cognicion.eficiencia import hibernar_agentes
+
+            hibernar_agentes()
+        except Exception:
+            pass
+        evento(_log, "nucleo_iniciado", boot_light=light)
     except Exception as exc:
         _log.exception("startup_parcial_fallo: %s", exc)
         evento(_log, "nucleo_inicio_degradado", error=str(exc))
@@ -263,6 +289,16 @@ def _persistir_turno(session_id: str, usuario: str, asistente: str) -> None:
 
 
 def _obtener_o_crear_sesion(session_id: str | None) -> tuple[str, SalomonAI]:
+    try:
+        from settings import MAX_SESIONES_RAM
+        from cognicion.eficiencia import podar_sesiones
+
+        podar_sesiones(_sesiones, max_sesiones=MAX_SESIONES_RAM)
+    except Exception:
+        # Fallback Free Tier: máximo 2 sesiones en RAM
+        while len(_sesiones) > 2:
+            _sesiones.pop(next(iter(_sesiones)), None)
+
     if session_id and session_id in _sesiones:
         return session_id, _sesiones[session_id]
 
@@ -483,6 +519,13 @@ def _salud_payload() -> dict:
         }
     except Exception:
         multiagente = {"active": False}
+    eficiencia: dict = {"active": False}
+    try:
+        from cognicion.eficiencia import estado_eficiencia
+
+        eficiencia = estado_eficiencia()
+    except Exception:
+        eficiencia = {"active": False}
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -494,6 +537,7 @@ def _salud_payload() -> dict:
         "system_guard": guard,
         "multimodal": multimodal,
         "multiagente": multiagente,
+        "eficiencia": eficiencia,
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
 
@@ -924,10 +968,17 @@ def cognicion_multimodal() -> dict:
 
 @app.get("/api/agentes/estado")
 def agentes_estado() -> dict:
-    """Estado Multi-Agent Deployment (v80) — lazy / Render-safe."""
+    """Estado Multi-Agent + Máxima Eficiencia (v95)."""
     from cognicion.agente.coordinador import estado_multiagente
 
     return estado_multiagente()
+
+
+@app.get("/api/eficiencia")
+def api_eficiencia() -> dict:
+    from cognicion.eficiencia import estado_eficiencia
+
+    return estado_eficiencia()
 
 
 class CoordinarRequest(BaseModel):
@@ -1372,14 +1423,23 @@ class MediaRouteRequest(BaseModel):
     motor: str | None = None
     imagen_entrada: str | None = None
     session_id: str | None = None
+    async_mode: bool | None = None
 
 
 @app.post("/api/media/route")
 def api_media_route(body: MediaRouteRequest) -> dict:
     """
-    Colsub Multi-Model Routing: analiza el prompt y conecta Flux / MJ / Runway / Kling / Krea.
-    Calidad forzada Pro/Ultra.
+    Colsub Multi-Model Routing. En Free Tier / async_mode: encola y responde al instante.
     """
+    from settings import MEDIA_ASYNC_DEFAULT, RENDER_FREE_TIER
+
+    usar_async = body.async_mode if body.async_mode is not None else (MEDIA_ASYNC_DEFAULT or RENDER_FREE_TIER)
+    if usar_async:
+        from cognicion.media.jobs_async import encolar_media
+
+        job = encolar_media(body.prompt, hint=body.hint or "imagen_hd", motor=body.motor)
+        return {**job, "session_id": body.session_id}
+
     from cognicion.media.media_engine import bridge_colsub_media
 
     pack = bridge_colsub_media(
@@ -1395,8 +1455,8 @@ def api_media_route(body: MediaRouteRequest) -> dict:
         "routing": pack.get("routing"),
         "resultado": res,
         "activo_url": res.get("url_relativa"),
-        "protocolo": pack.get("protocolo") or "MULTIMODAL_CORE",
-        "version": pack.get("version") or "70.0.0",
+        "protocolo": pack.get("protocolo") or "MAX_EFFICIENCY",
+        "version": pack.get("version") or "95.0.0",
         "prompt_enhancer": pack.get("prompt_enhancer"),
         "motor_enhancer": pack.get("motor_enhancer"),
         "prompt_original": pack.get("prompt_original"),
@@ -1405,7 +1465,18 @@ def api_media_route(body: MediaRouteRequest) -> dict:
         "budget_ms": pack.get("budget_ms"),
         "session_id": body.session_id,
         "error": res.get("error"),
+        "async": False,
     }
+
+
+@app.get("/api/media/jobs/{job_id}")
+def api_media_job(job_id: str) -> dict:
+    from cognicion.media.jobs_async import estado_job
+
+    st = estado_job(job_id)
+    if not st:
+        raise HTTPException(status_code=404, detail="job_no_encontrado")
+    return st
 
 
 @app.post("/api/media/generar_imagen")

@@ -262,7 +262,16 @@ class MotorCognicion:
                 }
                 res = pack.get("resultado") or {}
                 if pack.get("agente") == "Agent_Visual":
-                    if res.get("modo") == "buscar" and (res.get("mejor") or {}).get("url"):
+                    res = pack.get("resultado") or {}
+                    if pack.get("async") or res.get("async"):
+                        bloques.append(
+                            "[Agent_Visual — async Ultra-Light]\n"
+                            f"Job: {res.get('job_id')} · poll: {res.get('poll')}\n"
+                            "La generación corre en segundo plano para no congelar la UI. "
+                            "Informa a Israel que puede seguir hablando; el activo llegará al listo."
+                        )
+                        meta["cognicion"]["media_job"] = res.get("job_id")
+                    elif res.get("modo") == "buscar" and (res.get("mejor") or {}).get("url"):
                         m = res["mejor"]
                         bloques.append(
                             "[Agent_Visual — Recuperación]\n"

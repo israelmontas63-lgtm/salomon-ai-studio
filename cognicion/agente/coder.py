@@ -56,11 +56,23 @@ def ejecutar_coder(
         }
 
     agente = _obtener_autonomo()
-    resultado = agente.corregir(tarea, error=error_consola)
-    liberar_memoria_suave()
-    return {
-        "exito": bool(getattr(resultado, "exito", False) or getattr(resultado, "ejecutado", False)),
-        "agente": "Agent_Coder",
-        "modo": "parche",
-        "resultado": resultado.to_dict() if hasattr(resultado, "to_dict") else str(resultado),
-    }
+    try:
+        resultado = agente.corregir(tarea, error=error_consola)
+        out = {
+            "exito": bool(getattr(resultado, "exito", False) or getattr(resultado, "ejecutado", False)),
+            "agente": "Agent_Coder",
+            "modo": "parche",
+            "resultado": resultado.to_dict() if hasattr(resultado, "to_dict") else str(resultado),
+        }
+    finally:
+        # Hibernación inmediata (Free Tier)
+        global _autonomo
+        _autonomo = None
+        liberar_memoria_suave()
+        try:
+            from cognicion.eficiencia import hibernar_agentes
+
+            hibernar_agentes()
+        except Exception:
+            pass
+    return out

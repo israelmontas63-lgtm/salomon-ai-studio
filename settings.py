@@ -120,11 +120,25 @@ KLING_MODEL = os.getenv("KLING_MODEL", "kling-v1-pro").strip()
 KREA_API_KEY = os.getenv("KREA_API_KEY", "").strip()
 KREA_API_URL = os.getenv("KREA_API_URL", "").strip()
 
-# ── Colsub (orquesta on-demand) — techos Render Starter por defecto ────────
-COLSUB_MAX_AGENTES = int(os.getenv("COLSUB_MAX_AGENTES", "3"))
-COLSUB_MAX_WORKERS = int(os.getenv("COLSUB_MAX_WORKERS", "2"))
-COLSUB_CPU_CRITICO = float(os.getenv("COLSUB_CPU_CRITICO", "80"))
-COLSUB_RAM_CRITICO = float(os.getenv("COLSUB_RAM_CRITICO", "72"))
+# ── Colsub — techos Render Free Tier (Ultra-Light) ─────────────────────────
+COLSUB_MAX_AGENTES = int(os.getenv("COLSUB_MAX_AGENTES", "2"))
+COLSUB_MAX_WORKERS = int(os.getenv("COLSUB_MAX_WORKERS", "1"))
+COLSUB_CPU_CRITICO = float(os.getenv("COLSUB_CPU_CRITICO", "75"))
+COLSUB_RAM_CRITICO = float(os.getenv("COLSUB_RAM_CRITICO", "68"))
+
+# ── Máxima Eficiencia v95 ──────────────────────────────────────────────────
+RENDER_FREE_TIER = os.getenv("RENDER_FREE_TIER", "true").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+MAX_SESIONES_RAM = int(os.getenv("MAX_SESIONES_RAM", "2" if RENDER_FREE_TIER else "8"))
+MEDIA_HTTP_TIMEOUT = float(os.getenv("MEDIA_HTTP_TIMEOUT", "45"))
+MEDIA_HTTP_TIMEOUT_POLL = float(os.getenv("MEDIA_HTTP_TIMEOUT_POLL", "30"))
+MEDIA_ASYNC_DEFAULT = os.getenv("MEDIA_ASYNC_DEFAULT", "true").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+BOOT_LIGHT = os.getenv("BOOT_LIGHT", "true" if RENDER_FREE_TIER else "false").strip().lower() in (
+    "1", "true", "yes", "on",
+)
 
 # ── Caché conectores ───────────────────────────────────────────────────────
 CACHE_TTL_SEGUNDOS = int(os.getenv("CACHE_TTL_SEGUNDOS", "900"))

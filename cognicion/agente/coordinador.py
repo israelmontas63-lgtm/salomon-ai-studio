@@ -50,65 +50,90 @@ def coordinar(mensaje: str, **kwargs: Any) -> dict[str, Any]:
     rol = clasificar_rol(mensaje)
     meta: dict[str, Any] = {
         "coordinador": True,
-        "protocolo": "MULTI_AGENT_DEPLOY",
-        "version": "80.0.0",
+        "protocolo": "MAX_EFFICIENCY",
+        "version": "95.0.0",
         "rol": rol,
         "overlap": False,
+        "hibernacion": True,
     }
 
-    if rol == "ninguno":
-        return {**meta, "exito": True, "delegado": False, "nota": "sin_agente_especializado"}
+    try:
+        if rol == "ninguno":
+            return {**meta, "exito": True, "delegado": False, "nota": "sin_agente_especializado"}
 
-    if rol == "guard":
-        from cognicion.agente.guard import ejecutar_guard, validar_dependencia_render
+        if rol == "guard":
+            from cognicion.agente.guard import ejecutar_guard, validar_dependencia_render
 
-        # Si pide instalar X, validar sin pip install
-        lower = mensaje.lower()
-        if "instalar" in lower or "requirements" in lower or "paquete" in lower:
-            # Extraer última palabra candidata simple
-            tokens = [w.strip(",.;") for w in mensaje.replace("\n", " ").split() if w]
-            candidato = ""
-            for i, w in enumerate(tokens):
-                if w.lower() in {"instalar", "paquete", "librería", "libreria", "dependency"}:
-                    if i + 1 < len(tokens):
-                        candidato = tokens[i + 1]
-            if not candidato and tokens:
-                candidato = tokens[-1]
-            val = validar_dependencia_render(candidato)
-            return {**meta, "exito": val.get("ok"), "agente": "Agent_Guard", "resultado": val}
+            lower = mensaje.lower()
+            if "instalar" in lower or "requirements" in lower or "paquete" in lower:
+                tokens = [w.strip(",.;") for w in mensaje.replace("\n", " ").split() if w]
+                candidato = ""
+                for i, w in enumerate(tokens):
+                    if w.lower() in {"instalar", "paquete", "librería", "libreria", "dependency"}:
+                        if i + 1 < len(tokens):
+                            candidato = tokens[i + 1]
+                if not candidato and tokens:
+                    candidato = tokens[-1]
+                val = validar_dependencia_render(candidato)
+                return {**meta, "exito": val.get("ok"), "agente": "Agent_Guard", "resultado": val}
 
-        out = ejecutar_guard(kwargs.get("accion") or "integridad")
-        return {**meta, "exito": out.get("ok"), "agente": "Agent_Guard", "resultado": out}
+            out = ejecutar_guard(kwargs.get("accion") or "integridad")
+            return {**meta, "exito": out.get("ok"), "agente": "Agent_Guard", "resultado": out}
 
-    if rol == "visual":
-        from cognicion.agente.visual import ejecutar_visual
+        if rol == "visual":
+            # Free Tier: preferir encolado async para no bloquear el turno
+            try:
+                from settings import MEDIA_ASYNC_DEFAULT, RENDER_FREE_TIER
 
-        out = ejecutar_visual(mensaje, modo=kwargs.get("modo") or "auto")
-        return {**meta, "exito": out.get("exito"), "agente": "Agent_Visual", "resultado": out}
+                if MEDIA_ASYNC_DEFAULT or RENDER_FREE_TIER:
+                    from cognicion.media.jobs_async import encolar_media
 
-    # coder
-    from cognicion.agente.coder import ejecutar_coder
+                    job = encolar_media(mensaje, hint="imagen_hd")
+                    return {
+                        **meta,
+                        "exito": True,
+                        "agente": "Agent_Visual",
+                        "async": True,
+                        "resultado": job,
+                    }
+            except Exception:
+                pass
+            from cognicion.agente.visual import ejecutar_visual
 
-    out = ejecutar_coder(
-        mensaje,
-        error_consola=kwargs.get("error_consola"),
-        solo_razonamiento=bool(kwargs.get("solo_razonamiento", True)),
-    )
-    return {**meta, "exito": out.get("exito"), "agente": "Agent_Coder", "resultado": out}
+            out = ejecutar_visual(mensaje, modo=kwargs.get("modo") or "auto")
+            return {**meta, "exito": out.get("exito"), "agente": "Agent_Visual", "resultado": out}
+
+        from cognicion.agente.coder import ejecutar_coder
+
+        out = ejecutar_coder(
+            mensaje,
+            error_consola=kwargs.get("error_consola"),
+            solo_razonamiento=bool(kwargs.get("solo_razonamiento", True)),
+        )
+        return {**meta, "exito": out.get("exito"), "agente": "Agent_Coder", "resultado": out}
+    finally:
+        try:
+            from cognicion.eficiencia import hibernar_agentes
+
+            hibernar_agentes()
+        except Exception:
+            pass
 
 
 def estado_multiagente() -> dict[str, Any]:
     from cognicion.agente.registro import listar_agentes
+    from cognicion.eficiencia import estado_eficiencia
     from settings import COLSUB_MAX_AGENTES, COLSUB_MAX_WORKERS, COLSUB_RAM_CRITICO
 
+    eff = estado_eficiencia()
     return {
-        "protocol": "MULTI_AGENT_DEPLOY",
-        "version": "80.0.0",
-        "parent_protocol": "MULTIMODAL_CORE",
+        "protocol": "MAX_EFFICIENCY",
+        "version": "95.0.0",
+        "parent_protocol": "MULTI_AGENT_DEPLOY",
         "active": True,
         "agentes": {
-            "Agent_Coder": {"id": "coder", "rol": "python_js", "lazy": True},
-            "Agent_Visual": {"id": "visual", "rol": "media_apis", "lazy": True},
+            "Agent_Coder": {"id": "coder", "rol": "python_js", "lazy": True, "hibernate": True},
+            "Agent_Visual": {"id": "visual", "rol": "media_apis", "lazy": True, "async": True},
             "Agent_Guard": {"id": "guard", "rol": "integridad_deps", "lazy": True},
             "Coordinador": {"id": "coordinador", "rol": "orquestacion", "zero_overlap": True},
         },
@@ -123,7 +148,10 @@ def estado_multiagente() -> dict[str, Any]:
             "ram_critico_pct": COLSUB_RAM_CRITICO,
             "apis_via_env": True,
             "pip_runtime_prohibido": True,
+            "free_tier": eff.get("render_free_tier"),
+            "listo_free_tier": True,
         },
+        "eficiencia": eff,
         "apis_imagen_listas": True,
-        "nota": "Agentes lazy: se activan solo bajo demanda y liberan RAM con GC suave.",
+        "nota": "Hibernación + media async + caps Free Tier.",
     }

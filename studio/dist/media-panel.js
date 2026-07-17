@@ -127,18 +127,15 @@
       if (!prompt) return;
       const vp = window.__SalomonVisualProgress;
       if (vp) vp.arm();
-      setStatus("Mejorando prompt HD…");
+      setStatus("Encolando generación (async)…");
       document.getElementById("sm-preview").style.display = "none";
       try {
         const h = await apiKeyHeader();
-        // La app usa X-Api-Key; intentamos sin y con localStorage
         const keys = [h["X-API-Key"], localStorage.getItem("VITE_SALOMON_API_KEY")].filter(Boolean);
         let data = null;
-        let lastErr = null;
         for (const attempt of [0, 1]) {
           const hh = { "Content-Type": "application/json" };
           if (keys[0]) hh["X-API-Key"] = keys[0];
-          // Leer de cookie/meta no disponible: pedir al usuario una vez si 401
           const res = await fetch("/api/media/route", {
             method: "POST",
             headers: hh,
@@ -146,6 +143,7 @@
               prompt,
               hint: "imagen_hd",
               session_id: sessionId(),
+              async_mode: true,
             }),
           });
           if (res.status === 401 && attempt === 0) {
@@ -156,29 +154,35 @@
               continue;
             }
           }
-          if (!res.ok) {
-            // Fallback al endpoint clásico
-            const res2 = await fetch("/api/media/generar_imagen", {
-              method: "POST",
-              headers: hh,
-              body: JSON.stringify({
-                prompt,
-                session_id: sessionId(),
-                usar_routing: true,
-              }),
-            });
-            if (!res2.ok) throw new Error("HTTP " + res2.status);
-            data = await res2.json();
-            break;
-          }
+          if (!res.ok) throw new Error("HTTP " + res.status);
           data = await res.json();
           break;
         }
-        if (!data) throw lastErr || new Error("sin datos");
-        if (vp) {
-          if (data.progreso_requerido) vp.start("Finalizando calidad HD…");
-          vp.stop();
+        if (!data) throw new Error("sin datos");
+
+        // Poll async job — UI no se congela
+        if (data.async && data.job_id) {
+          setStatus("Procesando en segundo plano…");
+          if (vp) vp.start("Generando HD (async)…");
+          const pollUrl = data.poll || ("/api/media/jobs/" + data.job_id);
+          let final = null;
+          for (let i = 0; i < 60; i++) {
+            await new Promise((r) => setTimeout(r, 1000));
+            const pr = await fetch(pollUrl);
+            if (!pr.ok) continue;
+            const st = await pr.json();
+            setStatus(st.progreso || st.estado || "…");
+            if (st.estado === "listo" || st.estado === "error") {
+              final = st;
+              break;
+            }
+          }
+          if (!final) throw new Error("timeout_async");
+          if (final.estado === "error") throw new Error(final.error || "falló");
+          data = final.resultado || final;
         }
+
+        if (vp) vp.stop();
         const motor =
           (data.routing && data.routing.motor) ||
           (data.resultado && data.resultado.motor) ||
@@ -187,13 +191,7 @@
           (data.routing && data.routing.calidad) ||
           (data.resultado && data.resultado.calidad) ||
           "pro_ultra";
-        const enh = data.motor_enhancer ? " · enhancer:" + data.motor_enhancer : "";
-        const lat = data.latencia_ms != null ? " · " + data.latencia_ms + "ms" : "";
-        setStatus(
-          data.exito
-            ? "Listo · " + motor + " · " + cal + enh + lat
-            : data.error || "Falló"
-        );
+        setStatus(data.exito !== false ? "Listo · " + motor + " · " + cal : data.error || "Falló");
         const b64 = data.resultado && data.resultado.imagen_base64;
         const url = data.resultado && data.resultado.url_relativa;
         const img = document.getElementById("sm-preview");

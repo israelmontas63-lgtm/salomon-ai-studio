@@ -1,25 +1,34 @@
-# Blueprint Render — Salomón AI v80 Multi-Agent (Zero-Conflict / lazy RAM)
-# Starter-friendly: 1 gunicorn worker + Colsub caps. APIs solo vía env.
+# Blueprint Render — Salomón AI v95 Máxima Eficiencia (Free Tier Ultra-Light)
 services:
   - type: web
     name: salomon-ai
     runtime: python
     plan: free
     rootDir: .
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -c "import gunicorn, uvicorn; print('gunicorn_ok', gunicorn.__version__)" && python -c "from cognicion.agente.coordinador import estado_multiagente; print(estado_multiagente()['version'])"
-    startCommand: python -m gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 30 --max-requests 200 --max-requests-jitter 40
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -c "import gunicorn, uvicorn; print('gunicorn_ok', gunicorn.__version__)" && python -c "from cognicion.eficiencia import estado_eficiencia; print(estado_eficiencia()['version'])"
+    startCommand: python -m gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 90 --graceful-timeout 20 --max-requests 120 --max-requests-jitter 20
     healthCheckPath: /api/salud
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"
       - key: PYTHONUNBUFFERED
         value: "1"
-      - key: COLSUB_MAX_AGENTES
-        value: "3"
-      - key: COLSUB_MAX_WORKERS
+      - key: RENDER_FREE_TIER
+        value: "true"
+      - key: BOOT_LIGHT
+        value: "true"
+      - key: MEDIA_ASYNC_DEFAULT
+        value: "true"
+      - key: MEDIA_HTTP_TIMEOUT
+        value: "45"
+      - key: MAX_SESIONES_RAM
         value: "2"
+      - key: COLSUB_MAX_AGENTES
+        value: "2"
+      - key: COLSUB_MAX_WORKERS
+        value: "1"
       - key: COLSUB_RAM_CRITICO
-        value: "72"
+        value: "68"
       - key: MEDIA_PROMPT_ENHANCER
         value: "true"
       - key: MEDIA_FORZAR_PRO
@@ -33,14 +42,6 @@ services:
       - key: FLUX_API_KEY
         sync: false
       - key: FLUX_API_URL
-        sync: false
-      - key: MIDJOURNEY_API_KEY
-        sync: false
-      - key: MIDJOURNEY_API_URL
-        sync: false
-      - key: RUNWAY_API_KEY
-        sync: false
-      - key: KLING_API_KEY
         sync: false
       - key: TAVILY_API_KEY
         sync: false

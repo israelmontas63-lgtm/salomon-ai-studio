@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T19:55:00Z",
-  "timestamp": 1752791700,
-  "version": "80.0.0",
+  "timestamp_iso": "2026-07-17T20:00:00Z",
+  "timestamp": 1752792000,
+  "version": "95.0.0",
   "channel": "main",
-  "label": "multi-agent-deploy-render",
+  "label": "max-efficiency-free-tier",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "MULTI_AGENT_DEPLOY",
-  "notes": "Agent_Coder/Visual/Guard + Coordinador lazy. Render caps Colsub 3/2. APIs via env. CameraEngine untouched."
+  "protocol": "MAX_EFFICIENCY",
+  "notes": "Ultra-Light Free Tier: hibernacion agentes, media async, boot light, timeouts 45s, max 2 sesiones. Sin libs pesadas. CameraEngine intacto."
 }

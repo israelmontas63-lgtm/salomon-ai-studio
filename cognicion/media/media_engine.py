@@ -29,6 +29,15 @@ _DIR_GEN.mkdir(parents=True, exist_ok=True)
 _DIR_VID.mkdir(parents=True, exist_ok=True)
 
 
+def _http_timeout(poll: bool = False) -> float:
+    try:
+        from settings import MEDIA_HTTP_TIMEOUT, MEDIA_HTTP_TIMEOUT_POLL
+
+        return float(MEDIA_HTTP_TIMEOUT_POLL if poll else MEDIA_HTTP_TIMEOUT)
+    except Exception:
+        return 30.0 if poll else 45.0
+
+
 def _secreto(nombre: str, fallback_settings: str = "") -> str:
     """Lee clave de forma segura (secretos > settings > vacío)."""
     try:
@@ -254,7 +263,7 @@ def _llamar_flux(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
         "quality": "ultra",
     }
     try:
-        with httpx.Client(timeout=180.0) as client:
+        with httpx.Client(timeout=_http_timeout()) as client:
             r = client.post(url, json=payload, headers=headers)
             r.raise_for_status()
             data = r.json()
@@ -276,7 +285,7 @@ def _llamar_flux(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
         if b64:
             raw = base64.b64decode(b64)
         elif img_url:
-            with httpx.Client(timeout=120.0) as client:
+            with httpx.Client(timeout=_http_timeout(poll=True)) as client:
                 raw = client.get(img_url).content
         if not raw:
             return {"exito": False, "error": "flux_sin_imagen", "raw": str(data)[:300]}
@@ -310,7 +319,7 @@ def _llamar_midjourney(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
         "aspect_ratio": "16:9",
     }
     try:
-        with httpx.Client(timeout=180.0) as client:
+        with httpx.Client(timeout=_http_timeout()) as client:
             r = client.post(url, json=payload, headers=headers)
             r.raise_for_status()
             data = r.json()
@@ -321,7 +330,7 @@ def _llamar_midjourney(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
         )
         if not img_url:
             return {"exito": False, "error": "mj_sin_url", "raw": str(data)[:300]}
-        with httpx.Client(timeout=120.0) as client:
+        with httpx.Client(timeout=_http_timeout(poll=True)) as client:
             raw = client.get(img_url).content
         path = _guardar_bytes(raw, _DIR_GEN, "mj", "png")
         return {
@@ -356,7 +365,7 @@ def _llamar_runway(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
         "watermark": False,
     }
     try:
-        with httpx.Client(timeout=240.0) as client:
+        with httpx.Client(timeout=_http_timeout()) as client:
             r = client.post(f"{base}/image_to_video", json=payload, headers=headers)
             # Algunos gateways usan /text_to_video
             if r.status_code >= 400:
@@ -380,7 +389,7 @@ def _llamar_runway(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
             }
         if not video_url:
             return {"exito": False, "error": "runway_sin_video", "raw": str(data)[:300]}
-        with httpx.Client(timeout=180.0) as client:
+        with httpx.Client(timeout=_http_timeout()) as client:
             raw = client.get(video_url).content
         path = _guardar_bytes(raw, _DIR_VID, "runway", "mp4")
         return {
@@ -413,7 +422,7 @@ def _llamar_kling(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
         "aspect_ratio": "16:9",
     }
     try:
-        with httpx.Client(timeout=240.0) as client:
+        with httpx.Client(timeout=_http_timeout()) as client:
             r = client.post(url, json=payload, headers=headers)
             r.raise_for_status()
             data = r.json()
@@ -430,7 +439,7 @@ def _llamar_kling(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
             }
         if not video_url:
             return {"exito": False, "error": "kling_sin_video", "raw": str(data)[:300]}
-        with httpx.Client(timeout=180.0) as client:
+        with httpx.Client(timeout=_http_timeout()) as client:
             raw = client.get(video_url).content
         path = _guardar_bytes(raw, _DIR_VID, "kling", "mp4")
         return {
@@ -465,7 +474,7 @@ def _llamar_krea(prompt: str, imagen_path: str | None, cfg: dict[str, Any]) -> d
             Path(imagen_path).read_bytes()
         ).decode("ascii")
     try:
-        with httpx.Client(timeout=180.0) as client:
+        with httpx.Client(timeout=_http_timeout()) as client:
             r = client.post(url, json=payload, headers=headers)
             r.raise_for_status()
             data = r.json()
@@ -475,7 +484,7 @@ def _llamar_krea(prompt: str, imagen_path: str | None, cfg: dict[str, Any]) -> d
         if b64:
             raw = base64.b64decode(b64)
         elif img_url:
-            with httpx.Client(timeout=120.0) as client:
+            with httpx.Client(timeout=_http_timeout(poll=True)) as client:
                 raw = client.get(img_url).content
         if not raw:
             return {"exito": False, "error": "krea_sin_salida"}
