@@ -1,13 +1,16 @@
 /**
  * Salomón AI — Sistema de Autosaneamiento v2.0.0 (Self-Healing)
- * Vigilante previo/post-render: evaluateHealth → forceReset / Default Layout.
- * No sustituye el bundle estable; solo cura pantallas blancas y estados rotos.
+ * Vigilante: evaluateHealth() → forceReset() / Default Layout de emergencia.
+ * No sustituye el bundle estable; cura pantallas blancas y estados rotos.
+ *
+ * Consola (cada evaluación):
+ *   Salomón AI - Status: [OK/ERROR] - Action: [Healed/Active]
  */
 (function () {
   "use strict";
 
   var TAG = "Salomón AI";
-  var VERSION = "self-heal-2.0.1";
+  var VERSION = "self-heal-2.0.0";
   var CHECK_MS = 2200;
   var MAX_HEALS = 2;
   var healCount = 0;
@@ -28,25 +31,22 @@
   function hasCriticalUi() {
     var root = rootEl();
     if (!root) return false;
-    // Componentes críticos del shell estable
     var shell = root.querySelector(".app-shell");
     var chat = root.querySelector(".chat-body");
     var bar = root.querySelector(".bottom-bar, .controls-row");
     if (!shell || !chat || !bar) return false;
-    // No undefined / nodos vacíos críticos
-    if (typeof shell === "undefined" || typeof chat === "undefined") return false;
+    if (typeof shell === "undefined" || typeof chat === "undefined" || typeof bar === "undefined") {
+      return false;
+    }
     return true;
   }
 
   function isLoadingLoop() {
     var splash = document.getElementById("salomon-splash");
     var booted = document.documentElement.classList.contains("salomon-booted");
-    // Splash visible demasiado tiempo tras boot marcado
     if (splash && !splash.classList.contains("hide") && booted) return true;
-    // Root vacío tras ventana de arranque
     var root = rootEl();
     if (root && !root.children.length && booted) return true;
-    // Clase de error de boot sin UI
     if (document.getElementById("salomon-boot-error") && !hasCriticalUi()) return true;
     return false;
   }
@@ -55,15 +55,12 @@
     var root = rootEl();
     if (!root) return true;
     if (!root.children.length) return true;
-    // Sin shell visible y fondo claro del body (colapso de render)
     if (!hasCriticalUi()) {
       try {
         var bg = window.getComputedStyle(document.body).backgroundColor || "";
-        // rgb(255,255,255) o vacío → sospecha de blanco
         if (/rgb\(\s*255\s*,\s*255\s*,\s*255\s*\)/i.test(bg) || bg === "rgba(0, 0, 0, 0)") {
           return true;
         }
-        // Root sin altura útil
         var rect = root.getBoundingClientRect();
         if (rect.height < 40 && !document.querySelector(".ui-camera-overlay, .camera-view")) {
           return true;
@@ -76,39 +73,50 @@
     return false;
   }
 
+  /**
+   * Evaluación previa/continua. Verifica componentes críticos, bucles de carga y blanco.
+   * Imprime siempre el log de diagnóstico requerido.
+   */
   function evaluateHealth() {
+    var result;
     try {
       if (typeof document === "undefined" || !document.body) {
-        return { ok: false, reason: "document_undefined" };
-      }
-      if (!rootEl()) {
-        return { ok: false, reason: "root_undefined" };
-      }
-      // No sanear durante el splash / montaje normal de React
-      var splash = document.getElementById("salomon-splash");
-      var booted = document.documentElement.classList.contains("salomon-booted");
-      var stillBooting = splash && !splash.classList.contains("hide") && !booted;
-      if (stillBooting) {
-        return { ok: true, reason: "booting" };
-      }
-      try {
-        if (typeof performance !== "undefined" && performance.now() < 5500 && !hasCriticalUi()) {
-          return { ok: true, reason: "grace_mount" };
+        result = { ok: false, reason: "document_undefined" };
+      } else if (!rootEl()) {
+        result = { ok: false, reason: "root_undefined" };
+      } else {
+        var splash = document.getElementById("salomon-splash");
+        var booted = document.documentElement.classList.contains("salomon-booted");
+        var stillBooting = splash && !splash.classList.contains("hide") && !booted;
+        if (stillBooting) {
+          result = { ok: true, reason: "booting" };
+        } else {
+          try {
+            if (typeof performance !== "undefined" && performance.now() < 5500 && !hasCriticalUi()) {
+              result = { ok: true, reason: "grace_mount" };
+            }
+          } catch (e) {}
+          if (!result) {
+            if (isLoadingLoop()) {
+              result = { ok: false, reason: "loading_loop" };
+            } else if (isWhiteScreen()) {
+              result = { ok: false, reason: "white_screen" };
+            } else if (!hasCriticalUi()) {
+              result = { ok: false, reason: "critical_undefined" };
+            } else {
+              result = { ok: true, reason: "healthy" };
+            }
+          }
         }
-      } catch (e) {}
-      if (isLoadingLoop()) {
-        return { ok: false, reason: "loading_loop" };
       }
-      if (isWhiteScreen()) {
-        return { ok: false, reason: "white_screen" };
-      }
-      if (!hasCriticalUi()) {
-        return { ok: false, reason: "critical_undefined" };
-      }
-      return { ok: true, reason: "healthy" };
     } catch (err) {
-      return { ok: false, reason: "exception:" + ((err && err.message) || "unknown") };
+      result = { ok: false, reason: "exception:" + ((err && err.message) || "unknown") };
     }
+
+    // Log de diagnóstico obligatorio en cada evaluación
+    if (result.ok) logStatus("OK", "Active");
+    else logStatus("ERROR", "Healed");
+    return result;
   }
 
   function injectDefaultLayout() {
@@ -149,6 +157,7 @@
     if (el) el.remove();
   }
 
+  /** Recarga segura del estado inicial + layout de emergencia (no colapsa en blanco). */
   function forceReset(hard) {
     healCount += 1;
     try {
@@ -158,17 +167,16 @@
 
     clearEmergencyLayout();
     injectDefaultLayout();
+    logStatus("ERROR", "Healed");
 
     if (hard || healCount >= MAX_HEALS) {
-      logStatus("ERROR", "Healed");
       setTimeout(function () {
-        var url = "/?_salomon_heal=" + Date.now() + "&_v=2.0.1";
+        var url = "/?_salomon_heal=" + Date.now() + "&_v=2.0.2";
         window.location.replace(url);
       }, 350);
       return;
     }
 
-    // Soft heal: quitar splash colgado y reintentar evaluación
     try {
       var splash = document.getElementById("salomon-splash");
       if (splash) {
@@ -178,7 +186,6 @@
       document.documentElement.classList.add("salomon-booted");
     } catch (e) {}
 
-    logStatus("ERROR", "Healed");
     setTimeout(runWatchdog, 900);
   }
 
@@ -187,11 +194,9 @@
     if (health.ok) {
       clearEmergencyLayout();
       lastStatus = "OK";
-      logStatus("OK", "Active");
       return;
     }
     lastStatus = "ERROR";
-    logStatus("ERROR", "Healed");
     whiteHits += 1;
     if (whiteHits >= 2 || healCount >= MAX_HEALS) {
       forceReset(true);
@@ -205,7 +210,6 @@
     watching = true;
     try {
       healCount = parseInt(sessionStorage.getItem("salomon_heal_count") || "0", 10) || 0;
-      // Nueva sesión de página limpia contador viejo (>2 min)
       var last = parseInt(sessionStorage.getItem("salomon_last_heal") || "0", 10) || 0;
       if (Date.now() - last > 120000) {
         healCount = 0;
@@ -213,21 +217,15 @@
       }
     } catch (e) {}
 
-    // Evaluación previa (antes de que el usuario vea un blanco prolongado)
+    // Evaluación previa (antes de que un blanco prolongado llegue al usuario)
     setTimeout(function () {
       var pre = evaluateHealth();
-      if (pre.ok) {
-        logStatus("OK", "Active");
-      } else {
-        // Aún puede estar montando React — segunda pasada
-        setTimeout(runWatchdog, CHECK_MS);
-      }
+      if (!pre.ok) setTimeout(runWatchdog, CHECK_MS);
     }, 1200);
 
     setInterval(function () {
       var h = evaluateHealth();
       if (h.ok) {
-        if (lastStatus !== "OK") logStatus("OK", "Active");
         lastStatus = "OK";
         whiteHits = 0;
         clearEmergencyLayout();
