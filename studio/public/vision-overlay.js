@@ -69,6 +69,7 @@
     bootOnce = true;
     window.addEventListener("salomon:ui-photo", onPhoto, true);
     window.addEventListener("salomon:camera-close", flushPendingOnCamClose);
+    window.addEventListener("salomon:camera-v13-close", flushPendingOnCamClose);
     window.SalomonVision = {
       version: "neural-sync-2-cam-queue",
       open: function (mode) {

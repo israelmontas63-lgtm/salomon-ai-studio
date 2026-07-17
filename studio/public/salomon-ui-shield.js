@@ -799,6 +799,19 @@
    */
   function onFooterCameraTap() {
     if (!canCycleCam()) return;
+    // v13 aislada: no usa modoInterfaz / Bridge / dictado
+    if (window.SalomonCameraV13 && typeof window.SalomonCameraV13.toggle === "function") {
+      if (window.SalomonCameraV13.isOpen && window.SalomonCameraV13.isOpen()) {
+        window.SalomonCameraV13.close();
+      } else {
+        try {
+          stopCameraCompleto(true);
+        } catch (e) {}
+        window.SalomonCameraV13.open();
+      }
+      return;
+    }
+    // Fallback legacy solo si v13 no cargo
     if (modoInterfaz === "asistente") {
       setModoInterfaz("camara-trasera");
     } else if (modoInterfaz === "camara-trasera") {

@@ -3,7 +3,7 @@ import Header from "./components/Header";
 import ChatBody from "./components/ChatBody";
 import BottomBar from "./components/BottomBar";
 import GlassPanel from "./components/GlassPanel";
-import CameraModal from "./components/CameraModal";
+import CameraV13 from "./features/camera_v13/CameraV13.jsx";
 import MediaPanel from "./components/MediaPanel";
 import { useDayNight } from "./hooks/useTypewriter";
 import { useSalomonOrchestrator } from "./hooks/useSalomonOrchestrator";
@@ -651,10 +651,12 @@ export default function App() {
         onItemClick={handleToolClick}
       />
 
-      <CameraModal
+      <CameraV13
         open={cameraOpen}
         onClose={() => setCameraOpen(false)}
-        onCaptureComment={handleCameraComment}
+        onCaptured={() => {
+          /* v13 aislada: no inyecta al agente desde aquí */
+        }}
       />
 
       <MediaPanel

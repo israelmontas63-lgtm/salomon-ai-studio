@@ -1532,6 +1532,18 @@ def salomon_ui_shield_css() -> FileResponse:
     return _archivo_studio("salomon-ui-shield.css", "text/css")
 
 
+@app.get("/camera-v13.css")
+def camera_v13_css() -> FileResponse:
+    """Cámara Salomón v13 — UI aislada."""
+    return _archivo_studio("camera-v13.css", "text/css")
+
+
+@app.get("/camera-v13.js")
+def camera_v13_js() -> FileResponse:
+    """Cámara Salomón v13 — lógica aislada (sin Bridge/agente)."""
+    return _archivo_studio("camera-v13.js", "application/javascript")
+
+
 @app.get("/salomon-ui-shield.js")
 def salomon_ui_shield_js() -> FileResponse:
     """UI Shield: interacciones (cámara/voz/burbujas)."""

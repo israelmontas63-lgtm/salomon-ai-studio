@@ -1,7 +1,7 @@
 {
-    "timestamp_iso":  "2026-07-17T19:20:00Z",
-    "timestamp":  1752782400,
-    "version":  "2.9.1",
+    "timestamp_iso":  "2026-07-17T20:20:00Z",
+    "timestamp":  1752786000,
+    "version":  "13.0.0",
     "channel":  "main",
-    "label":  "fix-desacople-cam-asistente"
+    "label":  "camera-v13-aislada-clean-slate"
 }
