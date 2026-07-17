@@ -15,7 +15,7 @@
   var camera = {
     stream: null,
     facing: "environment",
-    phase: "closed", // closed | rear | selfie â€” ciclo UI (no depende del hardware)
+    phase: "closed", // derivado de modoInterfaz
     open: false,
     capturing: false,
     flipping: false,
@@ -26,7 +26,11 @@
     agentLockTimer: 0,
     zoom: 1,
     pinch: { active: false, startDist: 0, startZoom: 1, moved: false },
+    stageEl: null,
+    stageTapHandler: null,
   };
+  /** CAPA 1 — único estado de interfaz (fuente de verdad) */
+  var modoInterfaz = "asistente"; // "asistente" | "camara-trasera" | "camara-frontal"
   var ZOOM_MIN = 1;
   var ZOOM_MAX = 4;
   var audio = { ctx: null, analyser: null, src: null, raf: 0, stream: null };
@@ -50,12 +54,70 @@
   function canTakeShot() {
     var now = Date.now();
     if (now - lastShotAt < SHOT_COOLDOWN_MS) return false;
-    if (!camera.open || camera.capturing) return false;
+    if (!isCamMode() || !camera.open || camera.capturing) return false;
     if (camera.pinch.active || camera.pinch.moved) return false;
-    // Selfie: permitir foto aunque flipping aÃºn corra (si hay video)
-    if (camera.flipping && camera.phase !== "selfie") return false;
+    if (camera.flipping && modoInterfaz !== "camara-frontal") return false;
     lastShotAt = now;
     return true;
+  }
+
+  function isCamMode() {
+    return modoInterfaz === "camara-trasera" || modoInterfaz === "camara-frontal";
+  }
+
+  function getModoInterfaz() {
+    return modoInterfaz;
+  }
+
+  /**
+   * CAPA 1 — setter unico. Camara y boton central solo leen este estado.
+   * Ciclo: asistente → camara-trasera → camara-frontal → asistente
+   */
+  function setModoInterfaz(next) {
+    if (next !== "asistente" && next !== "camara-trasera" && next !== "camara-frontal") {
+      return;
+    }
+    if (next === modoInterfaz && next === "asistente") return;
+    if (next === modoInterfaz && isCamMode() && camera.open && !camera.flipping) return;
+
+    var prev = modoInterfaz;
+    modoInterfaz = next;
+    document.documentElement.setAttribute("data-modo-interfaz", next);
+    log("modoInterfaz", prev, "->", next);
+
+    if (next === "asistente") {
+      camera.phase = "closed";
+      camera.facing = "environment";
+      stopCameraCompleto(false);
+      return;
+    }
+
+    if (next === "camara-trasera") {
+      camera.phase = "rear";
+      camera.facing = "environment";
+      pauseChatForCapture();
+      stopAudioReactive();
+      openNeuralCamera({ mode: "photo", facing: "environment", keepFacing: true });
+      return;
+    }
+
+    // camara-frontal
+    camera.phase = "selfie";
+    camera.facing = "user";
+    pauseChatForCapture();
+    stopAudioReactive();
+    resetCameraZoom();
+    if (prev === "camara-trasera" && camera.open && camera.videoEl) {
+      var overlay = document.getElementById("ui-camera-overlay");
+      if (overlay) {
+        overlay.dataset.facing = "user";
+        overlay.classList.add("is-selfie");
+      }
+      syncCameraUiState();
+      swapFacingInPlace("environment");
+    } else {
+      openNeuralCamera({ mode: "photo", facing: "user", keepFacing: true });
+    }
   }
 
   function canCycleCam() {
@@ -509,7 +571,7 @@
       "click",
     ];
     function blockChat(e) {
-      if (!camera.open) return;
+      if (!isCamMode()) return;
       if (isCaptureExemptTarget(e.target)) return;
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
@@ -520,7 +582,7 @@
     });
 
     function onScreenShutter(e) {
-      if (!camera.open) return;
+      if (!isCamMode()) return;
       if (camera.pinch.active || camera.pinch.moved) return;
       if (isCaptureExemptTarget(e.target) && !isScreenShutterTarget(e.target)) return;
       if (!isPrimaryGesture(e)) return;
@@ -541,7 +603,7 @@
     if (document.documentElement.dataset.uiCamVol !== "1") {
       document.documentElement.dataset.uiCamVol = "1";
       function onVolume(e) {
-        if (!camera.open) return;
+        if (!isCamMode()) return;
         var k = e.key || "";
         var c = e.code || "";
         if (
@@ -573,7 +635,7 @@
     var targets = wrap === main ? [main] : [wrap, main];
 
     function gate(e) {
-      if (!camera.open) return;
+      if (!isCamMode()) return;
       if (!isPrimaryGesture(e)) return;
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
@@ -595,7 +657,7 @@
     btn.addEventListener(
       "click",
       function (e) {
-        if (camera.open) {
+        if (isCamMode()) {
           e.preventDefault();
           e.stopImmediatePropagation();
           return;
@@ -613,7 +675,7 @@
           startAudioReactive(btn);
         } else {
           setTimeout(function () {
-            if (Date.now() - lastTap >= 300 && !camera.open) {
+            if (Date.now() - lastTap >= 300 && !isCamMode()) {
               btn.dataset.uiMode = "dictation";
               startAudioReactive(btn);
             }
@@ -722,39 +784,17 @@
    */
   function onFooterCameraTap() {
     if (!canCycleCam()) return;
-
-    if (camera.phase === "closed" || !camera.open) {
-      pauseChatForCapture();
-      camera.phase = "rear";
-      camera.facing = "environment";
-      openNeuralCamera({ mode: "photo", facing: "environment", keepFacing: true });
-      return;
+    if (modoInterfaz === "asistente") {
+      setModoInterfaz("camara-trasera");
+    } else if (modoInterfaz === "camara-trasera") {
+      setModoInterfaz("camara-frontal");
+    } else {
+      setModoInterfaz("asistente");
     }
-
-    if (camera.phase === "rear") {
-      enterSelfieMode();
-      return;
-    }
-
-    // selfie (u otra): un toque recoge la cÃ¡mara â†’ modo agente
-    log("selfie â†’ recoger cÃ¡mara (modo agente)");
-    closeCamera();
   }
 
   function enterSelfieMode() {
-    camera.phase = "selfie";
-    camera.facing = "user";
-    resetCameraZoom();
-    log("ciclo â†’ selfie (espejo)");
-    haptic(8);
-    syncCameraUiState();
-    // Aplicar espejo de inmediato (aunque el stream tarde)
-    var overlay = document.getElementById("ui-camera-overlay");
-    if (overlay) {
-      overlay.dataset.facing = "user";
-      overlay.classList.add("is-selfie");
-    }
-    swapFacingInPlace("environment");
+    setModoInterfaz("camara-frontal");
   }
 
   function updateCamActiveBadge() {
@@ -770,50 +810,51 @@
   function syncCameraUiState() {
     var cam =
       document.querySelector(".controls-row .ui-smart-cam-btn") ||
-      document.querySelector('.controls-row .control-btn[aria-label="CÃ¡mara"]');
-    var active = !!camera.open;
-    var selfie = active && (camera.phase === "selfie" || camera.facing === "user");
+      document.querySelector(".controls-row .boton-camara") ||
+      document.querySelector('.controls-row .control-btn[aria-label="Camara"]');
+    var active = isCamMode();
+    var selfie = modoInterfaz === "camara-frontal";
+    camera.open = active && !!(camera.stream || document.getElementById("ui-camera-overlay"));
+    camera.phase = !active ? "closed" : selfie ? "selfie" : "rear";
+    camera.facing = selfie ? "user" : "environment";
+
     document.documentElement.classList.toggle("salomon-cam-mode", active);
     document.documentElement.classList.toggle("salomon-cam-selfie", selfie);
+    document.documentElement.setAttribute("data-modo-interfaz", modoInterfaz);
     if (active) document.documentElement.setAttribute("data-salomon-camera-only", "1");
     else document.documentElement.removeAttribute("data-salomon-camera-only");
 
     var overlay = document.getElementById("ui-camera-overlay");
     if (overlay) {
       overlay.dataset.facing = selfie ? "user" : "environment";
-      overlay.dataset.phase = camera.phase || (active ? "rear" : "closed");
+      overlay.dataset.phase = camera.phase;
+      overlay.dataset.modo = modoInterfaz;
       overlay.classList.toggle("is-selfie", selfie);
     }
     if (cam) {
       cam.classList.toggle("is-cam-active", active);
       cam.classList.toggle("is-selfie-phase", selfie);
       cam.dataset.facing = selfie ? "user" : "environment";
-      cam.dataset.phase = camera.phase || "closed";
-      if (!active) {
-        cam.title = "";
-        cam.setAttribute("aria-label", "CÃ¡mara");
-      } else if (selfie) {
-        cam.title = "";
-        cam.setAttribute("aria-label", "CÃ¡mara");
-      } else {
-        cam.title = "";
-        cam.setAttribute("aria-label", "CÃ¡mara");
-      }
+      cam.dataset.phase = camera.phase;
+      cam.dataset.modo = modoInterfaz;
+      cam.removeAttribute("title");
+      cam.setAttribute("aria-label", " ");
     }
     var main = document.querySelector(".controls-row .control-btn--main");
     if (main) {
       ensureShutterCamIcon(main);
       main.classList.toggle("is-cam-shutter", active);
       if (active) {
-        main.title = "";
-        main.setAttribute("aria-label", "Disparar");
+        main.removeAttribute("title");
+        main.setAttribute("aria-label", " ");
         main.dataset.captureMode = "1";
         main.dataset.uiMode = "";
         main.classList.remove("voice-btn--spinning", "control-btn--recording");
         main.classList.add("is-cam-live");
+        stopAudioReactive();
       } else {
-        main.title = "";
-        main.setAttribute("aria-label", "NÃºcleo SalomÃ³n");
+        main.removeAttribute("title");
+        main.setAttribute("aria-label", " ");
         main.dataset.captureMode = "0";
         main.classList.remove("is-cam-live", "is-cam-shot");
       }
@@ -837,18 +878,11 @@
   }
 
   function toggleCameraDirection() {
-    if (!camera.open) {
-      openNeuralCamera({ mode: camera.mode || "photo" });
+    if (!isCamMode()) {
+      setModoInterfaz("camara-trasera");
       return;
     }
-    if (camera.flipping || camera.capturing) return;
-    var next = camera.facing === "environment" ? "user" : "environment";
-    var prevFacing = camera.facing;
-    camera.facing = next;
-    log("facing â†’", camera.facing);
-    haptic(8);
-    syncCameraUiState();
-    swapFacingInPlace(prevFacing);
+    setModoInterfaz(modoInterfaz === "camara-frontal" ? "camara-trasera" : "camara-frontal");
   }
 
   function swapFacingInPlace(prevFacing) {
@@ -901,12 +935,12 @@
           } catch (e) {}
         }
         // Fase selfie se conserva aunque el device no reporte facingMode
-        if (camera.phase === "selfie") camera.facing = "user";
+        if (modoInterfaz === "camara-frontal") camera.facing = "user";
       })
       .catch(function (err) {
         log("flip error (se mantiene selfie UI)", err && err.message);
         // NO revertir phase a rear: el usuario debe poder cerrar con 1 toque
-        if (camera.phase === "selfie") camera.facing = "user";
+        if (modoInterfaz === "camara-frontal") camera.facing = "user";
       })
       .then(function () {
         if (seq === camera.flipSeq) camera.flipping = false;
@@ -975,7 +1009,7 @@
     var stage = document.querySelector("#ui-camera-overlay .ui-camera-stage");
     if (video) {
       video.style.transformOrigin = "center center";
-      var mirror = camera.phase === "selfie" || camera.facing === "user";
+      var mirror = modoInterfaz === "camara-frontal";
       video.style.transform = (mirror ? "scaleX(-1) " : "") + "scale(" + camera.zoom + ")";
     }
     if (stage) stage.dataset.zoom = String(camera.zoom.toFixed(2));
@@ -1053,7 +1087,7 @@
   }
 
   function capturePhoto() {
-    if (!camera.open || camera.capturing) return;
+    if (!isCamMode() || !camera.open || camera.capturing) return;
     // En selfie permitir foto aunque el flip aÃºn termine (si hay frame)
     var video = camera.videoEl || document.querySelector("#ui-camera-overlay video");
     var overlay = document.getElementById("ui-camera-overlay");
@@ -1073,7 +1107,7 @@
       canvas.width = vw;
       canvas.height = vh;
       var ctx = canvas.getContext("2d");
-      var selfie = camera.phase === "selfie" || camera.facing === "user";
+      var selfie = modoInterfaz === "camara-frontal";
       var z = clampZoom(camera.zoom || 1);
       var sw = vw / z;
       var sh = vh / z;
@@ -1128,9 +1162,11 @@
     });
   }
 
-  /** Preview: toque = disparo (refuerzo; muro document tambiÃ©n cubre) */
+  /** Preview: toque = disparo (solo si modoInterfaz es camara-*) */
   function bindStageShutter(stage) {
+    unbindStageShutter();
     function onTap(ev) {
+      if (!isCamMode()) return;
       if (camera.pinch.active || camera.pinch.moved) return;
       if (ev.target && ev.target.closest && ev.target.closest(".ui-smart-button, .ui-camera-close")) {
         return;
@@ -1142,9 +1178,25 @@
       if (!canTakeShot()) return;
       capturePhoto();
     }
+    camera.stageEl = stage;
+    camera.stageTapHandler = onTap;
     ["touchend", "pointerup", "click"].forEach(function (type) {
       stage.addEventListener(type, onTap, type === "click" ? true : CAPTURE_OPTS);
     });
+  }
+
+  function unbindStageShutter() {
+    if (camera.stageEl && camera.stageTapHandler) {
+      var stage = camera.stageEl;
+      var onTap = camera.stageTapHandler;
+      ["touchend", "pointerup", "click"].forEach(function (type) {
+        try {
+          stage.removeEventListener(type, onTap, type === "click" ? true : CAPTURE_OPTS);
+        } catch (e) {}
+      });
+    }
+    camera.stageEl = null;
+    camera.stageTapHandler = null;
   }
 
   function openNeuralCamera(opts) {
@@ -1154,7 +1206,7 @@
     else if (!opts.keepFacing && !camera.open) {
       camera.facing = "environment";
     }
-    closeCamera(true);
+    stopCameraCompleto(true);
     pauseChatForCapture();
     installCaptureEventWall();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1188,7 +1240,14 @@
         camera.stream = stream;
         camera.open = true;
         camera.flipping = false;
-        if (!camera.phase || camera.phase === "closed") camera.phase = "rear";
+        if (modoInterfaz === "camara-frontal") {
+          camera.phase = "selfie";
+          camera.facing = "user";
+        } else {
+          modoInterfaz = "camara-trasera";
+          camera.phase = "rear";
+          camera.facing = "environment";
+        }
         pauseChatForCapture();
 
         var overlay = document.createElement("div");
@@ -1282,20 +1341,41 @@
         log("cÃ¡mara error", err && err.name, err && err.message);
         camera.open = false;
         camera.videoEl = null;
-        document.documentElement.classList.remove("salomon-cam-mode");
+        modoInterfaz = "asistente";
+        camera.phase = "closed";
+        document.documentElement.classList.remove("salomon-cam-mode", "salomon-cam-selfie");
+        document.documentElement.setAttribute("data-modo-interfaz", "asistente");
+        unlockAgent();
         syncCameraUiState();
       });
   }
 
-  function closeCamera(silent) {
+  /** CAPA 2 — detener tracks, desmontar overlay, sin listeners colgantes */
+  function stopCameraCompleto(silent) {
     camera.openSeq += 1;
     camera.flipSeq += 1;
+    unbindStageShutter();
+
     var overlay = document.getElementById("ui-camera-overlay");
-    if (overlay) overlay.remove();
+    if (overlay) {
+      try {
+        overlay.querySelectorAll("video").forEach(function (v) {
+          try {
+            v.srcObject = null;
+            v.removeAttribute("src");
+            v.load();
+          } catch (e) {}
+        });
+      } catch (e) {}
+      overlay.remove();
+    }
+
     if (camera.stream) {
       try {
         camera.stream.getTracks().forEach(function (t) {
-          t.stop();
+          try {
+            t.stop();
+          } catch (e) {}
         });
       } catch (e) {}
     }
@@ -1308,14 +1388,22 @@
     camera.zoom = 1;
     camera.pinch.active = false;
     camera.pinch.moved = false;
-    if (!silent) camera.facing = "environment";
+    if (!silent) {
+      camera.facing = "environment";
+      modoInterfaz = "asistente";
+      document.documentElement.setAttribute("data-modo-interfaz", "asistente");
+    }
     document.documentElement.classList.remove("salomon-cam-mode", "salomon-cam-selfie");
     if (!silent) unlockAgent();
     syncCameraUiState();
     if (!silent) {
       window.dispatchEvent(new CustomEvent("salomon:camera-close"));
-      log("cÃ¡mara recogida â†’ modo agente");
+      log("CAPA2: stream detenido + overlay off → asistente limpio");
     }
+  }
+
+  function closeCamera(silent) {
+    stopCameraCompleto(silent);
   }
 
   function cycleCamera() {
@@ -1490,7 +1578,7 @@
     window.addEventListener("salomon:ready", tick);
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") {
-        if (camera.open) closeCamera();
+        if (isCamMode()) setModoInterfaz("asistente");
         else if (isWritingOpen()) closeWritingIfOpen();
       }
     });
@@ -1502,7 +1590,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo capas-281");
+    log("activo modo-interfaz-290");
   }
 
   if (document.readyState === "loading") {
@@ -1512,9 +1600,13 @@
   }
 
   window.SalomonUIShield = {
-    version: "capas-281",
+    version: "modo-interfaz-290",
+    getModoInterfaz: getModoInterfaz,
+    setModoInterfaz: setModoInterfaz,
+    isCamMode: isCamMode,
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
+    stopCameraCompleto: stopCameraCompleto,
     openNeuralCamera: openNeuralCamera,
     toggleCameraDirection: toggleCameraDirection,
     capturePhoto: capturePhoto,

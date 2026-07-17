@@ -1,7 +1,7 @@
 {
-    "timestamp_iso":  "2026-07-17T17:50:00Z",
-    "timestamp":  1752777000,
-    "version":  "2.8.1",
+    "timestamp_iso":  "2026-07-17T19:10:00Z",
+    "timestamp":  1752781800,
+    "version":  "2.9.0",
     "channel":  "main",
-    "label":  "capas-aisladas-cam-agente"
+    "label":  "modo-interfaz-capas-1-2"
 }
