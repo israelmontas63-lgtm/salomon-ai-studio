@@ -55,6 +55,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/cognicion/vdcp/estado",
         "/api/cognicion/cognitive-core",
         "/api/cognicion/multimodal",
+        "/api/agentes/estado",
         "/api/media/estado",
     }
 )
@@ -469,6 +470,19 @@ def _salud_payload() -> dict:
         }
     except Exception:
         multimodal = {"active": False}
+    multiagente: dict = {"active": False}
+    try:
+        from cognicion.agente.coordinador import estado_multiagente
+
+        ma = estado_multiagente()
+        multiagente = {
+            "active": True,
+            "version": ma.get("version"),
+            "protocol": ma.get("protocol"),
+            "render_caps": ma.get("render"),
+        }
+    except Exception:
+        multiagente = {"active": False}
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -479,6 +493,7 @@ def _salud_payload() -> dict:
         "neural_integrity_lock": True,
         "system_guard": guard,
         "multimodal": multimodal,
+        "multiagente": multiagente,
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
 
@@ -905,6 +920,27 @@ def cognicion_multimodal() -> dict:
     from cognicion.multimodal import estado_multimodal
 
     return estado_multimodal()
+
+
+@app.get("/api/agentes/estado")
+def agentes_estado() -> dict:
+    """Estado Multi-Agent Deployment (v80) — lazy / Render-safe."""
+    from cognicion.agente.coordinador import estado_multiagente
+
+    return estado_multiagente()
+
+
+class CoordinarRequest(BaseModel):
+    mensaje: str = Field(..., min_length=1, max_length=4000)
+    session_id: str | None = None
+
+
+@app.post("/api/agentes/coordinar")
+def agentes_coordinar(body: CoordinarRequest) -> dict:
+    """Despacho zero-overlap al agente especializado (lazy)."""
+    from cognicion.agente.coordinador import coordinar
+
+    return coordinar(body.mensaje)
 
 
 class VisionBuscarRequest(BaseModel):

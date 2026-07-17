@@ -120,11 +120,11 @@ KLING_MODEL = os.getenv("KLING_MODEL", "kling-v1-pro").strip()
 KREA_API_KEY = os.getenv("KREA_API_KEY", "").strip()
 KREA_API_URL = os.getenv("KREA_API_URL", "").strip()
 
-# ── Colsub (orquesta on-demand 1–40 agentes) ───────────────────────────────
-COLSUB_MAX_AGENTES = int(os.getenv("COLSUB_MAX_AGENTES", "40"))
-COLSUB_MAX_WORKERS = int(os.getenv("COLSUB_MAX_WORKERS", "8"))
-COLSUB_CPU_CRITICO = float(os.getenv("COLSUB_CPU_CRITICO", "85"))
-COLSUB_RAM_CRITICO = float(os.getenv("COLSUB_RAM_CRITICO", "88"))
+# ── Colsub (orquesta on-demand) — techos Render Starter por defecto ────────
+COLSUB_MAX_AGENTES = int(os.getenv("COLSUB_MAX_AGENTES", "3"))
+COLSUB_MAX_WORKERS = int(os.getenv("COLSUB_MAX_WORKERS", "2"))
+COLSUB_CPU_CRITICO = float(os.getenv("COLSUB_CPU_CRITICO", "80"))
+COLSUB_RAM_CRITICO = float(os.getenv("COLSUB_RAM_CRITICO", "72"))
 
 # ── Caché conectores ───────────────────────────────────────────────────────
 CACHE_TTL_SEGUNDOS = int(os.getenv("CACHE_TTL_SEGUNDOS", "900"))

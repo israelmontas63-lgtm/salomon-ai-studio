@@ -1,5 +1,6 @@
 """
-Registro multiagente — agentes especializados colaborativos.
+Registro multiagente — agentes especializados colaborativos (v80).
+Ejecutores lazy: no cargan media/código pesado hasta la primera llamada.
 """
 
 from __future__ import annotations
@@ -59,26 +60,104 @@ def _registrar_agentes_internos() -> None:
     if _AGENTES:
         return
 
-    from cognicion.agente.autonomo import AgenteAutonomo
+    def _exec_coder(**kwargs: Any):
+        from cognicion.agente.coder import ejecutar_coder
 
-    corrector = AgenteAutonomo()
+        return ejecutar_coder(
+            kwargs.get("tarea") or kwargs.get("mensaje") or "",
+            error_consola=kwargs.get("error_consola"),
+            solo_razonamiento=bool(kwargs.get("solo_razonamiento", False)),
+        )
 
+    def _exec_visual(**kwargs: Any):
+        from cognicion.agente.visual import ejecutar_visual
+
+        return ejecutar_visual(
+            kwargs.get("prompt") or kwargs.get("mensaje") or kwargs.get("tarea") or "",
+            modo=kwargs.get("modo") or "auto",
+        )
+
+    def _exec_guard(**kwargs: Any):
+        from cognicion.agente.guard import ejecutar_guard
+
+        return ejecutar_guard(kwargs.get("accion") or "integridad", **kwargs)
+
+    def _exec_coordinador(**kwargs: Any):
+        from cognicion.agente.coordinador import coordinar
+
+        return coordinar(
+            kwargs.get("mensaje") or kwargs.get("tarea") or "",
+            **{k: v for k, v in kwargs.items() if k not in {"mensaje", "tarea"}},
+        )
+
+    def _exec_corrector(**kwargs: Any):
+        # Compat: corrector legacy → Agent_Coder (parche)
+        from cognicion.agente.coder import ejecutar_coder
+
+        return ejecutar_coder(
+            kwargs.get("tarea") or "",
+            error_consola=kwargs.get("error"),
+            solo_razonamiento=False,
+        )
+
+    registrar_agente(
+        AgenteRegistrado(
+            id="coordinador",
+            nombre="Coordinador Multi-Agente",
+            rol="orquestacion",
+            descripcion="Zero-overlap: despacha Coder / Visual / Guard (lazy Render)",
+            prioridad=1,
+            metadata={"protocolo": "MULTI_AGENT_DEPLOY", "version": "80.0.0"},
+        ),
+        ejecutor=_exec_coordinador,
+    )
+    registrar_agente(
+        AgenteRegistrado(
+            id="guard",
+            nombre="Agent_Guard",
+            rol="integridad",
+            descripcion="Checksum SystemGuard + bloqueo deps pesadas Render",
+            prioridad=2,
+        ),
+        ejecutor=_exec_guard,
+    )
+    registrar_agente(
+        AgenteRegistrado(
+            id="coder",
+            nombre="Agent_Coder",
+            rol="codigo",
+            descripcion="Lógica Python/JS exclusiva",
+            prioridad=10,
+        ),
+        ejecutor=_exec_coder,
+    )
+    registrar_agente(
+        AgenteRegistrado(
+            id="visual",
+            nombre="Agent_Visual",
+            rol="vision_media",
+            descripcion="Búsqueda y generación visual vía APIs env",
+            prioridad=15,
+        ),
+        ejecutor=_exec_visual,
+    )
     registrar_agente(
         AgenteRegistrado(
             id="corrector",
             nombre="Agente Corrector",
             rol="codigo",
-            descripcion="Aplica parches seguros en archivos del proyecto",
-            prioridad=10,
+            descripcion="Alias legacy → Agent_Coder",
+            prioridad=11,
+            metadata={"alias_de": "coder"},
         ),
-        ejecutor=corrector.corregir,
+        ejecutor=_exec_corrector,
     )
     registrar_agente(
         AgenteRegistrado(
             id="investigador",
             nombre="Agente Investigador",
             rol="conocimiento",
-            descripcion="Consulta RAG y conectores (Fase 5)",
+            descripcion="Consulta RAG y conectores (legacy)",
             prioridad=20,
             activo=False,
         ),
@@ -88,7 +167,7 @@ def _registrar_agentes_internos() -> None:
             id="supervisor",
             nombre="Supervisor Multiagente",
             rol="orquestacion",
-            descripcion="Delega subtareas entre agentes (Fase 5)",
+            descripcion="Reemplazado por Coordinador v80",
             prioridad=5,
             activo=False,
         ),

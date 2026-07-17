@@ -1,26 +1,48 @@
-# Blueprint Render — Salomón AI v24 (arranque estable)
-# Si el servicio ya existe en Dashboard, alinear Build/Start Command con este archivo.
+# Blueprint Render — Salomón AI v80 Multi-Agent (Zero-Conflict / lazy RAM)
+# Starter-friendly: 1 gunicorn worker + Colsub caps. APIs solo vía env.
 services:
   - type: web
     name: salomon-ai
     runtime: python
     plan: free
     rootDir: .
-    # Instala deps + verifica que gunicorn/uvicorn existan (evita exit 127)
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -c "import gunicorn, uvicorn; print('gunicorn_ok', gunicorn.__version__)"
-    # python -m gunicorn evita "gunicorn: not found" (PATH / exit 127)
-    startCommand: python -m gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 30
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -c "import gunicorn, uvicorn; print('gunicorn_ok', gunicorn.__version__)" && python -c "from cognicion.agente.coordinador import estado_multiagente; print(estado_multiagente()['version'])"
+    startCommand: python -m gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 30 --max-requests 200 --max-requests-jitter 40
     healthCheckPath: /api/salud
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: COLSUB_MAX_AGENTES
+        value: "3"
+      - key: COLSUB_MAX_WORKERS
+        value: "2"
+      - key: COLSUB_RAM_CRITICO
+        value: "72"
+      - key: MEDIA_PROMPT_ENHANCER
+        value: "true"
+      - key: MEDIA_FORZAR_PRO
+        value: "true"
       - key: SALOMON_API_KEY
         sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: OPENAI_API_KEY
+        sync: false
+      - key: FLUX_API_KEY
+        sync: false
+      - key: FLUX_API_URL
+        sync: false
+      - key: MIDJOURNEY_API_KEY
+        sync: false
+      - key: MIDJOURNEY_API_URL
+        sync: false
+      - key: RUNWAY_API_KEY
+        sync: false
+      - key: KLING_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
         sync: false
       - key: ELEVENLABS_API_KEY
         sync: false

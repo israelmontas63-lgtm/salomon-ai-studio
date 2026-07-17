@@ -25,8 +25,6 @@ from cognicion.razonamiento.cadena import (
 )
 from cognicion.razonamiento.empatia import bloque_empatia
 from cognicion.codigo.motor_universal import bloque_motor_codigo
-from cognicion.multimodal import es_generacion_visual
-from cognicion.vision.busqueda_visual import es_busqueda_visual, recuperar_o_generar
 from cognicion.razonamiento.intencion import (
     Intencion,
     clasificar_intencion,
@@ -248,74 +246,67 @@ class MotorCognicion:
         bloques.append(emp_bloque)
         meta["cognicion"]["empatia"] = emp_meta
 
-        # Multimodal Core — búsqueda / generación visual (sin tocar CameraEngine)
-        if es_busqueda_visual(entrada):
-            try:
-                vis = recuperar_o_generar(entrada)
-                meta["cognicion"]["multimodal"] = {
-                    "accion": vis.get("accion"),
-                    "exito": vis.get("exito"),
-                    "latencia_ms": vis.get("latencia_ms") or (vis.get("generacion") or {}).get("latencia_ms"),
-                    "progreso_requerido": vis.get("progreso_requerido")
-                    or (vis.get("generacion") or {}).get("progreso_requerido"),
-                }
-                if vis.get("accion") == "recuperado" and (vis.get("mejor") or {}).get("url"):
-                    m = vis["mejor"]
-                    bloques.append(
-                        "[Agente de Recuperación Visual]\n"
-                        f"Consulta: {vis.get('consulta')}\n"
-                        f"Mejor opción HD: {m.get('titulo')} — {m.get('url')}\n"
-                        f"Snippet: {m.get('snippet')}\n"
-                        "Presenta esta imagen a Israel con enlace y breve justificación."
-                    )
-                elif vis.get("generacion"):
-                    gen = vis["generacion"]
-                    res = gen.get("resultado") or {}
-                    url = res.get("url_relativa") or ""
-                    bloques.append(
-                        "[Multimodal Core — Generación HD]\n"
-                        f"No hubo match visual perfecto; generé material HD.\n"
-                        f"Motor: {res.get('motor')} · URL: {url}\n"
-                        "Describe el resultado y comparte la URL relativa al usuario."
-                    )
-                    meta["cognicion"]["media_url"] = url
-                    meta["cognicion"]["prompt_enhancer"] = gen.get("prompt_enhancer")
-            except Exception as exc:
-                meta["cognicion"]["multimodal_error"] = type(exc).__name__
-        elif es_generacion_visual(entrada):
-            try:
-                from cognicion.media.media_engine import bridge_colsub_media
+        # Multimodal Core — lazy (Agent_Visual path; no eager import al boot)
+        from cognicion.multimodal import es_generacion_visual
+        from cognicion.vision.busqueda_visual import es_busqueda_visual
 
-                hint = "video_gen" if "video" in entrada.lower() else "imagen_hd"
-                gen = bridge_colsub_media(entrada, hint=hint)
-                res = gen.get("resultado") or {}
-                url = res.get("url_relativa") or ""
-                meta["cognicion"]["multimodal"] = {
-                    "accion": "generado",
-                    "exito": gen.get("exito"),
-                    "tarea": gen.get("tarea"),
-                    "latencia_ms": gen.get("latencia_ms"),
-                    "progreso_requerido": gen.get("progreso_requerido"),
-                    "motor": res.get("motor"),
+        if es_busqueda_visual(entrada) or es_generacion_visual(entrada):
+            try:
+                from cognicion.agente.coordinador import coordinar
+
+                pack = coordinar(entrada)
+                meta["cognicion"]["multiagente"] = {
+                    "rol": pack.get("rol"),
+                    "agente": pack.get("agente"),
+                    "exito": pack.get("exito"),
                 }
-                meta["cognicion"]["media_url"] = url
-                meta["cognicion"]["prompt_enhancer"] = {
-                    "activo": gen.get("prompt_enhancer"),
-                    "motor": gen.get("motor_enhancer"),
-                    "original": gen.get("prompt_original"),
-                }
-                bloques.append(
-                    "[Multimodal Core — HD Generator]\n"
-                    f"Prompt Enhancer: {gen.get('motor_enhancer')}\n"
-                    f"Motor: {res.get('motor')} · calidad: {res.get('calidad')}\n"
-                    f"Activo: {url or '(pendiente / async)'}\n"
-                    f"Latencia: {gen.get('latencia_ms')}ms · "
-                    f"progreso_ui={gen.get('progreso_requerido')}\n"
-                    "Informa a Israel el resultado con el enlace y confirma que "
-                    "el material se creó dentro de Salomón Viviente."
-                )
+                res = pack.get("resultado") or {}
+                if pack.get("agente") == "Agent_Visual":
+                    if res.get("modo") == "buscar" and (res.get("mejor") or {}).get("url"):
+                        m = res["mejor"]
+                        bloques.append(
+                            "[Agent_Visual — Recuperación]\n"
+                            f"Mejor opción: {m.get('titulo')} — {m.get('url')}\n"
+                            f"{m.get('snippet')}"
+                        )
+                    else:
+                        gen = res.get("pack") or res.get("generacion") or {}
+                        r = gen.get("resultado") or res.get("resultado") or {}
+                        url = r.get("url_relativa") or ""
+                        meta["cognicion"]["media_url"] = url
+                        bloques.append(
+                            "[Agent_Visual — HD Generator]\n"
+                            f"Motor: {r.get('motor')} · URL: {url}\n"
+                            f"Latencia: {gen.get('latencia_ms') or res.get('latencia_ms')}ms"
+                        )
             except Exception as exc:
                 meta["cognicion"]["multimodal_error"] = type(exc).__name__
+        else:
+            # Coordinador ligero: puede activar Coder/Guard sin media
+            try:
+                from cognicion.agente.coordinador import clasificar_rol, coordinar
+
+                rol = clasificar_rol(entrada)
+                if rol in {"coder", "guard"}:
+                    pack = coordinar(
+                        entrada,
+                        solo_razonamiento=True,
+                        accion="integridad" if rol == "guard" else None,
+                    )
+                    meta["cognicion"]["multiagente"] = {
+                        "rol": pack.get("rol"),
+                        "agente": pack.get("agente"),
+                        "exito": pack.get("exito"),
+                    }
+                    if rol == "coder" and (pack.get("resultado") or {}).get("contexto"):
+                        bloques.append(pack["resultado"]["contexto"])
+                    if rol == "guard":
+                        bloques.append(
+                            "[Agent_Guard]\n"
+                            f"{pack.get('resultado')}"
+                        )
+            except Exception as exc:
+                meta["cognicion"]["multiagente_error"] = type(exc).__name__
 
         # Universal Code Engine (matemática sandbox + prompt de ingeniería)
         uce = bloque_motor_codigo(entrada)

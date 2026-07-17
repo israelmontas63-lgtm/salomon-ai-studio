@@ -99,7 +99,24 @@ def aplicar_reemplazo(
     buscar: str,
     reemplazar: str,
 ) -> CambioArchivo:
-    """Aplica un reemplazo exacto en un archivo."""
+    """Aplica un reemplazo exacto en un archivo (supervisado por Agent_Guard)."""
+    try:
+        from cognicion.agente.guard import autorizar_escritura
+
+        gate = autorizar_escritura(ruta_relativa, autorizado=False)
+        # Core crítico solo con AUTORIZADO; rutas no críticas pasan ruta_segura
+        if gate.get("integrity_violation") and any(
+            x in ruta_relativa.replace("\\", "/")
+            for x in (
+                "camera-engine.js",
+                "studio/dist/camera",
+                "salomon-security-kernel.js",
+            )
+        ):
+            return CambioArchivo(ruta_relativa, False, "Agent_Guard: INTEGRITY_VIOLATION")
+    except Exception:
+        pass
+
     ruta = ruta_segura(ruta_relativa)
     if not ruta:
         return CambioArchivo(ruta_relativa, False, "Ruta no permitida")
