@@ -596,10 +596,10 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [orchestrator, modoCamaraActiva]);
 
-  // Señal global + cancelación de voz al entrar en cámara (Chat desmontado)
+  // Señal global + cancelación de voz (Chat permanece montado; solo se oculta)
   useEffect(() => {
-    window.__SALOMON_MODO_CAMARA__ = modoCamaraActiva;
-    document.documentElement.classList.toggle("salomon-modo-camara", modoCamaraActiva);
+    window.__SALOMON_MODO_CAMARA__ = Boolean(modoCamaraActiva);
+    document.documentElement.classList.toggle("salomon-modo-camara", Boolean(modoCamaraActiva));
     if (modoCamaraActiva) {
       try {
         window.SalomonBridge?.cancelAll?.("modo-camara-activa");
@@ -612,113 +612,115 @@ export default function App() {
       setMediaOpen(false);
     }
     return () => {
-      if (modoCamaraActiva) {
-        window.__SALOMON_MODO_CAMARA__ = false;
-        document.documentElement.classList.remove("salomon-modo-camara");
-      }
+      window.__SALOMON_MODO_CAMARA__ = false;
+      document.documentElement.classList.remove("salomon-modo-camara");
     };
   }, [modoCamaraActiva]);
 
-  // RENDER CONDICIONAL: con cámara activa el Chat NO existe en el DOM
-  if (modoCamaraActiva) {
-    return (
-      <div
-        className={[
-          "app-shell",
-          "app-shell--camera",
-          isDay ? "app-shell--day" : "app-shell--night",
-        ].join(" ")}
-      >
-        <CameraView
-          onClose={() => setModoCamaraActiva(false)}
-          onCaptured={() => {
-            /* visión via salomon:ui-photo; Chat se remonta al cerrar */
-          }}
-        />
-      </div>
-    );
-  }
-
+  // Arranque seguro: Chat SIEMPRE en el DOM (display none/block). modoCamaraActiva inicia en false.
   return (
     <div
       className={[
         "app-shell",
         isDay ? "app-shell--day" : "app-shell--night",
         accessibilityMode ? "app-shell--a11y" : "",
+        modoCamaraActiva ? "app-shell--camera" : "",
       ].join(" ")}
     >
-      <Header
-        appStatus={appStatus}
-        onOpenTools={toggleTools}
-        onOpenAccount={toggleAccount}
-        showWelcomeFlash={showWelcomeFlash}
-        isListeningOrSpeaking={isListeningOrSpeaking}
-      />
-
-      <ChatBody
-        messages={messages}
-        onToggleSaved={handleToggleSaved}
-        accessibilityMode={accessibilityMode}
-        onRepeatLast={handleRepeatLast}
-        canRepeat={Boolean(lastAiSnapshot)}
-        onTypingDone={handleTypingDone}
-      />
-
-      <BottomBar
-        orchestrator={orchestrator}
-        keyboardVisible={keyboardVisible}
-        inputValue={inputValue}
-        sending={sending}
-        onInputChange={setInputValue}
-        onSend={() => sendMessage()}
-        onOpenCamera={() => setModoCamaraActiva(true)}
-        onToggleKeyboard={() => setKeyboardVisible((v) => !v)}
-        onNotify={showVoiceHint}
-        onOpenMedia={() => setMediaOpen(true)}
-        onToggleHandsFree={orchestrator.toggleHandsFree}
-      />
-
-      {voiceHint && <div className="voice-hint" role="status">{voiceHint}</div>}
-
-      <GlassPanel
-        open={accountOpen}
-        title="Correo"
-        items={ACCOUNT_MENU}
-        onClose={() => setAccountOpen(false)}
-        side="left"
-        onItemClick={handleAccountClick}
-      />
-
-      <GlassPanel
-        open={toolsOpen}
-        title="Herramientas"
-        items={TOOLS_MENU}
-        onClose={() => setToolsOpen(false)}
-        side="right"
-        onItemClick={handleToolClick}
-      />
-
-      <MediaPanel
-        open={mediaOpen}
-        onClose={() => setMediaOpen(false)}
-        sessionId={sessionId}
-        onNotify={showVoiceHint}
-        onResult={(data) => {
-          const r = data?.resultado || {};
-          if (r.imagen_base64) {
-            pushAiMessage(
-              data.respuesta || "Imagen generada.",
-              null
-            );
-          } else if (r.url_relativa) {
-            pushAiMessage(
-              `${data.respuesta || "Listo."}\n${r.url_relativa}`
-            );
-          } else {
-            pushAiMessage(data.respuesta || data.error || "Resultado multimedia.");
-          }
+      <div
+        className="app-chat-layer"
+        style={{
+          display: modoCamaraActiva ? "none" : "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+          height: "100%",
+          width: "100%",
         }}
-      />
+        aria-hidden={modoCamaraActiva ? "true" : undefined}
+      >
+        <Header
+          appStatus={appStatus}
+          onOpenTools={toggleTools}
+          onOpenAccount={toggleAccount}
+          showWelcomeFlash={showWelcomeFlash}
+          isListeningOrSpeaking={isListeningOrSpeaking}
+        />
+
+        <ChatBody
+          messages={messages}
+          onToggleSaved={handleToggleSaved}
+          accessibilityMode={accessibilityMode}
+          onRepeatLast={handleRepeatLast}
+          canRepeat={Boolean(lastAiSnapshot)}
+          onTypingDone={handleTypingDone}
+        />
+
+        <BottomBar
+          orchestrator={orchestrator}
+          keyboardVisible={keyboardVisible}
+          inputValue={inputValue}
+          sending={sending}
+          onInputChange={setInputValue}
+          onSend={() => sendMessage()}
+          onOpenCamera={() => setModoCamaraActiva(true)}
+          onToggleKeyboard={() => setKeyboardVisible((v) => !v)}
+          onNotify={showVoiceHint}
+          onOpenMedia={() => setMediaOpen(true)}
+          onToggleHandsFree={orchestrator.toggleHandsFree}
+        />
+
+        {voiceHint && <div className="voice-hint" role="status">{voiceHint}</div>}
+
+        <GlassPanel
+          open={accountOpen}
+          title="Correo"
+          items={ACCOUNT_MENU}
+          onClose={() => setAccountOpen(false)}
+          side="left"
+          onItemClick={handleAccountClick}
+        />
+
+        <GlassPanel
+          open={toolsOpen}
+          title="Herramientas"
+          items={TOOLS_MENU}
+          onClose={() => setToolsOpen(false)}
+          side="right"
+          onItemClick={handleToolClick}
+        />
+
+        <MediaPanel
+          open={mediaOpen}
+          onClose={() => setMediaOpen(false)}
+          sessionId={sessionId}
+          onNotify={showVoiceHint}
+          onResult={(data) => {
+            const r = data?.resultado || {};
+            if (r.imagen_base64) {
+              pushAiMessage(
+                data.respuesta || "Imagen generada.",
+                null
+              );
+            } else if (r.url_relativa) {
+              pushAiMessage(
+                `${data.respuesta || "Listo."}\n${r.url_relativa}`
+              );
+            } else {
+              pushAiMessage(data.respuesta || data.error || "Resultado multimedia.");
+            }
+          }}
+        />
+      </div>
+
+      {modoCamaraActiva ? (
+        <CameraView
+          onClose={() => setModoCamaraActiva(false)}
+          onCaptured={() => {
+            /* visión via salomon:ui-photo */
+          }}
+        />
+      ) : null}
     </div>
   );
 }
