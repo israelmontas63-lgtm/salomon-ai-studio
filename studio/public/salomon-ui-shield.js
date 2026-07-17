@@ -133,13 +133,21 @@
     var main = row.querySelector(".control-btn--main") || btns[1];
     var textBtn = btns[btns.length - 1];
 
-    // Cámara: React CameraView (modoCamaraActiva) — NO bloquear el click
+    // Cámara legacy (shield overlay) — Chat permanece montado; aislamiento por z-index
     if (cam.dataset.uiCam !== "1") {
       cam.dataset.uiCam = "1";
       cam.classList.add("ui-smart-cam-btn");
       cam.setAttribute("aria-label", "Cámara");
-      cam.title = "Abrir cámara (vista exclusiva)";
-      // No stopImmediatePropagation: App.jsx setModoCamaraActiva(true)
+      cam.title = "Abrir cámara";
+      cam.addEventListener(
+        "click",
+        function (e) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          onFooterCameraTap();
+        },
+        true
+      );
     }
 
     // Escritura (Aa): bloqueada en CAPTURA; en CHAT React togglea el panel
@@ -1045,7 +1053,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo camview-react-1");
+    log("activo stable-zindex-162");
   }
 
   if (document.readyState === "loading") {
@@ -1055,7 +1063,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "camview-react-1",
+    version: "stable-zindex-162",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

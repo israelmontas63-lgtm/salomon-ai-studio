@@ -644,54 +644,38 @@ html.salomon-ui-shield .controls-row .control-btn--main {
   box-shadow: none;
 }
 
-/* Modo cámara: footer fijo por encima del overlay (ciclo + disparo) */
+/*
+ * Aislamiento LEGACY por z-index (sin unmount, sin display:none):
+ * Chat/header detrás; cámara al frente; footer usable.
+ */
+html.salomon-cam-mode .chat-body,
+html.salomon-cam-mode .studio-header,
+html.salomon-cam-mode .voice-hint,
+html.salomon-cam-mode .glass-panel,
+html.salomon-cam-mode .glass-backdrop {
+  z-index: -1 !important;
+  position: relative;
+}
+
+html.salomon-cam-mode .ui-camera-overlay {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+}
+
 html.salomon-cam-mode .bottom-bar {
   position: fixed !important;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  z-index: 400020 !important;
+  z-index: 10000 !important;
   background: linear-gradient(180deg, transparent, #000 40%) !important;
+  pointer-events: auto !important;
 }
 
 html.salomon-cam-mode .controls-row .control-btn--main.is-cam-shutter {
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.65), 0 0 18px rgba(212, 175, 55, 0.4);
   transform: scale(1.04);
-}
-
-/* CAPTURA: muro visual — chat bajo el overlay no recibe toques */
-html.salomon-cam-mode #root {
-  pointer-events: none !important;
-}
-
-html.salomon-cam-mode .bottom-bar {
-  pointer-events: auto !important;
-}
-
-html.salomon-cam-mode .bottom-bar form.chat-input,
-html.salomon-cam-mode .bottom-bar .chat-input {
-  display: none !important;
-  pointer-events: none !important;
-  visibility: hidden !important;
-}
-
-html.salomon-cam-mode .controls-row .ui-write-btn,
-html.salomon-cam-mode .controls-row .control-btn[aria-label="Texto"] {
-  pointer-events: none !important;
-  opacity: 0.35 !important;
-}
-
-html.salomon-cam-mode .send-btn {
-  pointer-events: none !important;
-}
-
-html.salomon-cam-mode .ui-camera-overlay {
-  pointer-events: auto !important;
-}
-
-/* Preview no tapa la franja del footer */
-html.salomon-cam-mode .ui-camera-overlay {
-  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
 }
 
 html.salomon-cam-mode .ui-smart-button {
@@ -838,7 +822,7 @@ html.salomon-ui-shield .camera-backdrop {
 .ui-camera-overlay {
   position: fixed;
   inset: 0;
-  z-index: 400000;
+  z-index: 9999;
   background: #000;
   display: flex;
   align-items: center;

@@ -3,7 +3,7 @@ import Header from "./components/Header";
 import ChatBody from "./components/ChatBody";
 import BottomBar from "./components/BottomBar";
 import GlassPanel from "./components/GlassPanel";
-import CameraView from "./components/CameraView";
+import CameraModal from "./components/CameraModal";
 import MediaPanel from "./components/MediaPanel";
 import { useDayNight } from "./hooks/useTypewriter";
 import { useSalomonOrchestrator } from "./hooks/useSalomonOrchestrator";
@@ -31,8 +31,7 @@ export default function App() {
   const [appStatus, setAppStatus] = useState("ready");
   const [toolsOpen, setToolsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  /** Si true: Chat NO se renderiza; solo CameraView en el DOM */
-  const [modoCamaraActiva, setModoCamaraActiva] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(true);
   const [inputValue, setInputValue] = useState("");
@@ -583,144 +582,102 @@ export default function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") {
-        if (modoCamaraActiva) {
-          setModoCamaraActiva(false);
-          return;
-        }
         setToolsOpen(false);
         setAccountOpen(false);
+        setCameraOpen(false);
         orchestrator.cancelAll("user");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [orchestrator, modoCamaraActiva]);
+  }, [orchestrator]);
 
-  // Señal global + cancelación de voz (Chat permanece montado; solo se oculta)
-  useEffect(() => {
-    window.__SALOMON_MODO_CAMARA__ = Boolean(modoCamaraActiva);
-    document.documentElement.classList.toggle("salomon-modo-camara", Boolean(modoCamaraActiva));
-    if (modoCamaraActiva) {
-      try {
-        window.SalomonBridge?.cancelAll?.("modo-camara-activa");
-      } catch {
-        /* noop */
-      }
-      setKeyboardVisible(false);
-      setToolsOpen(false);
-      setAccountOpen(false);
-      setMediaOpen(false);
-    }
-    return () => {
-      window.__SALOMON_MODO_CAMARA__ = false;
-      document.documentElement.classList.remove("salomon-modo-camara");
-    };
-  }, [modoCamaraActiva]);
-
-  // Arranque seguro: Chat SIEMPRE en el DOM (display none/block). modoCamaraActiva inicia en false.
   return (
     <div
       className={[
         "app-shell",
         isDay ? "app-shell--day" : "app-shell--night",
         accessibilityMode ? "app-shell--a11y" : "",
-        modoCamaraActiva ? "app-shell--camera" : "",
       ].join(" ")}
     >
-      <div
-        className="app-chat-layer"
-        style={{
-          display: modoCamaraActiva ? "none" : "flex",
-          flexDirection: "column",
-          flex: 1,
-          minHeight: 0,
-          height: "100%",
-          width: "100%",
+      <Header
+        appStatus={appStatus}
+        onOpenTools={toggleTools}
+        onOpenAccount={toggleAccount}
+        showWelcomeFlash={showWelcomeFlash}
+        isListeningOrSpeaking={isListeningOrSpeaking}
+      />
+
+      <ChatBody
+        messages={messages}
+        onToggleSaved={handleToggleSaved}
+        accessibilityMode={accessibilityMode}
+        onRepeatLast={handleRepeatLast}
+        canRepeat={Boolean(lastAiSnapshot)}
+        onTypingDone={handleTypingDone}
+      />
+
+      <BottomBar
+        orchestrator={orchestrator}
+        keyboardVisible={keyboardVisible}
+        inputValue={inputValue}
+        sending={sending}
+        onInputChange={setInputValue}
+        onSend={() => sendMessage()}
+        onOpenCamera={() => setCameraOpen(true)}
+        onToggleKeyboard={() => setKeyboardVisible((v) => !v)}
+        onNotify={showVoiceHint}
+        onOpenMedia={() => setMediaOpen(true)}
+        onToggleHandsFree={orchestrator.toggleHandsFree}
+      />
+
+      {voiceHint && <div className="voice-hint" role="status">{voiceHint}</div>}
+
+      <GlassPanel
+        open={accountOpen}
+        title="Correo"
+        items={ACCOUNT_MENU}
+        onClose={() => setAccountOpen(false)}
+        side="left"
+        onItemClick={handleAccountClick}
+      />
+
+      <GlassPanel
+        open={toolsOpen}
+        title="Herramientas"
+        items={TOOLS_MENU}
+        onClose={() => setToolsOpen(false)}
+        side="right"
+        onItemClick={handleToolClick}
+      />
+
+      <CameraModal
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCaptureComment={handleCameraComment}
+      />
+
+      <MediaPanel
+        open={mediaOpen}
+        onClose={() => setMediaOpen(false)}
+        sessionId={sessionId}
+        onNotify={showVoiceHint}
+        onResult={(data) => {
+          const r = data?.resultado || {};
+          if (r.imagen_base64) {
+            pushAiMessage(
+              data.respuesta || "Imagen generada.",
+              null
+            );
+          } else if (r.url_relativa) {
+            pushAiMessage(
+              `${data.respuesta || "Listo."}\n${r.url_relativa}`
+            );
+          } else {
+            pushAiMessage(data.respuesta || data.error || "Resultado multimedia.");
+          }
         }}
-        aria-hidden={modoCamaraActiva ? "true" : undefined}
-      >
-        <Header
-          appStatus={appStatus}
-          onOpenTools={toggleTools}
-          onOpenAccount={toggleAccount}
-          showWelcomeFlash={showWelcomeFlash}
-          isListeningOrSpeaking={isListeningOrSpeaking}
-        />
-
-        <ChatBody
-          messages={messages}
-          onToggleSaved={handleToggleSaved}
-          accessibilityMode={accessibilityMode}
-          onRepeatLast={handleRepeatLast}
-          canRepeat={Boolean(lastAiSnapshot)}
-          onTypingDone={handleTypingDone}
-        />
-
-        <BottomBar
-          orchestrator={orchestrator}
-          keyboardVisible={keyboardVisible}
-          inputValue={inputValue}
-          sending={sending}
-          onInputChange={setInputValue}
-          onSend={() => sendMessage()}
-          onOpenCamera={() => setModoCamaraActiva(true)}
-          onToggleKeyboard={() => setKeyboardVisible((v) => !v)}
-          onNotify={showVoiceHint}
-          onOpenMedia={() => setMediaOpen(true)}
-          onToggleHandsFree={orchestrator.toggleHandsFree}
-        />
-
-        {voiceHint && <div className="voice-hint" role="status">{voiceHint}</div>}
-
-        <GlassPanel
-          open={accountOpen}
-          title="Correo"
-          items={ACCOUNT_MENU}
-          onClose={() => setAccountOpen(false)}
-          side="left"
-          onItemClick={handleAccountClick}
-        />
-
-        <GlassPanel
-          open={toolsOpen}
-          title="Herramientas"
-          items={TOOLS_MENU}
-          onClose={() => setToolsOpen(false)}
-          side="right"
-          onItemClick={handleToolClick}
-        />
-
-        <MediaPanel
-          open={mediaOpen}
-          onClose={() => setMediaOpen(false)}
-          sessionId={sessionId}
-          onNotify={showVoiceHint}
-          onResult={(data) => {
-            const r = data?.resultado || {};
-            if (r.imagen_base64) {
-              pushAiMessage(
-                data.respuesta || "Imagen generada.",
-                null
-              );
-            } else if (r.url_relativa) {
-              pushAiMessage(
-                `${data.respuesta || "Listo."}\n${r.url_relativa}`
-              );
-            } else {
-              pushAiMessage(data.respuesta || data.error || "Resultado multimedia.");
-            }
-          }}
-        />
-      </div>
-
-      {modoCamaraActiva ? (
-        <CameraView
-          onClose={() => setModoCamaraActiva(false)}
-          onCaptured={() => {
-            /* visión via salomon:ui-photo */
-          }}
-        />
-      ) : null}
+      />
     </div>
   );
 }
