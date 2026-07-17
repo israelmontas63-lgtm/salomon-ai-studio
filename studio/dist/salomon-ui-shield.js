@@ -14,11 +14,11 @@
 
   var camera = {
     stream: null,
-    facing: "user", // selfie por defecto (facingMode: user)
+    facing: "environment", // trasera por defecto al abrir
     open: false,
     capturing: false,
     flipping: false,
-    mode: "photo", // photo | vdcp
+    mode: "photo",
     videoEl: null,
     openSeq: 0,
     flipSeq: 0,
@@ -201,12 +201,12 @@
     var main = row.querySelector(".control-btn--main") || btns[1];
     var textBtn = btns[btns.length - 1];
 
-    // Cámara legacy (shield overlay) — Chat permanece montado; aislamiento por z-index
+    // Ciclo cámara: cerrado → trasera → selfie → cerrado
     if (cam.dataset.uiCam !== "1") {
       cam.dataset.uiCam = "1";
       cam.classList.add("ui-smart-cam-btn");
       cam.setAttribute("aria-label", "Cámara");
-      cam.title = "Abrir cámara";
+      cam.title = "Cámara — trasera → selfie → cerrar";
       cam.addEventListener(
         "click",
         function (e) {
@@ -216,9 +216,18 @@
         },
         true
       );
+      cam.addEventListener(
+        "touchend",
+        function (e) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          onFooterCameraTap();
+        },
+        CAPTURE_OPTS
+      );
     }
 
-    // Escritura (Aa): bloqueada en CAPTURA; en CHAT React togglea el panel
+    // Escritura (Aa): bloqueada en CAPTURA
     if (textBtn.dataset.uiText !== "1") {
       textBtn.dataset.uiText = "1";
       textBtn.classList.add("ui-write-btn");
@@ -226,7 +235,6 @@
       textBtn.addEventListener(
         "click",
         function (e) {
-          // writeLock = cierre forzado del panel mientras CAPTURA (dejar pasar a React)
           if (camera.open && !writeLock) {
             e.preventDefault();
             e.stopImmediatePropagation();
@@ -240,9 +248,9 @@
       );
     }
 
-    // Voz/disparador central: gate de exclusividad CAPTURA vs CHAT
     if (main) {
       ensureVoiceFx(main);
+      ensureShutterCamIcon(main);
       wireMainShutterGate(main);
       if (main.dataset.uiVoice !== "1") {
         main.dataset.uiVoice = "1";
@@ -254,6 +262,14 @@
     syncCameraUiState();
     syncWritingUiState();
     return true;
+  }
+
+  function ensureShutterCamIcon(btn) {
+    if (!btn || btn.querySelector(".ui-shutter-cam-icon")) return;
+    var icon = document.createElement("span");
+    icon.className = "ui-shutter-cam-icon";
+    icon.setAttribute("aria-hidden", "true");
+    btn.appendChild(icon);
   }
 
   function getTextBtn() {
@@ -352,12 +368,13 @@
   }
 
   /**
-   * Muro total: con cámara activa, todo toque fuera del disparador/cierres
-   * recibe preventDefault + stopPropagation (el chat/React no ve el gesto).
+   * Muro CAPTURA: chat no recibe gestos.
+   * Toque en preview/pantalla = disparo (excepto controles exempt).
    */
   function installCaptureEventWall() {
     if (document.documentElement.dataset.uiCamWall === "1") return;
     document.documentElement.dataset.uiCamWall = "1";
+    var lastScreenShot = 0;
     var types = [
       "touchstart",
       "touchend",
@@ -375,17 +392,48 @@
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
       e.stopPropagation();
+      // Pantalla / preview = gatillo
+      if (e.type === "click" || e.type === "pointerup" || e.type === "touchend") {
+        var now = Date.now();
+        if (now - lastScreenShot < 500) return;
+        lastScreenShot = now;
+        log("pantalla → capturePhoto");
+        capturePhoto();
+      }
     }
     types.forEach(function (type) {
       document.addEventListener(type, wall, CAPTURE_OPTS);
     });
-    log("muro de eventos CAPTURA instalado");
+    // Volumen = gatillo (cuando el navegador lo permite)
+    if (document.documentElement.dataset.uiCamVol !== "1") {
+      document.documentElement.dataset.uiCamVol = "1";
+      document.addEventListener(
+        "keydown",
+        function (e) {
+          if (!camera.open) return;
+          var k = e.key || "";
+          var c = e.code || "";
+          if (
+            k === "AudioVolumeUp" ||
+            k === "AudioVolumeDown" ||
+            c === "VolumeUp" ||
+            c === "VolumeDown" ||
+            c === "AudioVolumeUp" ||
+            c === "AudioVolumeDown"
+          ) {
+            if (e.cancelable) e.preventDefault();
+            e.stopImmediatePropagation();
+            log("volumen → capturePhoto");
+            capturePhoto();
+          }
+        },
+        true
+      );
+    }
+    log("muro CAPTURA + gatillo pantalla/volumen");
   }
 
-  /**
-   * Botón grande → exclusivamente capturePhoto() si cámara activa.
-   * React VoiceButton no recibe el gesto.
-   */
+  /** Botón central = disparador (icono cámara) en modo captura */
   function wireMainShutterGate(main) {
     if (!main || main.dataset.uiShutterGate === "1") return;
     main.dataset.uiShutterGate = "1";
@@ -394,20 +442,22 @@
     var targets = wrap === main ? [main] : [wrap, main];
 
     function gate(e) {
-      if (!camera.open) return; // modo CHAT
+      if (!camera.open) return;
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
       e.stopPropagation();
-      if (e.type === "pointerup" || e.type === "touchend" || e.type === "click") return;
+      // Un solo disparo por gesto (evitar down+up+click)
+      if (e.type !== "pointerdown" && e.type !== "touchstart" && e.type !== "click") return;
       if (e.type === "pointerdown" && e.pointerType === "touch") return;
+      if (e.type === "click" && e.pointerType === "touch") return;
       var now = Date.now();
       if (now - lastShot < 480) return;
       lastShot = now;
-      log("disparador → capturePhoto (facing=" + camera.facing + ")");
+      log("mic/shutter → capturePhoto (facing=" + camera.facing + ")");
       capturePhoto();
     }
 
-    ["touchstart", "pointerdown", "touchend", "pointerup", "click"].forEach(function (type) {
+    ["touchstart", "pointerdown", "click"].forEach(function (type) {
       targets.forEach(function (el) {
         el.addEventListener(type, gate, CAPTURE_OPTS);
       });
@@ -536,20 +586,36 @@
     }
   }
 
-  /* ——— Unidad neuronal de cámara — latencia ultra-baja ——— */
+  /* ——— Unidad neuronal de cámara — ciclo limpio ——— */
 
+  /**
+   * Toque icono cámara:
+   * 1) cerrado → abre TRASERA
+   * 2) trasera → SELFIE
+   * 3) selfie → CIERRA
+   */
   function onFooterCameraTap() {
     var now = Date.now();
-    if (now - lastCamTap < 380) return;
+    if (now - lastCamTap < 400) return;
     lastCamTap = now;
     if (camera.flipping || camera.capturing) return;
-    // Toggle: abierto → cerrar al instante; cerrado → abrir trasera
-    if (camera.open) {
-      closeCamera();
+
+    if (!camera.open) {
+      pauseChatForCapture();
+      camera.facing = "environment";
+      openNeuralCamera({ mode: "photo", facing: "environment", keepFacing: true });
       return;
     }
-    pauseChatForCapture();
-    openNeuralCamera({ mode: "photo" });
+    if (camera.facing === "environment") {
+      camera.facing = "user";
+      log("ciclo → selfie");
+      haptic(8);
+      syncCameraUiState();
+      swapFacingInPlace("environment");
+      return;
+    }
+    log("ciclo → cerrar");
+    closeCamera();
   }
 
   function updateCamActiveBadge() {
@@ -568,15 +634,20 @@
     if (cam) {
       cam.classList.toggle("is-cam-active", active);
       cam.dataset.facing = camera.facing || "environment";
-      cam.title = active ? "Cerrar cámara" : "Cámara — toque: abrir";
+      if (!active) cam.title = "Cámara — 1: trasera · 2: selfie · 3: cerrar";
+      else if (camera.facing === "environment") cam.title = "Toque: modo selfie";
+      else cam.title = "Toque: cerrar cámara";
     }
     var main = document.querySelector(".controls-row .control-btn--main");
     if (main) {
+      ensureShutterCamIcon(main);
       main.classList.toggle("is-cam-shutter", active);
       if (active) {
         main.title = "Disparar foto";
-        main.setAttribute("aria-label", "Disparador");
+        main.setAttribute("aria-label", "Disparador de foto");
         main.dataset.captureMode = "1";
+        main.dataset.uiMode = "";
+        main.classList.remove("voice-btn--spinning", "control-btn--recording");
       } else {
         main.title = "Núcleo Salomón — dictado / conversación";
         main.setAttribute("aria-label", "Núcleo Salomón — mantener dictado, doble conversación, toque cancela");
@@ -588,6 +659,16 @@
       writeBtn.toggleAttribute("disabled", active);
       writeBtn.setAttribute("aria-disabled", active ? "true" : "false");
     }
+    // Congelar input de chat
+    document.querySelectorAll(".bottom-bar input, .bottom-bar textarea, .bottom-bar .send-btn").forEach(function (el) {
+      if (active) {
+        el.setAttribute("disabled", "disabled");
+        el.setAttribute("tabindex", "-1");
+      } else {
+        el.removeAttribute("disabled");
+        el.removeAttribute("tabindex");
+      }
+    });
     updateCamActiveBadge();
   }
 
@@ -703,7 +784,6 @@
       return;
     }
     camera.capturing = true;
-    // Flash + frame en el mismo tick (sin debounce)
     flashShutter(overlay);
     haptic([6, 12, 6]);
     try {
@@ -711,7 +791,6 @@
       canvas.width = video.videoWidth || 720;
       canvas.height = video.videoHeight || 1280;
       canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-      // Encode síncrono → evento inmediato (evita cola de toBlob)
       var dataUrl = canvas.toDataURL("image/jpeg", 0.88);
       var blob = dataUrlToBlob(dataUrl);
       camera.capturing = false;
@@ -723,62 +802,67 @@
         width: canvas.width,
         height: canvas.height,
         dataUrl: dataUrl,
+        deferChat: true,
       };
       window.dispatchEvent(new CustomEvent("salomon:ui-photo", { detail: detail }));
-      log("foto capturada", detail.mode, detail.facing, detail.width + "x" + detail.height);
-      if (camera.mode !== "vdcp") {
-        closeCamera();
-      }
+      log("foto capturada (cámara sigue abierta)", detail.facing, detail.width + "x" + detail.height);
+      // NO cerrar — solo el icono cámara cierra (3er toque)
     } catch (e) {
       camera.capturing = false;
       log("capture fail", e && e.message);
     }
   }
 
-  /** Nodo overlay: solo voltear (el disparo es exclusivo del botón central) */
+  /** Nodo overlay = también disparador (no voltear; el ciclo es el icono cámara) */
   function wireSmartButton(btn) {
     if (!btn || btn.dataset.neuralBound === "1") return;
     btn.dataset.neuralBound = "1";
-    var lastFlip = 0;
+    var lastShot = 0;
 
-    function flip(e) {
+    function shoot(e) {
       if (e.cancelable) e.preventDefault();
       e.stopImmediatePropagation();
       e.stopPropagation();
-      if (e.type !== "touchstart" && e.type !== "pointerdown") return;
+      if (e.type !== "touchstart" && e.type !== "pointerdown" && e.type !== "click") return;
       if (e.type === "pointerdown" && e.pointerType === "touch") return;
       var now = Date.now();
-      if (now - lastFlip < 400) return;
-      lastFlip = now;
-      toggleCameraDirection();
+      if (now - lastShot < 480) return;
+      lastShot = now;
+      capturePhoto();
     }
 
     ["touchstart", "pointerdown", "click"].forEach(function (type) {
-      btn.addEventListener(type, flip, CAPTURE_OPTS);
+      btn.addEventListener(type, shoot, CAPTURE_OPTS);
     });
   }
 
-  /** Preview: toques ignorados (no disparan ni llegan al chat) */
-  function bindStageIgnore(stage) {
-    function kill(ev) {
+  /** Preview: toque = disparo; no llega al chat */
+  function bindStageShutter(stage) {
+    var lastShot = 0;
+    function onTap(ev) {
       if (ev.target && ev.target.closest && ev.target.closest(".ui-smart-button, .ui-camera-close")) {
         return;
       }
       if (ev.cancelable) ev.preventDefault();
       ev.stopImmediatePropagation();
       ev.stopPropagation();
+      if (ev.type !== "pointerup" && ev.type !== "touchend" && ev.type !== "click") return;
+      var now = Date.now();
+      if (now - lastShot < 500) return;
+      lastShot = now;
+      capturePhoto();
     }
     ["touchstart", "touchend", "pointerdown", "pointerup", "click"].forEach(function (type) {
-      stage.addEventListener(type, kill, CAPTURE_OPTS);
+      stage.addEventListener(type, onTap, CAPTURE_OPTS);
     });
   }
 
   function openNeuralCamera(opts) {
     opts = opts || {};
     if (opts.mode) camera.mode = opts.mode;
-    // Selfie forzada por defecto (facingMode: user)
-    if (!opts.keepFacing && !camera.open) {
-      camera.facing = "user";
+    if (opts.facing) camera.facing = opts.facing;
+    else if (!opts.keepFacing && !camera.open) {
+      camera.facing = "environment";
     }
     closeCamera(true);
     pauseChatForCapture();
@@ -790,7 +874,7 @@
     }
     var seq = ++camera.openSeq;
     haptic(10);
-    var facing = camera.facing || "user";
+    var facing = camera.facing || "environment";
     navigator.mediaDevices
       .getUserMedia({
         video: { facingMode: { exact: facing } },
@@ -803,7 +887,6 @@
         });
       })
       .then(function (stream) {
-        // Descartar streams huérfanos (apertura supersedida / cerrada)
         if (seq !== camera.openSeq) {
           try {
             stream.getTracks().forEach(function (t) {
@@ -825,6 +908,8 @@
         video.playsInline = true;
         video.muted = true;
         video.autoplay = true;
+        video.setAttribute("playsinline", "true");
+        video.setAttribute("webkit-playsinline", "true");
         video.srcObject = stream;
         video.play().catch(function () {});
         camera.videoEl = video;
@@ -836,17 +921,17 @@
         var stage = document.createElement("div");
         stage.className = "ui-camera-stage";
         stage.appendChild(video);
-        bindStageIgnore(stage);
+        bindStageShutter(stage);
 
         var smart = document.createElement("button");
         smart.type = "button";
         smart.className = "ui-smart-button";
         smart.id = "ui-smart-button";
-        smart.setAttribute("aria-label", "Voltear cámara");
-        smart.title = "Toque: voltear · Mantener: disparar";
+        smart.setAttribute("aria-label", "Disparar foto");
+        smart.title = "Disparar foto";
         smart.innerHTML =
           '<span class="ui-smart-button__ring" aria-hidden="true"></span>' +
-          '<span class="ui-smart-button__core" aria-hidden="true"></span>';
+          '<span class="ui-smart-button__core ui-smart-button__core--shutter" aria-hidden="true"></span>';
         wireSmartButton(smart);
 
         var badge = document.createElement("div");
@@ -883,7 +968,7 @@
         var hint = document.createElement("div");
         hint.className = "ui-camera-hint";
         hint.textContent =
-          "Solo botón central = disparar · nodo = voltear · icono cámara = cerrar";
+          "Pantalla / volumen / mic = foto · icono cámara: trasera→selfie→cerrar";
 
         overlay.appendChild(stage);
         overlay.appendChild(flash);
@@ -895,10 +980,10 @@
         syncCameraUiState();
         syncWritingUiState();
 
-        // Sin delay artificial: ocultar modal React en microtask
         queueMicrotask(function () {
-          document.querySelectorAll(".camera-modal, .camera-backdrop").forEach(function (n) {
+          document.querySelectorAll(".camera-modal, .camera-backdrop, .camera-view").forEach(function (n) {
             n.style.display = "none";
+            n.setAttribute("aria-hidden", "true");
           });
         });
 
@@ -910,15 +995,16 @@
       })
       .catch(function (err) {
         if (seq !== camera.openSeq) return;
-        log("cámara error", err && err.message);
+        log("cámara error", err && err.name, err && err.message);
         camera.open = false;
         camera.videoEl = null;
+        document.documentElement.classList.remove("salomon-cam-mode");
         syncCameraUiState();
       });
   }
 
   function closeCamera(silent) {
-    camera.openSeq += 1; // invalida getUserMedia en vuelo
+    camera.openSeq += 1;
     camera.flipSeq += 1;
     var overlay = document.getElementById("ui-camera-overlay");
     if (overlay) overlay.remove();
@@ -934,19 +1020,21 @@
     camera.capturing = false;
     camera.flipping = false;
     camera.videoEl = null;
+    if (!silent) camera.facing = "environment";
     syncCameraUiState();
     if (!silent) {
       window.dispatchEvent(new CustomEvent("salomon:camera-close"));
     }
   }
 
-  // Compat: nombres anteriores
   function cycleCamera() {
-    if (!camera.open) openNeuralCamera({ mode: "photo" });
-    else toggleCameraDirection();
+    onFooterCameraTap();
   }
   function openCamera() {
-    openNeuralCamera({ mode: "photo" });
+    if (!camera.open) {
+      camera.facing = "environment";
+      openNeuralCamera({ mode: "photo", facing: "environment", keepFacing: true });
+    }
   }
   function captureFromVideo() {
     capturePhoto();
@@ -1122,7 +1210,7 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo estructura-fidelidad-205");
+    log("activo cam-cycle-206");
   }
 
   if (document.readyState === "loading") {
@@ -1132,7 +1220,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "estructura-fidelidad-205",
+    version: "cam-cycle-206",
     cycleCamera: cycleCamera,
     closeCamera: closeCamera,
     openNeuralCamera: openNeuralCamera,

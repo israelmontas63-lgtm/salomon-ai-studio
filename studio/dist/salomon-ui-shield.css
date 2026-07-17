@@ -672,6 +672,24 @@ html.salomon-cam-mode .glass-panel,
 html.salomon-cam-mode .glass-backdrop {
   z-index: -1 !important;
   position: relative;
+  pointer-events: none !important;
+}
+
+html.salomon-cam-mode .chat-body,
+html.salomon-cam-mode .chat-scroll,
+html.salomon-cam-mode .bubble-row,
+html.salomon-cam-mode .bubble {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+html.salomon-cam-mode .bottom-bar form.chat-input,
+html.salomon-cam-mode .bottom-bar .chat-input,
+html.salomon-cam-mode .bottom-bar .input-row,
+html.salomon-cam-mode .bottom-bar .send-btn {
+  pointer-events: none !important;
+  opacity: 0.25 !important;
 }
 
 html.salomon-cam-mode .ui-camera-overlay {
@@ -693,6 +711,46 @@ html.salomon-cam-mode .bottom-bar {
 html.salomon-cam-mode .controls-row .control-btn--main.is-cam-shutter {
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.65), 0 0 18px rgba(212, 175, 55, 0.4);
   transform: scale(1.04);
+}
+
+/* Icono cámara en el micrófono = disparador */
+html.salomon-cam-mode .control-btn--main.is-cam-shutter .ui-voice-orbit,
+html.salomon-cam-mode .control-btn--main.is-cam-shutter .ui-voice-cloud,
+html.salomon-cam-mode .control-btn--main.is-cam-shutter .voice-btn__glyph,
+html.salomon-cam-mode .control-btn--main.is-cam-shutter .voice-btn__clip {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.ui-shutter-cam-icon {
+  display: none;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 28px;
+  height: 22px;
+  border: 2.2px solid #1a1508;
+  border-radius: 6px;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.ui-shutter-cam-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 2px solid #1a1508;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+html.salomon-cam-mode .control-btn--main.is-cam-shutter .ui-shutter-cam-icon {
+  display: block;
 }
 
 html.salomon-cam-mode .ui-smart-button {

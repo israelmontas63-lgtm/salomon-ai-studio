@@ -8,6 +8,87 @@
   var SESSION_KEY = "salomon_session_id";
   var busy = false;
   var bootOnce = false;
+  var pendingPhotos = [];
+
+  function camModeActive() {
+    return (
+      document.documentElement.classList.contains("salomon-cam-mode") ||
+      !!(window.SalomonUIShield && document.getElementById("ui-camera-overlay"))
+    );
+  }
+
+  function processPhotoDetail(detail) {
+    if (!detail || (!detail.blob && !detail.dataUrl)) return;
+    if (busy) {
+      pendingPhotos.push(detail);
+      return;
+    }
+    busy = true;
+    var mode = detail.mode || "photo";
+    queueMicrotask(function () {
+      var job = mode === "vdcp" ? sendVdcp(detail) : sendPhotoVision(detail);
+      job
+        .catch(function (err) {
+          var msg =
+            err && err.message === "api_key"
+              ? "Se requiere API key para visión."
+              : "No pude procesar la captura.";
+          injectBubbles(null, msg);
+          console.warn("[Salomon Vision]", err && err.message);
+        })
+        .then(function () {
+          busy = false;
+          if (pendingPhotos.length) {
+            processPhotoDetail(pendingPhotos.shift());
+          }
+        });
+    });
+  }
+
+  function onPhoto(ev) {
+    var detail = (ev && ev.detail) || {};
+    if (!detail.blob && !detail.dataUrl) return;
+    // Mientras la cámara está activa: cola — el chat/asistente no entra
+    if (camModeActive() || detail.deferChat) {
+      pendingPhotos.push(detail);
+      console.info("[Salomon Vision] foto en cola (modo cámara)");
+      return;
+    }
+    processPhotoDetail(detail);
+  }
+
+  function flushPendingOnCamClose() {
+    if (!pendingPhotos.length) return;
+    console.info("[Salomon Vision] cámara cerrada → procesar", pendingPhotos.length);
+    var next = pendingPhotos.shift();
+    processPhotoDetail(next);
+  }
+
+  function boot() {
+    if (bootOnce) return;
+    bootOnce = true;
+    window.addEventListener("salomon:ui-photo", onPhoto, true);
+    window.addEventListener("salomon:camera-close", flushPendingOnCamClose);
+    window.SalomonVision = {
+      version: "neural-sync-2-cam-queue",
+      open: function (mode) {
+        waitShieldThenOpen(mode || "photo");
+      },
+      openVdcp: function () {
+        waitShieldThenOpen("vdcp");
+      },
+      close: function () {
+        if (shield()) shield().closeCamera();
+      },
+      capture: function () {
+        if (shield()) shield().capturePhoto();
+      },
+      toggle: function () {
+        if (shield()) shield().toggleCameraDirection();
+      },
+    };
+    console.info("[Salomon Vision] hub neuronal sincronizado (cola cámara)");
+  }
 
   function apiKey() {
     return (
@@ -161,54 +242,6 @@
     window.dispatchEvent(new CustomEvent("salomon:vdcp-result", { detail: data }));
     if (shield() && shield().closeCamera) shield().closeCamera();
     return data;
-  }
-
-  function onPhoto(ev) {
-    var detail = (ev && ev.detail) || {};
-    if (!detail.blob && !detail.dataUrl) return;
-    if (busy) return;
-    busy = true;
-    var mode = detail.mode || "photo";
-    queueMicrotask(function () {
-      var job = mode === "vdcp" ? sendVdcp(detail) : sendPhotoVision(detail);
-      job
-        .catch(function (err) {
-          var msg =
-            err && err.message === "api_key"
-              ? "Se requiere API key para visión."
-              : "No pude procesar la captura.";
-          injectBubbles(null, msg);
-          console.warn("[Salomon Vision]", err && err.message);
-        })
-        .then(function () {
-          busy = false;
-        });
-    });
-  }
-
-  function boot() {
-    if (bootOnce) return;
-    bootOnce = true;
-    window.addEventListener("salomon:ui-photo", onPhoto, true);
-    window.SalomonVision = {
-      version: "neural-sync-1",
-      open: function (mode) {
-        waitShieldThenOpen(mode || "photo");
-      },
-      openVdcp: function () {
-        waitShieldThenOpen("vdcp");
-      },
-      close: function () {
-        if (shield()) shield().closeCamera();
-      },
-      capture: function () {
-        if (shield()) shield().capturePhoto();
-      },
-      toggle: function () {
-        if (shield()) shield().toggleCameraDirection();
-      },
-    };
-    console.info("[Salomon Vision] hub neuronal sincronizado");
   }
 
   if (document.readyState === "loading") {
