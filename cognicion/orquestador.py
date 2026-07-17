@@ -279,6 +279,35 @@ class MotorCognicion:
         except Exception as exc:
             meta["cognicion"]["sce_error"] = type(exc).__name__
 
+        # Evolución 30-X + Comic Engine (v101)
+        try:
+            from cognicion.evolucion.habilidades_30x import (
+                bloque_contexto_30x,
+                es_peticion_30x,
+            )
+            from cognicion.comic import bloque_contexto_comic, es_peticion_comic, producir_comic
+
+            if es_peticion_30x(entrada):
+                bloques.append(bloque_contexto_30x())
+                meta["cognicion"]["evolucion_30x"] = True
+            if es_peticion_comic(entrada):
+                bloques.append(bloque_contexto_comic(entrada))
+                comic = producir_comic(persistir=True)
+                meta["cognicion"]["comic_engine"] = {
+                    "active": True,
+                    "paneles": (comic.get("storyboard") or {}).get("n_paneles"),
+                    "archivo": comic.get("archivo"),
+                }
+                bloques.append(
+                    "[Comic pack generado]\n"
+                    f"Título: {(comic.get('guion') or {}).get('titulo')}\n"
+                    f"Paneles: {(comic.get('storyboard') or {}).get('n_paneles')}\n"
+                    f"Archivo: {comic.get('archivo') or 'en memoria'}\n"
+                    "Resume las viñetas y globos al usuario."
+                )
+        except Exception as exc:
+            meta["cognicion"]["comic_30x_error"] = type(exc).__name__
+
         # Multimodal Core — lazy (Agent_Visual path; no eager import al boot)
         from cognicion.multimodal import es_generacion_visual
         from cognicion.vision.busqueda_visual import es_busqueda_visual

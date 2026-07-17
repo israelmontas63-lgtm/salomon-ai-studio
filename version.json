@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T20:45:00Z",
-  "timestamp": 1752794700,
-  "version": "100.0.0",
+  "timestamp_iso": "2026-07-17T20:55:00Z",
+  "timestamp": 1752795300,
+  "version": "101.0.0",
   "channel": "main",
-  "label": "sce-criterio-evolucion",
+  "label": "evolucion-30x-comic-engine",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "SCE_EVOLUCION",
-  "notes": "Sistema de Criterio de Evolucion (SCE): aprueba mejoras utiles, bloquea riesgos. CameraEngine untouched. Owner Israel Monta."
+  "protocol": "EVOLUCION_30X_COMIC_ENGINE",
+  "notes": "30 habilidades SCE-aprobadas + Comic_Engine (guion/storyboard/ilustracion/lettering). Prioridad hoy: Comic Engine #21. CameraEngine untouched. Owner Israel Monta."
 }

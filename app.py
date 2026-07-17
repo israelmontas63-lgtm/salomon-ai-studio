@@ -62,6 +62,8 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/pwa/estado",
         "/api/auditoria/preflight",
         "/api/sce",
+        "/api/evolucion/30x",
+        "/api/comic/estado",
         "/api/media/estado",
     }
 )
@@ -557,6 +559,20 @@ def _salud_payload() -> dict:
         sce = estado_sce()
     except Exception:
         sce = {"active": False}
+    evolucion_30x: dict = {"active": False}
+    try:
+        from cognicion.evolucion.habilidades_30x import estado_30x
+
+        evolucion_30x = estado_30x()
+    except Exception:
+        evolucion_30x = {"active": False}
+    comic: dict = {"active": False}
+    try:
+        from cognicion.comic import estado_comic_engine
+
+        comic = estado_comic_engine()
+    except Exception:
+        comic = {"active": False}
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -572,6 +588,14 @@ def _salud_payload() -> dict:
         "identidad": identidad,
         "pwa": pwa,
         "sce": sce,
+        "evolucion_30x": {
+            "active": bool(evolucion_30x.get("active")),
+            "version": evolucion_30x.get("version"),
+            "aprobadas": evolucion_30x.get("aprobadas_sce"),
+            "prioridad_hoy": evolucion_30x.get("prioridad_hoy"),
+            "nucleo": evolucion_30x.get("nucleo"),
+        },
+        "comic_engine": comic,
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
 
@@ -2094,6 +2118,40 @@ def api_sce_evaluar(body: SceEvaluarRequest) -> dict:
     return analizar_valor(
         body.propuesta,
         contexto={"paquete": body.paquete or "", "autorizado": body.autorizado},
+    )
+
+
+@app.get("/api/evolucion/30x")
+def api_evolucion_30x() -> dict:
+    """Evolución 30-X — habilidades de vanguardia filtradas por SCE (v101)."""
+    from cognicion.evolucion.habilidades_30x import estado_30x
+
+    return estado_30x()
+
+
+@app.get("/api/comic/estado")
+def api_comic_estado() -> dict:
+    from cognicion.comic import estado_comic_engine
+
+    return estado_comic_engine()
+
+
+class ComicProducirRequest(BaseModel):
+    titulo: str | None = Field(default=None, max_length=200)
+    tema: str | None = Field(default=None, max_length=500)
+    persistir: bool = True
+
+
+@app.post("/api/comic/producir")
+def api_comic_producir(body: ComicProducirRequest | None = None) -> dict:
+    """Comic_Engine: Guion → Storyboard → Ilustración → Lettering."""
+    from cognicion.comic import producir_comic
+
+    body = body or ComicProducirRequest()
+    return producir_comic(
+        titulo=body.titulo,
+        tema=body.tema,
+        persistir=body.persistir,
     )
 
 

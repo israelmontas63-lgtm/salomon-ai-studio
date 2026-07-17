@@ -213,4 +213,7 @@ def estado_sce() -> dict[str, Any]:
         },
         "mensajes": {"aceptada": MSG_ACEPTADA, "rechazada": MSG_RECHAZADA},
         "recientes": recientes,
+        "evolucion_30x": True,
+        "comic_engine": True,
+        "version_protocolo_hijo": "101.0.0",
     }

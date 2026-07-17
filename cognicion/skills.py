@@ -159,6 +159,20 @@ def _registrar_skills_internas() -> None:
         prioridad=12,
     ))
     registrar_skill(Skill(
+        id="evolucion_30x",
+        nombre="Evolución 30-X",
+        descripcion="30 habilidades de vanguardia (inteligencia, percepción, creatividad)",
+        intenciones=frozenset({Intencion.TECNICO, Intencion.CHAT, Intencion.VISION}),
+        prioridad=11,
+    ))
+    registrar_skill(Skill(
+        id="comic_engine",
+        nombre="Comic Engine",
+        descripcion="Narrativa visual: guion → storyboard → ilustración → lettering",
+        intenciones=frozenset({Intencion.VISION, Intencion.CHAT, Intencion.TECNICO}),
+        prioridad=13,
+    ))
+    registrar_skill(Skill(
         id="agente",
         nombre="Agente autónomo",
         descripcion="Correcciones en archivos del proyecto",
