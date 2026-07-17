@@ -1,9 +1,10 @@
 {
-  "timestamp_iso": "2026-07-17T18:50:00Z",
-  "timestamp": 1752787800,
-  "version": "31.0.0",
+  "timestamp_iso": "2026-07-17T18:55:00Z",
+  "timestamp": 1752788100,
+  "version": "32.0.0",
   "channel": "main",
-  "label": "ui-utf8-forensic-purge",
+  "label": "neural-integrity-lock-active",
   "stability": "STABLE_PRODUCTION_READY",
-  "notes": "UTF-8 enforcement index.html + welcome plain text. Camera core unchanged."
+  "protocol": "NEURAL_INTEGRITY_LOCK",
+  "notes": "Neural Integrity Lock active. Camera Golden State sealed. Zero-Lag budget 100ms."
 }

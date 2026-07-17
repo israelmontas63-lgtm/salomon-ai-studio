@@ -1,16 +1,35 @@
 {
-  "protocol": "SALOMON_INMORTAL",
-  "protocol_version": "23.0.0",
-  "parent_protocol": "SALOMON_GUARDIAN",
+  "protocol": "NEURAL_INTEGRITY_LOCK",
+  "protocol_version": "32.0.0",
+  "parent_protocol": "SALOMON_INMORTAL",
   "architect": "Israel",
   "authorization_word": "AUTORIZADO",
+  "neural_integrity_lock": {
+    "active": true,
+    "activated_at": "2026-07-17T14:54:00-04:00",
+    "zero_lag_overhead_budget_ms": 100,
+    "non_distraction": true,
+    "auto_gc_on_lag": true,
+    "core_files": [
+      "app.py",
+      "studio/dist/camera-engine.js",
+      "studio/dist/camera-v13.js",
+      "studio/dist/camera-v13.css",
+      "studio/dist/salomon-security-kernel.js",
+      "studio/src/features/camera_v13/MediaStreamManager.js",
+      "studio/src/features/camera_v13/CameraV13.jsx"
+    ],
+    "golden_snapshot_id": "camera_engine_v20.1.0+ui31+deploy24",
+    "notes": "Cualquier drift de checksum vs file_signatures_sha256 = bloqueo sin AUTORIZADO."
+  },
   "defense_layer": {
     "security_kernel": "studio/dist/salomon-security-kernel.js",
     "sandbox": true,
     "hardware_proxy": true,
     "resource_limiter": true,
     "anomaly_telemetry": true,
-    "read_only_golden_lock": true
+    "read_only_golden_lock": true,
+    "neural_integrity_lock": true
   },
   "golden_state": {
     "id": "camera_engine_v20.1.0",
@@ -22,12 +41,13 @@
     "label": "camera-engine-v20.1-stable-production-ready",
     "immutable": true,
     "read_only_lock": true,
-    "notes": "Estado Dorado INMUTABLE bajo Inmortal. Kernel de seguridad se envuelve POR ENCIMA; no reescribe el Core."
+    "notes": "Estado Dorado cámara INMUTABLE. Neural Lock sella app.py + engine + streaming UI shell."
   },
   "protected_paths": [
     "studio/dist/camera-engine.js",
     "studio/dist/camera-v13.js",
     "studio/dist/camera-v13.css",
+    "studio/dist/salomon-security-kernel.js",
     "studio/src/features/camera_v13/**",
     "studio/public/camera-engine.js",
     "studio/public/camera-v13.js",
@@ -39,12 +59,14 @@
     "version.json"
   ],
   "file_signatures_sha256": {
+    "app.py": "b3da429dc0b92a2e8f68d34f9e6489724ac275b381c61194b53590b73957776e",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
+    "studio/dist/salomon-security-kernel.js": "66804a6fa7f41bbec296b29d37c4b4a6de766766b1006ec26ee8610037c70dfd",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
-    "version.json": "323a7ff2e3f9c6fbc1611eedec290974a2dff184bd7e1686cfde5073dacb49d1"
+    "version.json": "16f864bb32a653ccdc90475bd786b925356dd356b05def2972c226c1cb156faf"
   },
   "invariants": [
     "MediaStreamManager.forceReset debe existir",
@@ -55,7 +77,9 @@
     "STABLE_PRODUCTION_READY === true en CameraEngine",
     "Sin dual-stream hot-swap que mate HW Redmi 13C",
     "Security Kernel envuelve getUserMedia y switch sin editar Core",
-    "Resource Limiter: max 8 GUM/min, max 6 switch/30s, gaps mínimos"
+    "Resource Limiter: max 8 GUM/min, max 6 switch/30s, gaps mínimos",
+    "Zero-Lag: overhead nuevo sobre cámara <= 100ms o rechazo",
+    "Non-Distraction: sin logs/temp/bg no críticos en CameraEngine"
   ],
   "gatekeeper": {
     "require_impact_report": true,
@@ -64,7 +88,8 @@
     "require_word": "AUTORIZADO",
     "block_git_without_auth": true,
     "block_write_on_signature_drift": true,
-    "read_only_golden_lock": true
+    "read_only_golden_lock": true,
+    "zero_lag_reject_over_ms": 100
   },
   "resource_limiter": {
     "max_getUserMedia_per_minute": 8,
@@ -81,37 +106,29 @@
       "by": "Israel"
     },
     {
-      "version": "22.0.0",
-      "event": "GUARDIAN_PROTOCOL_ACTIVATED",
-      "at": "2026-07-17T16:50:00-04:00",
-      "by": "Cursor+Israel"
-    },
-    {
       "version": "23.0.0",
       "event": "INMORTAL_SECURITY_KERNEL_ACTIVATED",
       "at": "2026-07-17T12:54:00-04:00",
-      "by": "Cursor+Israel",
-      "note": "Sandbox + Proxy + Limiter + Telemetría; Core v20.1.0 intacto"
+      "by": "Cursor+Israel"
     },
     {
       "version": "24.0.0",
       "event": "RENDER_DEPLOY_REPAIR",
       "at": "2026-07-17T14:15:00-04:00",
-      "by": "Israel+Cursor",
-      "note": "gunicorn via python -m; app import fail-soft; Core camera unchanged"
+      "by": "Israel+Cursor"
     },
     {
       "version": "31.0.0",
       "event": "UI_UTF8_FORENSIC_PURGE",
       "at": "2026-07-17T14:50:00-04:00",
+      "by": "Israel+Cursor"
+    },
+    {
+      "version": "32.0.0",
+      "event": "NEURAL_INTEGRITY_LOCK_ACTIVE",
+      "at": "2026-07-17T14:54:00-04:00",
       "by": "Israel+Cursor",
-      "note": "index.html UTF-8 first-byte + welcome plain text; camera core unchanged"
+      "note": "Checksum Core + Zero-Lag 100ms + Non-Distraction"
     }
-  ],
-  "deploy": {
-    "version": "24.0.0",
-    "startCommand": "python -m gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:\\ --timeout 120",
-    "buildCommand": "pip install --upgrade pip && pip install -r requirements.txt && python -c \"import gunicorn, uvicorn\"",
-    "note": "exit 127 fix: use python -m gunicorn"
-  }
+  ]
 }

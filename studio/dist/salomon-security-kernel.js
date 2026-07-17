@@ -93,6 +93,11 @@
         payload
       );
     } catch (e) {}
+    // Zero-Lag / Non-Distraction: liberar buffers solo bajo estrés (sin timers permanentes)
+    try {
+      if (state.gumCalls.length > 12) state.gumCalls = state.gumCalls.slice(-8);
+      if (state.switchCalls.length > 12) state.switchCalls = state.switchCalls.slice(-6);
+    } catch (eGc) {}
     try {
       global.dispatchEvent(
         new CustomEvent("salomon:integrity-red-alert", { detail: payload })

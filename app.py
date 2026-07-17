@@ -434,6 +434,8 @@ def salud() -> dict:
         "build": ver.get("build"),
         "timestamp": ver.get("timestamp") or 0,
         "live": True,
+        "neural_integrity_lock": True,
+        "protocol": ver.get("protocol") or "NEURAL_INTEGRITY_LOCK",
     }
 
 
