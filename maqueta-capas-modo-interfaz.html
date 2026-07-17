@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Maqueta — modoInterfaz (aprobación obligatoria)</title>
+  <style>
+    :root {
+      --dorado: #c9a227;
+      --dorado-claro: #e8c860;
+      --plateado: #c0c0c0;
+      --cobrizo: #b87333;
+      --fondo: #0a0a0a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100dvh;
+      background: #050505;
+      color: rgba(240, 215, 140, 0.85);
+      font-family: Georgia, "Cormorant Garamond", serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 12px 36px;
+      gap: 14px;
+    }
+    h1 {
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      font-size: 0.95rem;
+      color: var(--dorado-claro);
+    }
+    .sub {
+      font-family: system-ui, sans-serif;
+      font-size: 0.75rem;
+      opacity: 0.55;
+      text-align: center;
+      max-width: 380px;
+      line-height: 1.45;
+    }
+    .phone {
+      width: min(370px, 100%);
+      height: min(720px, 86dvh);
+      border-radius: 28px;
+      border: 1px solid rgba(201, 162, 39, 0.35);
+      background: var(--fondo);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ——— HEADER (solo estética; no se toca en la solución) ——— */
+    .header {
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 0;
+      position: relative;
+      flex-shrink: 0;
+      z-index: 5;
+    }
+    .menu {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 1.5px solid var(--dorado);
+      background: rgba(20,20,20,0.6);
+      color: var(--dorado-claro);
+      display: flex; align-items: center; justify-content: center;
+      font-family: system-ui, sans-serif; font-weight: 600; font-size: 14px;
+      box-shadow: 0 0 8px rgba(201,162,39,0.45);
+    }
+    .logo {
+      width: 70px; height: 70px; border-radius: 50%;
+      position: absolute; left: 50%; transform: translateX(-50%);
+      border: 2px solid var(--dorado);
+      background: radial-gradient(circle at 35% 30%, #2a2a2a, #0a0a0a 70%);
+      color: var(--dorado-claro);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 20px;
+      animation: respirar 4s ease-in-out infinite;
+    }
+    @keyframes respirar {
+      0%, 100% { box-shadow: 0 0 6px rgba(201,162,39,0.25); }
+      50% { box-shadow: 0 0 14px rgba(201,162,39,0.55); }
+    }
+
+    /* ——— L1 ASISTENTE ——— */
+    .layer-agent {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      z-index: 1;
+    }
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .bubble {
+      max-width: 78%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      margin: 6px 12px;
+      font-family: system-ui, sans-serif;
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+    .bubble.ai {
+      background: linear-gradient(135deg, var(--dorado-claro), var(--dorado));
+      color: #111;
+      align-self: flex-start;
+    }
+    .bubble.user {
+      background: #1e1e1e;
+      color: #fff;
+      border: 1px solid rgba(201,162,39,0.4);
+      align-self: flex-end;
+    }
+
+    /* ——— L2 CÁMARA ——— */
+    .layer-camera {
+      display: none;
+      position: absolute;
+      inset: 76px 0 110px 0;
+      background: #000;
+      z-index: 20;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .phone[data-modo="camara-trasera"] .layer-camera,
+    .phone[data-modo="camara-frontal"] .layer-camera { display: block; }
+    .phone[data-modo="camara-trasera"] .layer-agent,
+    .phone[data-modo="camara-frontal"] .layer-agent {
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .preview {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 42%, #2a2418 0%, #12100c 55%, #0a0a0a 100%);
+    }
+    .phone[data-modo="camara-frontal"] .preview {
+      transform: scaleX(-1);
+      background:
+        radial-gradient(circle at 48% 40%, #3a2e1a 0%, #1a1510 50%, #0a0a0a 100%);
+    }
+    .face {
+      position: absolute;
+      left: 50%; top: 42%;
+      width: 118px; height: 118px;
+      margin: -59px 0 0 -59px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(201,162,39,0.35);
+      background: radial-gradient(circle at 35% 30%, #4a3c22, #14110a);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .phone[data-modo="camara-frontal"] .face { opacity: 0.9; }
+    .flash {
+      position: absolute; inset: 0; background: #fff;
+      opacity: 0; pointer-events: none;
+    }
+    .flash.on { animation: flash 180ms ease-out forwards; }
+    @keyframes flash {
+      0% { opacity: 0.9; }
+      100% { opacity: 0; }
+    }
+
+    /* ——— L3 CHROME ——— */
+    .footer {
+      flex-shrink: 0;
+      height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+      background: linear-gradient(180deg, transparent, #000 42%);
+      position: relative;
+      z-index: 30;
+    }
+    .btn {
+      width: 56px; height: 56px; border-radius: 50%;
+      border: 1.5px solid var(--dorado);
+      background: #0a0a0a;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn.cam-on {
+      background: rgba(212,175,55,0.28);
+      box-shadow: 0 0 0 2px rgba(232,200,96,0.55), 0 0 14px rgba(201,162,39,0.4);
+    }
+    .ico-cam {
+      width: 22px; height: 16px;
+      border: 1.7px solid var(--dorado);
+      border-radius: 5px;
+      position: relative;
+      box-shadow: 0 0 8px rgba(201,162,39,0.35);
+    }
+    .ico-cam::after {
+      content: "";
+      position: absolute; top: 50%; left: 50%;
+      width: 9px; height: 9px; margin: -5px 0 0 -5px;
+      border: 1.7px solid var(--dorado); border-radius: 50%;
+    }
+    .btn.cam-on .ico-cam { background: rgba(212,175,55,0.45); }
+    .aa {
+      font-family: system-ui, sans-serif;
+      font-size: 0.78rem; font-weight: 600;
+      color: var(--dorado); letter-spacing: 0.04em;
+    }
+
+    .smart {
+      width: 76px; height: 76px; border-radius: 50%;
+      border: none;
+      background: radial-gradient(circle at 35% 30%, var(--dorado-claro), var(--dorado));
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 14px rgba(201,162,39,0.5);
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* En cámara: icono cam oscuro = disparador */
+    .smart .ico-shutter {
+      display: none;
+      width: 26px; height: 20px;
+      border: 2.2px solid #1a1508;
+      border-radius: 5px;
+      position: relative; z-index: 2;
+    }
+    .smart .ico-shutter::after {
+      content: "";
+      position: absolute; top: 50%; left: 50%;
+      width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
+      border: 2px solid #1a1508; border-radius: 50%;
+    }
+    .phone[data-modo="camara-trasera"] .smart .ico-shutter,
+    .phone[data-modo="camara-frontal"] .smart .ico-shutter { display: block; }
+
+    .smart .ring-plata {
+      display: none;
+      position: absolute; inset: -3px; border-radius: 50%;
+      pointer-events: none;
+      background: radial-gradient(circle, transparent 42%, rgba(192,192,192,0.05) 55%, rgba(232,232,232,0.55) 78%, rgba(192,192,192,0.85) 92%, transparent 100%);
+      animation: ring 2.8s ease-in-out infinite;
+    }
+    .phone[data-modo="camara-trasera"] .smart .ring-plata,
+    .phone[data-modo="camara-frontal"] .smart .ring-plata { display: block; }
+    @keyframes ring {
+      0%, 100% { opacity: 0.55; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+    .smart .swirl {
+      display: none;
+      position: absolute; inset: -8px; border-radius: 50%;
+      pointer-events: none; opacity: 0;
+      background: conic-gradient(from 0deg, transparent 0%, rgba(232,232,232,0.35) 18%, transparent 36%, rgba(192,192,192,0.25) 55%, transparent 72%, rgba(232,232,232,0.4) 88%, transparent 100%);
+      mask-image: radial-gradient(circle, transparent 38%, #000 62%, transparent 78%);
+      -webkit-mask-image: radial-gradient(circle, transparent 38%, #000 62%, transparent 78%);
+    }
+    .phone[data-modo="camara-trasera"] .smart .swirl,
+    .phone[data-modo="camara-frontal"] .smart .swirl { display: block; opacity: 0.55; animation: spin 3.6s linear infinite; }
+    .smart.is-shot .swirl { opacity: 1; animation: shot 0.85s ease-out forwards; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shot {
+      0% { transform: rotate(0) scale(0.85); opacity: 0.95; }
+      100% { transform: rotate(220deg) scale(1.35); opacity: 0; }
+    }
+
+    /* Asistente: anillo dictado / destello conversación — sin icono cam */
+    .smart .orbit {
+      position: absolute; inset: -5px; border-radius: 50%;
+      border: 2px solid transparent;
+      background:
+        linear-gradient(#0a0a0a,#0a0a0a) padding-box,
+        linear-gradient(120deg, #d4af37, #c0c0c0, #b87333, #d4af37) border-box;
+      opacity: 0; pointer-events: none;
+    }
+    .phone[data-modo="asistente"] .smart.dictando .orbit {
+      opacity: 1; animation: spin 2.2s linear infinite;
+    }
+    .phone[data-modo="asistente"] .smart .ico-shutter,
+    .phone[data-modo="asistente"] .smart .ring-plata,
+    .phone[data-modo="asistente"] .smart .swirl { display: none !important; }
+    .destello {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: radial-gradient(circle, rgba(232,200,96,0.9) 0%, rgba(201,162,39,0.3) 60%, transparent 80%);
+      animation: boom 0.7s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes boom {
+      0% { transform: scale(0.6); opacity: 0.9; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+
+    /* Panel de estado — fuera del teléfono (auditoría de maqueta) */
+    .panel {
+      width: min(370px, 100%);
+      font-family: system-ui, sans-serif;
+      font-size: 0.78rem;
+      background: rgba(20,20,20,0.75);
+      border: 1px solid rgba(201,162,39,0.3);
+      border-radius: 14px;
+      padding: 12px 14px;
+      backdrop-filter: blur(10px);
+    }
+    .panel code {
+      color: var(--dorado-claro);
+      font-size: 0.85rem;
+    }
+    .panel .row { margin: 4px 0; opacity: 0.85; }
+    .panel .log {
+      margin-top: 8px;
+      max-height: 110px;
+      overflow-y: auto;
+      font-size: 0.72rem;
+      opacity: 0.65;
+      line-height: 1.4;
+      border-top: 1px solid rgba(201,162,39,0.2);
+      padding-top: 8px;
+    }
+    .panel .log div { margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <h1>MAQUETA · modoInterfaz</h1>
+  <p class="sub">
+    Comportamiento exacto a implementar. Un solo estado:
+    <strong style="color:#e8c860">asistente → camara-trasera → camara-frontal → asistente</strong>.
+    Aprueba esto antes de que toque el código real.
+  </p>
+
+  <div class="phone" id="phone" data-modo="asistente">
+    <header class="header">
+      <div class="menu" aria-hidden="true">H</div>
+      <div class="logo" aria-hidden="true">S S</div>
+      <div class="menu" aria-hidden="true">👤</div>
+    </header>
+
+    <!-- L1 AGENTE -->
+    <div class="layer-agent" data-salomon-layer="agent" id="layerAgent">
+      <div class="chat" id="chat">
+        <div class="bubble ai">Modo asistente activo. El botón central = dictado / conversación. La cámara no existe aquí.</div>
+      </div>
+    </div>
+
+    <!-- L2 CÁMARA (solo montada visualmente cuando modo ≠ asistente) -->
+    <div class="layer-camera" data-salomon-layer="camera" id="layerCamera" aria-hidden="true">
+      <div class="preview" id="preview">
+        <div class="face" aria-hidden="true"></div>
+        <div class="flash" id="flash" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <!-- L3 CHROME -->
+    <footer class="footer" data-salomon-layer="chrome">
+      <button type="button" class="btn" id="btnCam" aria-label=" ">
+        <span class="ico-cam" aria-hidden="true"></span>
+      </button>
+      <button type="button" class="smart" id="btnSmart" aria-label=" ">
+        <span class="orbit" aria-hidden="true"></span>
+        <span class="ring-plata" aria-hidden="true"></span>
+        <span class="swirl" aria-hidden="true"></span>
+        <span class="ico-shutter" aria-hidden="true"></span>
+      </button>
+      <button type="button" class="btn aa" id="btnAa" aria-label=" ">Aa</button>
+    </footer>
+  </div>
+
+  <div class="panel">
+    <div class="row">Estado único: <code id="estado">"asistente"</code></div>
+    <div class="row">Stream simulado: <code id="stream">null</code></div>
+    <div class="row">Listeners foto: <code id="listeners">0</code></div>
+    <div class="row">Botón central ahora: <code id="rol">dictado / conversación</code></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    /**
+     * CAPA 1 — Estado compartido (exactamente como se implementará)
+     * Un solo modoInterfaz. Cámara y botón central lo leen.
+     * No hay estado interno de “cámara encendida” aparte.
+     */
+    var modoInterfaz = "asistente"; // "asistente" | "camara-trasera" | "camara-frontal"
+
+    // CAPA 2 — simulación de stream / listeners (para demostrar limpieza)
+    var streamActivo = null; // null | { id, facing, tracks: 1 }
+    var streamSeq = 0;
+    var listenersFoto = 0;
+    var tapSmartCount = 0;
+    var tapSmartTimer = 0;
+
+    var phone = document.getElementById("phone");
+    var btnCam = document.getElementById("btnCam");
+    var btnSmart = document.getElementById("btnSmart");
+    var preview = document.getElementById("preview");
+    var flash = document.getElementById("flash");
+    var chat = document.getElementById("chat");
+    var layerCamera = document.getElementById("layerCamera");
+
+    function log(msg) {
+      var el = document.getElementById("log");
+      var d = document.createElement("div");
+      d.textContent = "· " + msg;
+      el.insertBefore(d, el.firstChild);
+    }
+
+    function setModoInterfaz(next) {
+      var prev = modoInterfaz;
+      modoInterfaz = next;
+      phone.setAttribute("data-modo", next);
+      document.getElementById("estado").textContent = '"' + next + '"';
+
+      if (next === "asistente") {
+        // CAPA 2: apagar stream, desmontar listeners, limpiar
+        detenerStreamCompleto();
+        quitarListenersFoto();
+        layerCamera.setAttribute("aria-hidden", "true");
+        btnCam.classList.remove("cam-on");
+        btnSmart.classList.remove("dictando", "is-shot");
+        document.getElementById("rol").textContent = "dictado / conversación";
+        if (prev !== "asistente") {
+          pushBubble("ai", "Cámara cerrada. Asistente limpio — sin stream ni listeners de foto.");
+          log("→ asistente | stream detenido | listeners=0");
+        }
+      } else {
+        // Abrir / cambiar cámara desde estado único
+        var facing = next === "camara-frontal" ? "user" : "environment";
+        abrirStreamNuevo(facing);
+        ponerListenersFoto();
+        layerCamera.setAttribute("aria-hidden", "false");
+        btnCam.classList.add("cam-on");
+        btnSmart.classList.remove("dictando");
+        document.getElementById("rol").textContent = "DISPARADOR (capturarFoto)";
+        log("→ " + next + " | stream#" + streamActivo.id + " facing=" + facing);
+      }
+
+      document.getElementById("stream").textContent = streamActivo
+        ? "{id:" + streamActivo.id + ", facing:" + streamActivo.facing + ", tracks:" + streamActivo.tracks + "}"
+        : "null";
+      document.getElementById("listeners").textContent = String(listenersFoto);
+    }
+
+    function abrirStreamNuevo(facing) {
+      // Si había stream anterior (cambio trasera↔frontal), detenerlo primero
+      if (streamActivo) {
+        log("detener stream#" + streamActivo.id + " antes de abrir otro");
+        streamActivo.tracks = 0;
+        streamActivo = null;
+      }
+      streamSeq += 1;
+      streamActivo = { id: streamSeq, facing: facing, tracks: 1 };
+    }
+
+    function detenerStreamCompleto() {
+      if (streamActivo) {
+        streamActivo.tracks = 0;
+        log("tracks.stop() stream#" + streamActivo.id);
+      }
+      streamActivo = null;
+    }
+
+    function ponerListenersFoto() {
+      // Un solo par de listeners; no acumular
+      quitarListenersFoto();
+      preview.addEventListener("click", onPreviewFoto);
+      listenersFoto = 1;
+    }
+
+    function quitarListenersFoto() {
+      preview.removeEventListener("click", onPreviewFoto);
+      listenersFoto = 0;
+    }
+
+    function capturarFoto() {
+      if (modoInterfaz === "asistente") return; // imposible: desacoplado
+      if (!streamActivo || streamActivo.tracks < 1) {
+        log("ERROR: captura sin stream — no debe ocurrir");
+        return;
+      }
+      flash.classList.remove("on");
+      void flash.offsetWidth;
+      flash.classList.add("on");
+      btnSmart.classList.remove("is-shot");
+      void btnSmart.offsetWidth;
+      btnSmart.classList.add("is-shot");
+      setTimeout(function () { btnSmart.classList.remove("is-shot"); }, 900);
+      log("capturarFoto() · " + modoInterfaz + " · stream#" + streamActivo.id + " (cola visión; asistente no habla)");
+    }
+
+    function onPreviewFoto(e) {
+      e.stopPropagation();
+      capturarFoto();
+    }
+
+    /** Botón cámara: ciclo del estado único */
+    function onCamTap() {
+      if (modoInterfaz === "asistente") {
+        setModoInterfaz("camara-trasera");
+      } else if (modoInterfaz === "camara-trasera") {
+        setModoInterfaz("camara-frontal");
+      } else {
+        setModoInterfaz("asistente");
+      }
+    }
+
+    /**
+     * Botón central:
+     * - camara-* → solo capturarFoto()
+     * - asistente → 1 toque dictado, 2 toques conversación (sin relación con cámara)
+     */
+    function onSmartTap() {
+      if (modoInterfaz === "camara-trasera" || modoInterfaz === "camara-frontal") {
+        capturarFoto();
+        return;
+      }
+      // Modo asistente puro
+      tapSmartCount += 1;
+      clearTimeout(tapSmartTimer);
+      tapSmartTimer = setTimeout(function () {
+        if (tapSmartCount === 1) {
+          btnSmart.classList.toggle("dictando");
+          var on = btnSmart.classList.contains("dictando");
+          log(on ? "asistente: DICTADO ON" : "asistente: DICTADO OFF");
+          if (on) pushBubble("user", "(dictando…)");
+        } else {
+          btnSmart.classList.remove("dictando");
+          var d = document.createElement("div");
+          d.className = "destello";
+          btnSmart.appendChild(d);
+          setTimeout(function () { d.remove(); }, 700);
+          log("asistente: CONVERSACIÓN FLUIDA (doble toque)");
+          pushBubble("ai", "Conversación fluida — sin cámara, sin stream.");
+        }
+        tapSmartCount = 0;
+      }, 280);
+    }
+
+    function pushBubble(kind, text) {
+      var b = document.createElement("div");
+      b.className = "bubble " + (kind === "ai" ? "ai" : "user");
+      b.textContent = text;
+      chat.appendChild(b);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    btnCam.addEventListener("click", onCamTap);
+    btnSmart.addEventListener("click", onSmartTap);
+    document.getElementById("btnAa").addEventListener("click", function () {
+      if (modoInterfaz !== "asistente") {
+        log("Aa bloqueado en cámara (escritura solo en asistente)");
+        return;
+      }
+      log("Aa: escritura (modo asistente)");
+    });
+
+    // Arranque limpio
+    setModoInterfaz("asistente");
+    log("Maqueta lista. Prueba el ciclo 1→2→3 en el icono cámara.");
+  </script>
+</body>
+</html>

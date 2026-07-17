@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Maqueta — Cámara Salomón AI v13.0.0</title>
+  <style>
+    :root {
+      --dorado: #c9a227;
+      --dorado-claro: #e8c860;
+      --fondo: #0a0a0a;
+      --gap-2mm: 7.56px; /* 2mm @ ~96dpi CSS */
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100dvh;
+      background: #050505;
+      color: rgba(240, 215, 140, 0.85);
+      font-family: Georgia, "Cormorant Garamond", serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 12px 32px;
+      gap: 14px;
+    }
+    h1 {
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      font-size: 0.92rem;
+      color: var(--dorado-claro);
+    }
+    .note {
+      font-family: system-ui, sans-serif;
+      font-size: 0.75rem;
+      opacity: 0.55;
+      text-align: center;
+      max-width: 380px;
+      line-height: 1.45;
+    }
+    .phone {
+      width: min(370px, 100%);
+      height: min(720px, 86dvh);
+      border-radius: 28px;
+      border: 1px solid rgba(201, 162, 39, 0.35);
+      background: #000;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+    }
+
+    /* Preview full-bleed — sin textos de modo */
+    .preview {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 42%, #2a2418 0%, #12100c 55%, #0a0a0a 100%);
+    }
+    .phone.is-front .preview {
+      transform: scaleX(-1);
+      background:
+        radial-gradient(circle at 48% 40%, #3a2e1a 0%, #1a1510 50%, #0a0a0a 100%);
+    }
+    .flash {
+      position: absolute; inset: 0; background: #fff;
+      opacity: 0; pointer-events: none; z-index: 50;
+    }
+    .flash.on { animation: flash 180ms ease-out forwards; }
+    @keyframes flash {
+      0% { opacity: 0.9; }
+      100% { opacity: 0; }
+    }
+
+    /* ——— CONTROLES v13 ——— */
+    /* Offset vertical: +21mm (bajado más) */
+    /* CANDADO — esquina superior izquierda */
+    .lock {
+      position: absolute;
+      top: calc(14px + 21mm + env(safe-area-inset-top, 0px));
+      left: 14px;
+      z-index: 20;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(201, 162, 39, 0.65);
+      background: rgba(10, 10, 10, 0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--dorado-claro);
+    }
+    .lock svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+    .lock.is-locked {
+      border-color: var(--dorado);
+      box-shadow: 0 0 12px rgba(201, 162, 39, 0.45);
+    }
+
+    /* CLUSTER DERECHO — Cámara (arriba) + Giro (abajo), gap 2mm */
+    .cluster-right {
+      position: absolute;
+      top: calc(14px + 21mm + env(safe-area-inset-top, 0px));
+      right: 14px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap-2mm);
+    }
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(201, 162, 39, 0.65);
+      background: rgba(10, 10, 10, 0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--dorado);
+      position: relative;
+    }
+    .icon-btn.is-on {
+      background: rgba(212, 175, 55, 0.28);
+      box-shadow: 0 0 0 2px rgba(232, 200, 96, 0.45), 0 0 12px rgba(201, 162, 39, 0.4);
+    }
+    /* Glifo cámara CSS */
+    .ico-cam {
+      width: 20px; height: 14px;
+      border: 1.6px solid var(--dorado);
+      border-radius: 4px;
+      position: relative;
+    }
+    .ico-cam::after {
+      content: "";
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 7px; height: 7px;
+      margin: -4px 0 0 -4px;
+      border: 1.6px solid var(--dorado);
+      border-radius: 50%;
+    }
+    .icon-btn.is-on .ico-cam { background: rgba(212, 175, 55, 0.4); }
+    /* Glifo giro */
+    .ico-flip svg {
+      width: 20px; height: 20px;
+      fill: none; stroke: var(--dorado); stroke-width: 1.8;
+    }
+    .icon-btn.is-flip .ico-flip svg {
+      animation: flipspin 0.45s ease;
+    }
+    @keyframes flipspin {
+      from { transform: rotate(0); }
+      to { transform: rotate(180deg); }
+    }
+
+    /* DISPARADOR — único control inferior, centrado */
+    .shutter-wrap {
+      position: absolute;
+      left: 0; right: 0;
+      bottom: calc(max(12px, 28px - 7mm) + env(safe-area-inset-bottom, 0px));
+      z-index: 20;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .shutter {
+      pointer-events: auto;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      border: none;
+      background: radial-gradient(circle at 35% 30%, var(--dorado-claro), var(--dorado));
+      box-shadow: 0 0 16px rgba(201, 162, 39, 0.5);
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .shutter .ring-plata {
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      pointer-events: none;
+      background: radial-gradient(
+        circle,
+        transparent 42%,
+        rgba(192, 192, 192, 0.05) 55%,
+        rgba(232, 232, 232, 0.55) 78%,
+        rgba(192, 192, 192, 0.85) 92%,
+        transparent 100%
+      );
+      animation: breathe 2.8s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: 0.55; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+    .shutter .ico-cam-dark {
+      width: 26px; height: 20px;
+      border: 2.2px solid #1a1508;
+      border-radius: 5px;
+      position: relative;
+      z-index: 2;
+    }
+    .shutter .ico-cam-dark::after {
+      content: "";
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 9px; height: 9px;
+      margin: -4.5px 0 0 -4.5px;
+      border: 2px solid #1a1508;
+      border-radius: 50%;
+    }
+    .shutter.is-shot .ring-plata {
+      animation: shot 0.85s ease-out forwards;
+    }
+    @keyframes shot {
+      0% { transform: scale(0.9); opacity: 1; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+
+    /* Panel de especificación (fuera del teléfono) */
+    .spec {
+      width: min(370px, 100%);
+      font-family: system-ui, sans-serif;
+      font-size: 0.74rem;
+      background: rgba(20, 20, 20, 0.8);
+      border: 1px solid rgba(201, 162, 39, 0.3);
+      border-radius: 14px;
+      padding: 12px 14px;
+      line-height: 1.45;
+    }
+    .spec code { color: var(--dorado-claro); }
+    .spec ul { margin: 8px 0 0 16px; opacity: 0.8; }
+    .tree {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(201, 162, 39, 0.2);
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.68rem;
+      opacity: 0.7;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <h1>CÁMARA SALOMÓN · v13.0.0</h1>
+  <p class="note">
+    Maqueta obligatoria — <strong>sin código de producción aún</strong>.
+    Layout exacto a implementar en <code style="color:#e8c860">/src/features/camera_v13/</code>.
+  </p>
+
+  <div class="phone" id="phone">
+    <div class="preview" id="preview"></div>
+    <div class="flash" id="flash" aria-hidden="true"></div>
+
+    <!-- CANDADO — top left -->
+    <button type="button" class="lock is-locked" id="btnLock" aria-label=" ">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="5" y="11" width="14" height="10" rx="2"/>
+        <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+      </svg>
+    </button>
+
+    <!-- CLUSTER DERECHO — Cámara + Giro, gap 2mm -->
+    <div class="cluster-right">
+      <button type="button" class="icon-btn is-on" id="btnCam" aria-label=" ">
+        <span class="ico-cam" aria-hidden="true"></span>
+      </button>
+      <button type="button" class="icon-btn" id="btnFlip" aria-label=" ">
+        <span class="ico-flip" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 12a8 8 0 0 1 13.5-5.8M20 12a8 8 0 0 1-13.5 5.8"/>
+            <polyline points="16 4 17.5 6.2 14.2 6.5"/>
+            <polyline points="8 20 6.5 17.8 9.8 17.5"/>
+          </svg>
+        </span>
+      </button>
+    </div>
+
+    <!-- DISPARADOR — único inferior centrado -->
+    <div class="shutter-wrap">
+      <button type="button" class="shutter" id="btnShutter" aria-label=" ">
+        <span class="ring-plata" aria-hidden="true"></span>
+        <span class="ico-cam-dark" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="spec">
+    <div><strong>Distribución v13</strong></div>
+    <ul>
+      <li><code>Candado</code> — esquina superior izquierda · <code>+21mm</code> abajo</li>
+      <li><code>Cámara</code> — cluster derecho arriba · <code>+21mm</code> abajo</li>
+      <li><code>Giro</code> — cluster derecho abajo · gap <code>2mm</code> · <code>+21mm</code></li>
+      <li><code>Disparador</code> — único inferior centrado · bajado <code>7mm</code></li>
+      <li>Sin textos “selfie / CAM / mic” · sin footer Aa/mic de la UI vieja</li>
+    </ul>
+    <div class="tree">src/features/camera_v13/
+├── CameraV13.jsx
+├── cameraV13.css
+├── useCameraStream.js
+├── controls/
+│   ├── LockButton.jsx
+│   ├── CamToggle.jsx
+│   ├── FlipButton.jsx
+│   └── ShutterButton.jsx
+└── index.js</div>
+  </div>
+
+  <script>
+    var phone = document.getElementById("phone");
+    var facing = "environment";
+    var locked = true;
+
+    document.getElementById("btnLock").addEventListener("click", function () {
+      locked = !locked;
+      this.classList.toggle("is-locked", locked);
+      this.querySelector("path").setAttribute(
+        "d",
+        locked ? "M8 11V8a4 4 0 0 1 8 0v3" : "M8 11V8a4 4 0 0 1 8 0"
+      );
+    });
+
+    document.getElementById("btnFlip").addEventListener("click", function () {
+      facing = facing === "environment" ? "user" : "environment";
+      phone.classList.toggle("is-front", facing === "user");
+      this.classList.add("is-flip");
+      setTimeout(function () {
+        document.getElementById("btnFlip").classList.remove("is-flip");
+      }, 450);
+    });
+
+    function shoot() {
+      var f = document.getElementById("flash");
+      var s = document.getElementById("btnShutter");
+      f.classList.remove("on");
+      void f.offsetWidth;
+      f.classList.add("on");
+      s.classList.remove("is-shot");
+      void s.offsetWidth;
+      s.classList.add("is-shot");
+      setTimeout(function () { s.classList.remove("is-shot"); }, 900);
+    }
+    document.getElementById("btnShutter").addEventListener("click", shoot);
+    document.getElementById("preview").addEventListener("click", shoot);
+  </script>
+</body>
+</html>
