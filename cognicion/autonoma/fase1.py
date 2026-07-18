@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Fase 1 — maqueta funcional de Salomón autónomo.
+Fase 1 — Salomón autónomo (Estado Vivo).
 
 Capacidades:
   • Ver: análisis de escena con Gemini Vision (no solo UI).
-  • Pensar en paralelo: agente búsqueda + agente síntesis.
+  • Pensar en paralelo: búsqueda + síntesis bajo una sola voz.
   • Comunicar mientras piensa: generador de eventos SSE / callbacks.
+  • Núcleo: respuestas conversacionales pasan por INSTRUCCION_SISTEMA (cerebro).
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from collections.abc import Iterator
 from typing import Any, Callable
 
 from cognicion.autonoma.agentes_fase1 import correr_busqueda_y_sintesis_paralelo
+from cognicion.estado_vivo import responder_con_nucleo
 from cognicion.salida_limpia import sanitizar_salida_chat
 from cognicion.vision.analizador import analizar_imagen, analizar_escena
 
@@ -111,10 +113,12 @@ def ejecutar_fase1(
     }
 
     if not consulta and not vision.get("texto"):
-        texto = (
-            "Israel, aquí estoy. Habla, mándame una foto, o formula una pregunta "
-            "y activo búsqueda + síntesis en paralelo."
+        texto = responder_con_nucleo(
+            "Israel acaba de abrir la sesión sin mensaje. "
+            "Salúdalo con tono HD Cognitiva (fluido, contextual, sobrio) "
+            "y ofrece acompañamiento breve sin listar capacidades."
         )
+        meta["nucleo"] = "estado_vivo"
         meta["ms"] = int((time.time() - t0) * 1000)
         return {"texto": texto, "exito": True, "metadata": meta}
 
@@ -123,11 +127,12 @@ def ejecutar_fase1(
         if on_progress:
             on_progress("sintetizando", {"mensaje": "Organizo lo que vi…"})
         visto = vision.get("texto") or "No logré extraer detalle visual esta vez."
-        texto = sanitizar_salida_chat(
-            f"Israel, esto es lo que veo:\n\n{visto}\n\n"
-            "Si quieres, pregunto a fuentes abiertas para ampliar el contexto."
+        texto = responder_con_nucleo(
+            consulta or "Describe lo que ves de forma útil y sobria.",
+            contexto=f"[Lo que vi]\n{visto}",
         )
-        meta["agentes"] = ["vision", "sintesis_local"]
+        meta["agentes"] = ["vision", "sintesis_nucleo"]
+        meta["nucleo"] = "estado_vivo"
         meta["ms"] = int((time.time() - t0) * 1000)
         return {"texto": texto, "exito": True, "metadata": meta}
 
@@ -139,6 +144,7 @@ def ejecutar_fase1(
         )
         texto = sanitizar_salida_chat(pack.get("texto") or "")
         meta["agentes"] = pack.get("agentes") or ["busqueda", "sintesis"]
+        meta["nucleo"] = "estado_vivo"
         meta["busqueda"] = {
             "agentes_ok": (pack.get("pack_busqueda") or {}).get("agentes_ok"),
             "total_hallazgos": (pack.get("pack_busqueda") or {}).get("total_hallazgos"),
@@ -146,11 +152,9 @@ def ejecutar_fase1(
         meta["ms"] = int((time.time() - t0) * 1000)
         return {"texto": texto, "exito": bool(texto), "metadata": meta}
 
-    # Fallback conversacional corto
-    texto = (
-        f"Israel, te escucho: «{consulta[:160]}». "
-        "Dime si quieres que busque en fuentes abiertas o que analice una foto."
-    )
+    # Fallback conversacional → núcleo HD Cognitiva (misma voz que /api/chat)
+    texto = responder_con_nucleo(consulta)
+    meta["nucleo"] = "estado_vivo"
     meta["ms"] = int((time.time() - t0) * 1000)
     return {"texto": texto, "exito": True, "metadata": meta}
 

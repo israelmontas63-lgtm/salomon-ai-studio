@@ -1,13 +1,13 @@
 /**
- * Salomón Autónomo — Fase 1 (maqueta funcional)
- * - Intercepta /api/chat → SSE /api/autonoma/fase1/stream
+ * Salomón Autónomo — Fase 1 (Estado Vivo)
+ * - Intercepta /api/chat → SSE solo para imagen o investigación
+ * - Conversación / saludos → /api/chat (cerebro · INSTRUCCION_SISTEMA)
  * - Burbujas de estado: "Estoy pensando…", "buscando…", "sintetizando…"
- * - Voz: interim results → "Escuchando…" mientras Israel habla
  */
 (function () {
   "use strict";
 
-  var VERSION = "fase1-1.0.0";
+  var VERSION = "fase1-estado-vivo-1.1.0";
   var enabled = true;
   var statusEl = null;
   var lastInterim = "";
@@ -156,6 +156,22 @@
     };
   }
 
+  function isConversational(m) {
+    var t = String(m || "").trim().toLowerCase();
+    if (!t) return true;
+    if (t.length < 12) return true;
+    return /^(hola|hi|hey|buenas|buen[oa]s?\s|saludos|qué tal|que tal|cómo estás|como estas|buenos días|buenos dias|buenas tardes|buenas noches)/.test(
+      t
+    );
+  }
+
+  function looksLikeResearch(m) {
+    var t = String(m || "").trim().toLowerCase();
+    return /(qué es|que es|busca|investiga|según|segun|wikipedia|explica|analiza|cómo funciona|como funciona|fuentes|definición|definicion|por qué|porque)/.test(
+      t
+    );
+  }
+
   function shouldUseFase1(url, init) {
     if (!enabled) return false;
     if (!url || String(url).indexOf("/api/chat") < 0) return false;
@@ -164,12 +180,15 @@
     try {
       var body = typeof init.body === "string" ? JSON.parse(init.body) : null;
       if (!body) return false;
-      // Foto o pregunta con sustancia → Fase 1
+      if (body.fase1 === false) return false;
+      if (body.fase1 === true) return true;
+      // Foto → percepción Fase 1
       if (body.imagen_base64) return true;
       var m = String(body.mensaje || "").trim();
-      if (m.length >= 12) return true;
-      if (body.fase1 === true) return true;
-      if (body.fase1 === false) return false;
+      // Conversación / saludo → cerebro (Estado Vivo / HD Cognitiva)
+      if (isConversational(m)) return false;
+      // Investigación con sustancia → Fase 1 (síntesis bajo núcleo)
+      if (looksLikeResearch(m) || m.length >= 28) return true;
     } catch (e) {
       return false;
     }

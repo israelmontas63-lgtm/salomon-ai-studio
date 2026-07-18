@@ -303,54 +303,40 @@ def sintetizar_orquesta(
     cuerpo = consolidar_hallazgos_texto(pack)
     if not cuerpo.strip():
         return (
-            f"Israel, desplegué la orquesta de agentes sobre «{consulta}», "
-            "pero aún no obtuve hallazgos sólidos. Afina el enfoque y lo intento de nuevo."
+            f"Israel, busqué en paralelo sobre «{consulta}», "
+            "pero aún no hay hallazgos sólidos. Afina el enfoque y lo retomo."
         )
 
-    # Síntesis local primero (estable bajo cuota; sin reintentos LLM)
-    lineas = [
-        f"Israel, reuní varias fuentes en paralelo sobre «{consulta}».",
-        "",
-        cuerpo[:2800],
-        "",
-    ]
-    ok = pack.get("agentes_ok") or []
-    fail = pack.get("agentes_fallidos") or []
-    if ok:
-        lineas.append(f"Agentes que aportaron: {', '.join(ok)}.")
-    if fail:
-        lineas.append(
-            f"Agentes sin datos (el resto continuó): {', '.join(fail)}."
-        )
-    lineas.append(
-        "¿Quieres que profundice en el ángulo web, académico o de mercado?"
+    # Síntesis local primero (voz unificada Estado Vivo — sin roster de agentes)
+    local = (
+        f"Israel, mientras cruzaba fuentes sobre «{consulta}», esto es lo sólido:\n\n"
+        f"{cuerpo[:2800]}\n\n"
+        "Si quieres, afino un ángulo concreto — sin ruido."
     )
-    local = "\n".join(lineas)
 
     if not intentar_llm:
         return local
 
     try:
-        from cognicion.llm import generar_texto, llm_disponible
+        from cognicion.estado_vivo import responder_con_nucleo
+        from cognicion.llm import llm_disponible
 
         if not llm_disponible():
             return local
-        prompt = f"""Eres Salomón. Estilo negro y oro: elegante, profundo, claro.
-Consolida los informes. Elimina redundancias. No menciones cuotas ni fallos de API.
-
-Consulta: {consulta}
-
-Informes:
-{cuerpo[:3500]}
-
-Entrega apertura breve, síntesis unificada, matices y una pregunta de cierre."""
-        texto = (generar_texto(prompt) or "").strip()
-        baja = texto.lower()
+        texto = responder_con_nucleo(
+            (
+                f"Consulta de Israel: {consulta}\n\n"
+                "Consolida los hallazgos en una sola voz (Salomón). "
+                "Elimina redundancias. No menciones agentes, cuotas ni fallos de API. "
+                "Apertura breve, síntesis unificada, cierre sobrio."
+            ),
+            contexto=cuerpo[:3500],
+        )
+        baja = (texto or "").lower()
         if (
             len(texto) > 80
-            and "eres salomón" not in baja
-            and "consolida los informes" not in baja
-            and "no hallé un resumen sólido para «eres" not in baja
+            and "agentes que aportaron" not in baja
+            and "consolida los hallazgos" not in baja
         ):
             return texto
     except Exception:
