@@ -483,6 +483,8 @@ def api_version() -> dict:
     from settings import CARTESIA_API_KEY, CARTESIA_MODEL_ID, CARTESIA_VOICE_ID
 
     data = _leer_version_json()
+    key_ok = bool((CARTESIA_API_KEY or "").strip())
+    voice_ok = bool((CARTESIA_VOICE_ID or "").strip())
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -494,7 +496,10 @@ def api_version() -> dict:
         "channel": data.get("channel") or "main",
         "tts_env": "CARTESIA_API_KEY",
         "tts_modelo": CARTESIA_MODEL_ID or "sonic-3.5",
-        "tts_configurado": bool(CARTESIA_API_KEY and CARTESIA_VOICE_ID),
+        "tts_formato": "audio/wav",
+        "tts_key": key_ok,
+        "tts_voice": voice_ok,
+        "tts_configurado": bool(key_ok and voice_ok),
         "live": True,
     }
 

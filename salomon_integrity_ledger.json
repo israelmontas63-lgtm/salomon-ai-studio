@@ -73,7 +73,7 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "cc4db20e5c98757f3d1b845f026b1e8d63aa00825cde59630a2381e44aeb2391",
+    "app.py": "dbef17981f4314acc7aec573abc4850e7cc514727a2ed00117612539b5f38ebe",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
@@ -266,6 +266,6 @@
       "note": "Push produccion; espera autorizacion fisica mic/cam"
     }
   ],
-  "updated_at": "2026-07-18T13:34:24.857650+00:00",
+  "updated_at": "2026-07-18T14:00:07.708443+00:00",
   "note": "resync local v107 — Actualizar menú H / UTF-8 / salida limpia"
 }
