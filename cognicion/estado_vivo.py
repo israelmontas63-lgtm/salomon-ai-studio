@@ -3,7 +3,7 @@
 Estado Vivo — puente de integridad entre agentes y el núcleo (cerebro).
 
 Garantiza que rutas paralelas (Fase 1, orquesta) usen la misma
-INSTRUCCION_SISTEMA HD Cognitiva que /api/chat.
+INSTRUCCION_SISTEMA (Esencia 2026+ · HD Cognitiva) que /api/chat.
 """
 
 from __future__ import annotations

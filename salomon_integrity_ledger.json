@@ -73,11 +73,11 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "dbef17981f4314acc7aec573abc4850e7cc514727a2ed00117612539b5f38ebe",
+    "app.py": "5554de05ddedb74b445625a4c2f5cefb1716f058831cc586f774525ee9cbe7fa",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
-    "studio/dist/index.html": "3be16f5221ed51c9637c8e9af42d5eb90d8a3642749cef755182b38258272bc6",
+    "studio/dist/index.html": "5d216111eb8011b1b13d3df8a8336ac81c0df67ebdd2c4f809014c7b96034703",
     "studio/dist/salomon-security-kernel.js": "cf42ef62d1ec2b9fd181dc2ca64cd2f2ca58e32fd314aeed204534d7886b95ec",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",

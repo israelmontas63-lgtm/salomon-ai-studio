@@ -56,6 +56,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/cognicion/cognitive-core",
         "/api/cognicion/multimodal",
         "/api/agentes/estado",
+        "/api/esencia",
         "/api/eficiencia",
         "/api/identidad",
         "/api/inmune",
@@ -1186,6 +1187,31 @@ def agentes_estado() -> dict:
     from cognicion.agente.coordinador import estado_multiagente
 
     return estado_multiagente()
+
+
+@app.get("/api/esencia")
+def api_esencia() -> dict:
+    """Protocolo de Esencia 2026+ — auditoría leyes + regeneración + malla."""
+    from cognicion.esencia import auditoria_esencia
+
+    return auditoria_esencia(auto_heal=True)
+
+
+class EsenciaArquitectoRequest(BaseModel):
+    tarea: str = ""
+    mensaje: str = ""
+    con_busqueda: bool = True
+
+
+@app.post("/api/esencia/arquitecto")
+def api_esencia_arquitecto(body: EsenciaArquitectoRequest) -> dict:
+    """Despliega Arquitecto → micro-agentes (Estado Vivo)."""
+    from cognicion.esencia import arquitecto_desplegar
+
+    tarea = (body.tarea or body.mensaje or "").strip()
+    if not tarea:
+        return {"ok": False, "error": "tarea_requerida"}
+    return arquitecto_desplegar(tarea, con_busqueda=body.con_busqueda)
 
 
 @app.get("/api/eficiencia")

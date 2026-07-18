@@ -90,6 +90,14 @@ def _registrar_agentes_internos() -> None:
             **{k: v for k, v in kwargs.items() if k not in {"mensaje", "tarea"}},
         )
 
+    def _exec_arquitecto(**kwargs: Any):
+        from cognicion.esencia import arquitecto_desplegar
+
+        return arquitecto_desplegar(
+            kwargs.get("tarea") or kwargs.get("mensaje") or "",
+            con_busqueda=bool(kwargs.get("con_busqueda", True)),
+        )
+
     def _exec_corrector(**kwargs: Any):
         # Compat: corrector legacy → Agent_Coder (parche)
         from cognicion.agente.coder import ejecutar_coder
@@ -102,11 +110,22 @@ def _registrar_agentes_internos() -> None:
 
     registrar_agente(
         AgenteRegistrado(
+            id="arquitecto",
+            nombre="Agent_Arquitecto",
+            rol="esencia",
+            descripcion="Esencia 2026+: micro-agentes recursivos → fusión memoria central",
+            prioridad=1,
+            metadata={"protocolo": "ESENCIA_AUTOSOSTENIBILIDAD_2026"},
+        ),
+        ejecutor=_exec_arquitecto,
+    )
+    registrar_agente(
+        AgenteRegistrado(
             id="coordinador",
             nombre="Coordinador Multi-Agente",
             rol="orquestacion",
             descripcion="Zero-overlap: despacha Coder / Visual / Guard (lazy Render)",
-            prioridad=1,
+            prioridad=2,
             metadata={"protocolo": "MULTI_AGENT_DEPLOY", "version": "80.0.0"},
         ),
         ejecutor=_exec_coordinador,
@@ -117,7 +136,7 @@ def _registrar_agentes_internos() -> None:
             nombre="Agent_Guard",
             rol="integridad",
             descripcion="Checksum SystemGuard + bloqueo deps pesadas Render",
-            prioridad=2,
+            prioridad=3,
         ),
         ejecutor=_exec_guard,
     )

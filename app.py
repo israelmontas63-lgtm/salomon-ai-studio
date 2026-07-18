@@ -56,6 +56,11 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/cognicion/cognitive-core",
         "/api/cognicion/multimodal",
         "/api/agentes/estado",
+        "/api/esencia",
+        "/api/sbi/estado",
+        "/api/sbi/challenge",
+        "/api/ejecutivo/estado",
+        "/api/cognitivo/estado",
         "/api/eficiencia",
         "/api/identidad",
         "/api/inmune",
@@ -1186,6 +1191,186 @@ def agentes_estado() -> dict:
     from cognicion.agente.coordinador import estado_multiagente
 
     return estado_multiagente()
+
+
+@app.get("/api/esencia")
+def api_esencia() -> dict:
+    """Protocolo de Esencia 2026+ — auditoría leyes + regeneración + malla."""
+    from cognicion.esencia import auditoria_esencia
+
+    return auditoria_esencia(auto_heal=True)
+
+
+class EsenciaArquitectoRequest(BaseModel):
+    tarea: str = ""
+    mensaje: str = ""
+    con_busqueda: bool = True
+
+
+@app.post("/api/esencia/arquitecto")
+def api_esencia_arquitecto(body: EsenciaArquitectoRequest) -> dict:
+    """Despliega Arquitecto → micro-agentes (Estado Vivo)."""
+    from cognicion.esencia import arquitecto_desplegar
+
+    tarea = (body.tarea or body.mensaje or "").strip()
+    if not tarea:
+        return {"ok": False, "error": "tarea_requerida"}
+    return arquitecto_desplegar(tarea, con_busqueda=body.con_busqueda)
+
+
+class SbiEnrollRequest(BaseModel):
+    audio_base64: str = Field(..., min_length=8)
+    audio_mime: str = "audio/wav"
+    enroll_token: str | None = None
+
+
+class SbiVerifyRequest(BaseModel):
+    audio_base64: str | None = None
+    audio_mime: str = "audio/wav"
+    recovery_key: str | None = None
+
+
+@app.get("/api/sbi/estado")
+def api_sbi_estado() -> dict:
+    """SBI-PRO — estado (sin secretos ni huella)."""
+    from cognicion.seguridad.sbi_pro import estado_sbi
+
+    return estado_sbi()
+
+
+@app.get("/api/sbi/challenge")
+def api_sbi_challenge() -> dict:
+    """Frase de desafío para enrollment / verificación en voz."""
+    from cognicion.seguridad.sbi_pro import estado_sbi
+
+    st = estado_sbi()
+    return {
+        "protocolo": st["protocolo"],
+        "challenge": st["challenge"],
+        "owner": st["owner"],
+        "enrolled": st["enrolled"],
+    }
+
+
+@app.post("/api/sbi/enroll")
+def api_sbi_enroll(body: SbiEnrollRequest, request: Request) -> dict:
+    """
+    Enrollment de huella de Israel.
+    Auth: header X-SBI-Enroll-Token == SBI_ENROLL_TOKEN, o rol admin.
+    """
+    from cognicion.seguridad.sbi_pro import enrollar
+
+    token_hdr = request.headers.get("x-sbi-enroll-token") or body.enroll_token
+    admin_ok = False
+    try:
+        _requiere_admin(request)
+        admin_ok = True
+    except HTTPException:
+        admin_ok = False
+
+    return enrollar(
+        body.audio_base64,
+        mime=body.audio_mime,
+        enroll_token=token_hdr,
+        admin_ok=admin_ok,
+    )
+
+
+@app.post("/api/sbi/verify")
+def api_sbi_verify(body: SbiVerifyRequest) -> dict:
+    """Verifica audio contra plantilla enrollada (o recovery key)."""
+    from cognicion.seguridad.sbi_pro import verificar
+
+    return verificar(
+        body.audio_base64,
+        mime=body.audio_mime,
+        recovery_key=body.recovery_key,
+    ).a_dict()
+
+
+class EjecutivoRequest(BaseModel):
+    modulo: str = Field(
+        default="completo",
+        description="mercados|contenido|oportunidades|contactos|completo",
+    )
+    consulta: str = ""
+    tema: str = ""
+    numero: str = ""
+    plataforma: str = "shorts"
+    actor: str = "Israel Montas"
+
+
+@app.get("/api/ejecutivo/estado")
+def api_ejecutivo_estado() -> dict:
+    """Cerebro Ejecutivo — estado (exclusivo Israel Montas)."""
+    from cognicion.ejecutivo import estado_ejecutivo
+
+    return estado_ejecutivo()
+
+
+@app.post("/api/ejecutivo/informe")
+def api_ejecutivo_informe(body: EjecutivoRequest) -> dict:
+    """Informe ejecutivo: mercados / contenido / oportunidades / contactos."""
+    from cognicion.ejecutivo import informe_ejecutivo
+    from settings import EJECUTIVO_ENABLED
+
+    if not EJECUTIVO_ENABLED:
+        return {"ok": False, "error": "ejecutivo_desactivado"}
+    return informe_ejecutivo(
+        modulo=body.modulo,  # type: ignore[arg-type]
+        consulta=body.consulta,
+        tema=body.tema,
+        numero=body.numero,
+        plataforma=body.plataforma,
+        actor=body.actor,
+    )
+
+
+class CognitivoCorreccionRequest(BaseModel):
+    mensaje: str = Field(..., min_length=1, max_length=4000)
+    session_id: str | None = None
+    causa_raiz: str = ""
+
+
+class CognitivoConsolidarRequest(BaseModel):
+    session_id: str | None = None
+    notas: str = ""
+
+
+@app.get("/api/cognitivo/estado")
+def api_cognitivo_estado() -> dict:
+    """Cerebro Cognitivo Dual — Despertar."""
+    from cognicion.cognitivo import estado_cognitivo_dual
+
+    return estado_cognitivo_dual()
+
+
+@app.post("/api/cognitivo/pre")
+def api_cognitivo_pre(body: CognitivoCorreccionRequest) -> dict:
+    """Ciclo pre-tarea: claridad + crítico + lecciones episódicas."""
+    from cognicion.cognitivo import ciclo_pre_tarea
+
+    return ciclo_pre_tarea(body.mensaje, session_id=body.session_id)
+
+
+@app.post("/api/cognitivo/correccion")
+def api_cognitivo_correccion(body: CognitivoCorreccionRequest) -> dict:
+    """Registra corrección de Israel → memoria episódica + frase de aprendizaje."""
+    from cognicion.cognitivo import registrar_correccion
+
+    return registrar_correccion(
+        body.mensaje,
+        session_id=body.session_id,
+        causa_raiz=body.causa_raiz,
+    )
+
+
+@app.post("/api/cognitivo/consolidar")
+def api_cognitivo_consolidar(body: CognitivoConsolidarRequest) -> dict:
+    """Limpieza y consolidación de sesión → esencia permanente."""
+    from cognicion.cognitivo import consolidar_sesion
+
+    return consolidar_sesion(body.session_id, notas=body.notas)
 
 
 @app.get("/api/eficiencia")

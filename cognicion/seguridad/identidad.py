@@ -13,22 +13,26 @@ _PERMISOS: dict[RolAcceso, frozenset[str]] = {
     RolAcceso.ANON: frozenset({"salud", "manifest", "estatico"}),
     RolAcceso.USUARIO: frozenset({
         "salud", "chat", "historial", "tts", "cognicion", "herramientas",
-        "nucleo_lectura", "media",
+        "nucleo_lectura", "media", "sbi", "ejecutivo",
     }),
     RolAcceso.SERVICIO: frozenset({
         "salud", "chat", "historial", "tts", "cognicion", "herramientas",
-        "nucleo_lectura", "agente", "media",
+        "nucleo_lectura", "agente", "media", "sbi", "ejecutivo",
     }),
     RolAcceso.ADMIN: frozenset({
         "salud", "chat", "historial", "tts", "cognicion", "herramientas",
         "nucleo_lectura", "agente", "seguridad", "auditoria", "recuperacion",
-        "admin", "media",
+        "admin", "media", "sbi", "ejecutivo",
     }),
 }
 
 _RUTAS_PUBLICAS = frozenset({
     "/api/salud",
     "/api/nucleo/estado",
+    "/api/sbi/estado",
+    "/api/sbi/challenge",
+    "/api/ejecutivo/estado",
+    "/api/cognitivo/estado",
     "/manifest.webmanifest",
     "/favicon.svg",
     "/favicon-v2.ico",
@@ -54,6 +58,12 @@ _RUTAS_ADMIN = (
 
 
 def _clasificar_ruta(path: str) -> str:
+    if path.startswith("/api/sbi/"):
+        return "sbi"
+    if path.startswith("/api/ejecutivo"):
+        return "ejecutivo"
+    if path.startswith("/api/cognitivo"):
+        return "cognicion"
     if path.startswith("/api/seguridad/"):
         return "seguridad"
     if path.startswith("/api/cognicion/agente"):

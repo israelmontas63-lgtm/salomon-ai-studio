@@ -157,6 +157,27 @@ class MotorCognicion:
         }
         self._ultimo_plan = meta["cognicion"]
 
+        # Cerebro Cognitivo Dual — claridad + lecciones episódicas + crítico
+        try:
+            from cognicion.cognitivo import ciclo_pre_tarea, registrar_correccion
+
+            pre = ciclo_pre_tarea(entrada, session_id=self.session_id)
+            meta["cognicion"]["dual"] = {
+                "deseo": (pre.get("claridad") or {}).get("deseo"),
+                "intencion_central": (pre.get("claridad") or {}).get("intencion_central"),
+                "viable": (pre.get("critico") or {}).get("viable"),
+                "lecciones_n": len(pre.get("lecciones") or []),
+            }
+            if pre.get("bloque_interno"):
+                bloques.append(pre["bloque_interno"])
+            if pre.get("es_correccion"):
+                apr = registrar_correccion(entrada, session_id=self.session_id)
+                meta["cognicion"]["aprendizaje_error"] = apr
+                if apr.get("mensaje_israel"):
+                    meta["cognicion"]["frase_aprendizaje"] = apr.get("frase")
+        except Exception as exc:
+            meta["cognicion"]["dual_error"] = type(exc).__name__
+
         if plan.usar_rag:
             # Memoria unificada (inmediata + personal + RAG + JSON de sesión)
             ctx_mem, meta_mem = self._memory.contexto_para_turno(entrada)
@@ -433,11 +454,24 @@ class MotorCognicion:
         asistente: str,
         metadata_turno: dict[str, Any] | None = None,
     ) -> ResultadoAprendizaje:
-        """Reflexión post-turno — actualiza memoria de aprendizaje."""
-        return procesar_turno(
+        """Reflexión post-turno — actualiza memoria de aprendizaje + episodios."""
+        resultado = procesar_turno(
             self.session_id,
             usuario,
             asistente,
             self._gestor,
             metadata_turno=metadata_turno,
         )
+        try:
+            from cognicion.cognitivo import registrar_exito
+            from cognicion.cognitivo.episodica import es_correccion_usuario
+
+            if not es_correccion_usuario(usuario) and (asistente or "").strip():
+                registrar_exito(
+                    f"Turno útil. Israel: {(usuario or '')[:200]} | "
+                    f"Salomón: {(asistente or '')[:400]}",
+                    session_id=self.session_id,
+                )
+        except Exception:
+            pass
+        return resultado

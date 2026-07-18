@@ -17,11 +17,13 @@ class TipoMemoria(str, Enum):
     PREFERENCIAS = "preferencias"
     CONTEXTO = "contexto"
     APRENDIZAJE = "aprendizaje"
+    EPISODICA = "episodica"
 
 
 CAPAS_RAG: tuple[TipoMemoria, ...] = (
     TipoMemoria.PREFERENCIAS,
     TipoMemoria.APRENDIZAJE,
+    TipoMemoria.EPISODICA,
     TipoMemoria.PERMANENTE,
     TipoMemoria.PROYECTO,
     TipoMemoria.CONTEXTO,

@@ -71,6 +71,30 @@ SEGURIDAD_HABILITADA = os.getenv("SEGURIDAD_HABILITADA", "true").strip().lower()
     "1", "true", "yes", "on",
 )
 
+# ── SBI-PRO — Speaker Biometric Identity (Israel Monta) ─────────────────────
+# off/soft/strict vía módulo; plantilla en data/seguridad/ (gitignored).
+SBI_ENABLED = os.getenv("SBI_ENABLED", "false").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+SBI_MODE = (os.getenv("SBI_MODE", "soft") or "soft").strip().lower()
+SBI_THRESHOLD = float(os.getenv("SBI_THRESHOLD", "0.82") or "0.82")
+SBI_RECOVERY_KEY = os.getenv("SBI_RECOVERY_KEY", "").strip()
+SBI_ENROLL_TOKEN = os.getenv("SBI_ENROLL_TOKEN", "").strip()
+SBI_TEMPLATE_SECRET = os.getenv("SBI_TEMPLATE_SECRET", "").strip()
+SBI_OWNER_NAME = os.getenv("SBI_OWNER_NAME", "Israel Monta").strip() or "Israel Monta"
+SBI_CHALLENGE_PHRASE = os.getenv(
+    "SBI_CHALLENGE_PHRASE", "Salomon autentica a Israel"
+).strip()
+SBI_TEMPLATE_PATH = os.getenv(
+    "SBI_TEMPLATE_PATH", "data/seguridad/sbi_israel.json"
+).strip()
+
+# ── Cerebro Ejecutivo (Israel Montas — propiedad privada) ──────────────────
+EJECUTIVO_ENABLED = os.getenv("EJECUTIVO_ENABLED", "true").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+NUMVERIFY_API_KEY = os.getenv("NUMVERIFY_API_KEY", "").strip()
+
 # ── Proveedor LLM ──────────────────────────────────────────────────────────
 MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "gemini").strip().lower()
 

@@ -29,6 +29,12 @@ data/memoria_chroma/
 data/memoria_sesiones.json
 data/agente_backups/
 data/seguridad_backups/
+data/seguridad/sbi_*.json
+data/seguridad/*.json
+!data/seguridad/samples/README.md
+!data/seguridad/.gitkeep
+salomon_esencia_ledger.jsonl
+salomon_integrity_attempts.jsonl
 data/bca/
 data/*.db
 data/modelos/

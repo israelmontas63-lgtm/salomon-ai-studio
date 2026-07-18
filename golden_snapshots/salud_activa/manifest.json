@@ -7,7 +7,7 @@
     "app.py": {
       "source": "app.py",
       "snapshot": "golden_snapshots/salud_activa/app.py",
-      "sha256": "dbef17981f4314acc7aec573abc4850e7cc514727a2ed00117612539b5f38ebe"
+      "sha256": "5554de05ddedb74b445625a4c2f5cefb1716f058831cc586f774525ee9cbe7fa"
     },
     "CameraEngine": {
       "source": "studio/dist/camera-engine.js",
@@ -27,7 +27,7 @@
     "UI_Layout": {
       "source": "studio/dist/index.html",
       "snapshot": "golden_snapshots/salud_activa/index.html",
-      "sha256": "3be16f5221ed51c9637c8e9af42d5eb90d8a3642749cef755182b38258272bc6"
+      "sha256": "5d216111eb8011b1b13d3df8a8336ac81c0df67ebdd2c4f809014c7b96034703"
     },
     "SecurityKernel": {
       "source": "studio/dist/salomon-security-kernel.js",
