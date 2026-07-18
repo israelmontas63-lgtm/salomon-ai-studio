@@ -73,11 +73,11 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "21a2b577c866f3b5a12ac971188252c1b0d9bd02d9a499c83c56108671df7f4c",
+    "app.py": "cc4db20e5c98757f3d1b845f026b1e8d63aa00825cde59630a2381e44aeb2391",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
-    "studio/dist/index.html": "f1715c6d58ba913417e40a5ab33253e195322de1e0a9d1ec9f0247720033db8b",
+    "studio/dist/index.html": "3be16f5221ed51c9637c8e9af42d5eb90d8a3642749cef755182b38258272bc6",
     "studio/dist/salomon-security-kernel.js": "cf42ef62d1ec2b9fd181dc2ca64cd2f2ca58e32fd314aeed204534d7886b95ec",
     "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
@@ -265,5 +265,7 @@
       "by": "Israel+Cursor",
       "note": "Push produccion; espera autorizacion fisica mic/cam"
     }
-  ]
+  ],
+  "updated_at": "2026-07-18T13:34:24.857650+00:00",
+  "note": "resync local v107 — Actualizar menú H / UTF-8 / salida limpia"
 }

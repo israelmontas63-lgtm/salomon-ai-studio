@@ -15,7 +15,7 @@ function createRecognition(lang = "es-ES", { continuous = false } = {}) {
 
   const rec = new SpeechRecognition();
   rec.lang = lang;
-  rec.interimResults = false;
+  rec.interimResults = true; // Fase 1 — pensar mientras Israel aún habla
   rec.continuous = continuous;
   rec.maxAlternatives = 1;
   return rec;
@@ -140,6 +140,22 @@ export default function VoiceButton({
         const result = event.results?.[event.results.length - 1];
         const text = result?.[0]?.transcript?.trim();
         if (!text) return;
+
+        // Fase 1: interim → feedback en vivo; solo finales disparan el chat
+        const isFinal = Boolean(result?.isFinal);
+        if (!isFinal) {
+          try {
+            window.dispatchEvent(
+              new CustomEvent("salomon:fase1-escuchando", {
+                detail: { texto: text, final: false },
+              })
+            );
+          } catch {
+            /* ignore */
+          }
+          onNotify?.(`Escuchando… ${text.slice(0, 36)}`);
+          return;
+        }
 
         const autoSend =
           mode === CaptureMode.CONVERSATION ||

@@ -65,7 +65,7 @@ export default function App() {
         hapticPulse(8);
       },
       onError: () => {
-        // Fallo de audio (ElevenLabs/repro): omitir, UI sigue con el texto
+        // Fallo de audio (Cartesia/repro): omitir, UI sigue con el texto
         audioPlayingRef.current = false;
         setAppStatus("ready");
       },
@@ -93,7 +93,7 @@ export default function App() {
             };
           }
         } catch {
-          /* ElevenLabs / TTS opcional — no bloquea el chat */
+          /* Cartesia Sonic-3.5 / TTS opcional — no bloquea el chat */
         }
       }
     } catch {

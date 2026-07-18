@@ -16,4 +16,4 @@ Pregunta del usuario: qué es Python"""
 def test_respuesta_local_sin_contexto():
     texto = respuesta_local_chat("Hola Salomón", [], "")
     assert "Israel" in texto
-    assert "cuota" in texto.lower() or "nube" in texto.lower()
+    assert "nube" in texto.lower() or "aquí estoy" in texto.lower()

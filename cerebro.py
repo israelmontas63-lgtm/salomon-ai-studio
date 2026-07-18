@@ -6,8 +6,6 @@ Diseñado para conectarse a una interfaz web u otro cliente mediante la clase Sa
 
 from __future__ import annotations
 
-import base64
-import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,112 +24,22 @@ from cognicion.codigo.guardrails import analizar_respuesta_codigo
 from cognicion.seguridad import enmascarar_secreto
 from settings import (
     APRENDIZAJE_ASYNC,
-    ELEVENLABS_API_KEY,
-    ELEVENLABS_MODEL_ID,
-    ELEVENLABS_SIMILARITY,
-    ELEVENLABS_STABILITY,
-    ELEVENLABS_STYLE,
-    ELEVENLABS_VOICE_ID,
     GEMINI_MAX_TURNOS,
     GEMINI_MODEL,
     TTS_ASYNC,
 )
 
-_tts_lock = threading.Lock()
-
-_ELEVENLABS_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-
-
-@dataclass
-class ResultadoTTS:
-    """Resultado de la síntesis de voz (ElevenLabs)."""
-
-    audio_base64: str | None = None
-    audio_mime: str = "audio/mpeg"
-    tts_disponible: bool = False
-    error: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "audio_base64": self.audio_base64,
-            "audio_mime": self.audio_mime,
-            "tts_disponible": self.tts_disponible,
-            "error": self.error,
-        }
-
-
-def _texto_a_voz_elevenlabs(texto: str) -> ResultadoTTS:
-    """Síntesis con ElevenLabs Multilingual v2 — perfil juvenil y enérgico."""
-    import httpx
-
-    if not ELEVENLABS_API_KEY:
-        return ResultadoTTS(
-            tts_disponible=False,
-            error="elevenlabs_api_key_faltante",
-        )
-    if not ELEVENLABS_VOICE_ID:
-        return ResultadoTTS(
-            tts_disponible=False,
-            error="elevenlabs_voice_id_faltante",
-        )
-
-    url = _ELEVENLABS_TTS_URL.format(voice_id=ELEVENLABS_VOICE_ID)
-    # MP3 44.1 kHz — buena fidelidad y compatible con el reproductor del sistema
-    params = {"output_format": "mp3_44100_128"}
-    headers = {
-        "xi-api-key": ELEVENLABS_API_KEY,
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "text": texto,
-        "model_id": ELEVENLABS_MODEL_ID or "eleven_multilingual_v2",
-        "voice_settings": {
-            # Stability baja → más variación / energía juvenil
-            "stability": max(0.0, min(1.0, ELEVENLABS_STABILITY)),
-            "similarity_boost": max(0.0, min(1.0, ELEVENLABS_SIMILARITY)),
-            "style": max(0.0, min(1.0, ELEVENLABS_STYLE)),
-            "use_speaker_boost": True,
-        },
-    }
-
-    try:
-        with httpx.Client(timeout=60.0) as client:
-            resp = client.post(url, params=params, headers=headers, json=payload)
-        if resp.status_code >= 400:
-            detalle = (resp.text or "")[:240]
-            return ResultadoTTS(
-                tts_disponible=False,
-                error=f"elevenlabs_http_{resp.status_code}:{detalle}",
-            )
-        audio = resp.content
-        if not audio:
-            return ResultadoTTS(tts_disponible=False, error="elevenlabs_audio_vacio")
-        return ResultadoTTS(
-            audio_base64=base64.b64encode(audio).decode("ascii"),
-            audio_mime="audio/mpeg",
-            tts_disponible=True,
-        )
-    except Exception as exc:
-        return ResultadoTTS(
-            tts_disponible=False,
-            error=f"elevenlabs_{type(exc).__name__}",
-        )
+from cognicion.voz.cartesia_tts import ResultadoTTS, hablar_salomon
 
 
 def texto_a_voz(texto: str) -> ResultadoTTS:
     """
-    Convierte texto en audio con ElevenLabs (motor principal).
+    Convierte texto en audio con Cartesia Sonic-3.5 (WebSocket, baja latencia).
 
-    Modelo: eleven_multilingual_v2 — fluidez natural en español.
-    Perfil: stability baja + style alto = energía juvenil.
+    Claves: CARTESIA_API_KEY + CARTESIA_VOICE_ID (solo entorno).
+    Si el servicio cae, soft-fail sin tumbar el chat.
     """
-    contenido = (texto or "").strip()
-    if not contenido:
-        return ResultadoTTS(tts_disponible=False, error="texto_vacio")
-
-    with _tts_lock:
-        return _texto_a_voz_elevenlabs(contenido)
+    return hablar_salomon(texto)
 
 
 @dataclass

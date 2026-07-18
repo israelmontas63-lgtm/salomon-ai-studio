@@ -33,7 +33,7 @@ _BENEFICIO = (
     "voz", "visión", "vision", "hd", "macro", "micro", "cromátic", "cromatic",
     "color", "biblioteca", "api externa", "hablar", "escuchar", "ocr",
     "accesib", "eficiencia", "optimiza", "mejorar capacidad", "aprender",
-    "nuevo idioma", "speech", "whisper", "elevenlabs", "gemini", "openai",
+    "nuevo idioma", "speech", "whisper", "cartesia", "sonic", "gemini", "openai",
 )
 
 # Señales de riesgo / daño

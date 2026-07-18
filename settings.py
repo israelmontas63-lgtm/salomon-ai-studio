@@ -35,18 +35,14 @@ GEMINI_MODELOS_RESPALDO = [
 # ── OpenWeatherMap ─────────────────────────────────────────────────────────
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "").strip()
 
-# ── TTS — ElevenLabs (motor principal) ─────────────────────────────────────
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "").strip()
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
-ELEVENLABS_MODEL_ID = os.getenv(
-    "ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"
-).strip()
-# Perfil juvenil / enérgico (más expresivo = stability más baja)
-ELEVENLABS_STABILITY = float(os.getenv("ELEVENLABS_STABILITY", "0.32"))
-ELEVENLABS_SIMILARITY = float(os.getenv("ELEVENLABS_SIMILARITY", "0.82"))
-ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.55"))
+# ── TTS — Cartesia Sonic-3.5 (motor de alta gama) ──────────────────────────
+CARTESIA_API_KEY = os.getenv("CARTESIA_API_KEY", "").strip()
+CARTESIA_VOICE_ID = os.getenv("CARTESIA_VOICE_ID", "").strip()
+CARTESIA_MODEL_ID = os.getenv("CARTESIA_MODEL_ID", "sonic-3.5").strip() or "sonic-3.5"
+CARTESIA_LANGUAGE = os.getenv("CARTESIA_LANGUAGE", "es").strip() or "es"
+CARTESIA_SAMPLE_RATE = int(os.getenv("CARTESIA_SAMPLE_RATE", "44100") or "44100")
 
-# Compatibilidad (ya no se usan como motor principal)
+# Compatibilidad de flags de orquestación (sin motores legacy)
 TTS_RATE = int(os.getenv("TTS_RATE", "185"))
 TTS_VOLUME = float(os.getenv("TTS_VOLUME", "0.95"))
 TTS_ASYNC = os.getenv("TTS_ASYNC", "false").strip().lower() in ("1", "true", "yes", "on")

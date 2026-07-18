@@ -25,7 +25,7 @@ configurar_registro()
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -69,6 +69,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/evolucion/30x",
         "/api/comic/estado",
         "/api/media/estado",
+        "/api/autonoma/fase1/estado",
     }
 )
 
@@ -339,6 +340,8 @@ class ChatRequest(BaseModel):
     imagen_mime: str = "image/png"
     error_consola: str | None = Field(default=None, max_length=8000)
     autonomo: bool = False
+    # Fase 1 — pipeline autónomo (visión + búsqueda/síntesis + estados)
+    fase1: bool = False
 
 
 class ChatResponse(BaseModel):
@@ -477,7 +480,7 @@ def version_json_file():
 @app.get("/api/version")
 def api_version() -> dict:
     """Build actual en Render — el cliente lo usa para auto-actualizar la PWA."""
-    from settings import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
+    from settings import CARTESIA_API_KEY, CARTESIA_MODEL_ID, CARTESIA_VOICE_ID
 
     data = _leer_version_json()
     return {
@@ -489,8 +492,9 @@ def api_version() -> dict:
         "build": data.get("build"),
         "build_full": data.get("build_full"),
         "channel": data.get("channel") or "main",
-        "tts_env": "ELEVENLABS_API_KEY",
-        "tts_configurado": bool(ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID),
+        "tts_env": "CARTESIA_API_KEY",
+        "tts_modelo": CARTESIA_MODEL_ID or "sonic-3.5",
+        "tts_configurado": bool(CARTESIA_API_KEY and CARTESIA_VOICE_ID),
         "live": True,
     }
 
@@ -851,19 +855,20 @@ def api_tunel_estado() -> dict:
 
 class TtsResponse(BaseModel):
     audio_base64: str | None = None
-    audio_mime: str = "audio/mpeg"
+    audio_mime: str = "audio/wav"
     tts_disponible: bool = False
     error: str | None = None
 
 
 @app.post("/api/tts", response_model=TtsResponse)
 def api_tts(body: TextoRequest) -> TtsResponse:
-    from cerebro import texto_a_voz
+    """TTS Cartesia Sonic-3.5 — WebSocket baja latencia (clave solo en entorno)."""
+    from cognicion.voz.cartesia_tts import hablar_salomon
 
-    resultado = texto_a_voz(body.texto)
+    resultado = hablar_salomon(body.texto)
     return TtsResponse(
         audio_base64=resultado.audio_base64,
-        audio_mime=resultado.audio_mime,
+        audio_mime=resultado.audio_mime or "audio/wav",
         tts_disponible=resultado.tts_disponible,
         error=resultado.error,
     )
@@ -883,6 +888,34 @@ def api_hablar(body: HablarRequest) -> dict:
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(body: ChatRequest) -> ChatResponse:
     session_id, salomon = _obtener_o_crear_sesion(body.session_id)
+
+    if body.fase1:
+        from cognicion.autonoma.fase1 import ejecutar_fase1
+
+        pack = ejecutar_fase1(
+            body.mensaje,
+            imagen_base64=body.imagen_base64,
+            imagen_mime=body.imagen_mime,
+        )
+        texto = pack.get("texto") or ""
+        meta = dict(pack.get("metadata") or {})
+        meta["fase1"] = True
+        if body.mensaje.strip() or body.imagen_base64:
+            _persistir_turno(
+                session_id,
+                (body.mensaje or "").strip() or "[foto]",
+                texto,
+            )
+        return ChatResponse(
+            texto=texto,
+            exito=bool(pack.get("exito")),
+            session_id=session_id,
+            metadata=meta,
+            audio_base64=None,
+            audio_mime="audio/mpeg",
+            tts_disponible=False,
+        )
+
     respuesta = salomon.procesar_entrada(
         body.mensaje,
         lat=body.lat,
@@ -904,6 +937,98 @@ def chat(body: ChatRequest) -> ChatResponse:
         audio_base64=respuesta.audio_base64,
         audio_mime=respuesta.audio_mime,
         tts_disponible=respuesta.tts_disponible,
+    )
+
+
+class Fase1Request(BaseModel):
+    mensaje: str = Field(default="", max_length=4000)
+    session_id: str | None = None
+    imagen_base64: str | None = Field(default=None, max_length=8_000_000)
+    imagen_mime: str = "image/png"
+
+
+@app.get("/api/autonoma/fase1/estado")
+def autonoma_fase1_estado() -> dict:
+    return {
+        "ok": True,
+        "fase": "1",
+        "protocolo": "SALOMON_AUTONOMO_FASE1",
+        "capacidades": {
+            "vision_escena": True,
+            "agentes_paralelos": ["busqueda", "sintesis"],
+            "streaming_estados": True,
+            "audio_interim": True,
+        },
+        "siguiente": "Fase 2 — analítico + verificador + HF/Wikipedia profunda",
+        "firma": "Created by Israel Monta - Salomón AI Studio",
+    }
+
+
+@app.post("/api/autonoma/fase1")
+def autonoma_fase1(body: Fase1Request) -> dict:
+    """JSON síncrono — misma lógica que el stream, sin SSE."""
+    from cognicion.autonoma.fase1 import ejecutar_fase1
+
+    session_id, _salomon = _obtener_o_crear_sesion(body.session_id)
+    pack = ejecutar_fase1(
+        body.mensaje,
+        imagen_base64=body.imagen_base64,
+        imagen_mime=body.imagen_mime,
+    )
+    texto = pack.get("texto") or ""
+    if body.mensaje.strip() or body.imagen_base64:
+        _persistir_turno(
+            session_id,
+            (body.mensaje or "").strip() or "[foto]",
+            texto,
+        )
+    return {
+        "texto": texto,
+        "exito": bool(pack.get("exito")),
+        "session_id": session_id,
+        "metadata": pack.get("metadata") or {},
+    }
+
+
+@app.post("/api/autonoma/fase1/stream")
+def autonoma_fase1_stream(body: Fase1Request) -> StreamingResponse:
+    """
+    SSE: emite status (Estoy pensando / buscando / sintetizando…)
+    y cierra con evento done { texto, metadata }.
+    """
+    from cognicion.autonoma.fase1 import evento_sse, iter_eventos_fase1
+
+    session_id, _salomon = _obtener_o_crear_sesion(body.session_id)
+
+    def gen():
+        final_texto = ""
+        for ev in iter_eventos_fase1(
+            body.mensaje,
+            imagen_base64=body.imagen_base64,
+            imagen_mime=body.imagen_mime,
+        ):
+            if ev.get("type") == "done":
+                final_texto = ev.get("texto") or ""
+                ev = {**ev, "session_id": session_id}
+            yield evento_sse(ev)
+        if final_texto and (body.mensaje.strip() or body.imagen_base64):
+            try:
+                _persistir_turno(
+                    session_id,
+                    (body.mensaje or "").strip() or "[foto]",
+                    final_texto,
+                )
+            except Exception:
+                pass
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

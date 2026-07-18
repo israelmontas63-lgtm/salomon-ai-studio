@@ -10,3 +10,4 @@ psutil>=5.9.0
 Pillow>=10.0.0
 numpy>=1.26.0
 chromadb>=0.5.0
+cartesia[websockets]>=2.0.0

@@ -1,9 +1,10 @@
 """Visión — análisis de capturas y VDCP (carga diferida)."""
 
-from cognicion.vision.analizador import ResultadoVision, analizar_imagen
+from cognicion.vision.analizador import ResultadoVision, analizar_escena, analizar_imagen
 
 __all__ = [
     "ResultadoVision",
+    "analizar_escena",
     "analizar_imagen",
     "ejecutar_vdcp",
     "estado_vdcp",

@@ -45,9 +45,11 @@ services:
         sync: false
       - key: TAVILY_API_KEY
         sync: false
-      - key: ELEVENLABS_API_KEY
+      - key: CARTESIA_API_KEY
         sync: false
-      - key: ELEVENLABS_VOICE_ID
+      - key: CARTESIA_VOICE_ID
         sync: false
+      - key: CARTESIA_MODEL_ID
+        value: "sonic-3.5"
       - key: TTS_ASYNC
         value: "false"

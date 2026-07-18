@@ -62,6 +62,27 @@ def _limpiar_bloque(texto: str) -> str:
     return "\n".join(lineas[:14])
 
 
+def _es_saludo_simple(texto: str) -> bool:
+    t = re.sub(r"\s+", " ", (texto or "").strip().lower())
+    if not t or len(t) > 48:
+        return False
+    return bool(
+        re.search(
+            r"^(hola|buenas|buen[oa]s?\s+d[ií]as|hey|saludos|qu[eé]\s+tal)\b",
+            t,
+        )
+    )
+
+
+def _con_israel(texto: str) -> str:
+    t = (texto or "").strip()
+    if not t:
+        return "Israel, aquí estoy. Dime en qué te ayudo."
+    if re.search(r"\bIsrael\b", t):
+        return t
+    return f"Israel, {t}"
+
+
 def respuesta_local_chat(
     mensaje: str,
     historial: list[dict],
@@ -86,6 +107,14 @@ def respuesta_local_chat(
                 f"Si quieres, profundizo en «{pregunta[:100]}» o busco otro ángulo."
             )
 
+    # Saludos: no disparar búsqueda web (evita basura / fugas de contexto).
+    if _es_saludo_simple(pregunta):
+        return (
+            "Israel, aquí estoy contigo. "
+            "El motor en la nube puede estar en respaldo local; "
+            "dime qué necesitas y lo atendemos."
+        )
+
     # 2) Respaldo principal: agente de búsqueda web
     if BUSQUEDA_WEB_AUTO and pregunta:
         try:
@@ -93,7 +122,7 @@ def respuesta_local_chat(
 
             pack = responder_con_busqueda(pregunta)
             if pack.get("texto"):
-                return pack["texto"]
+                return _con_israel(str(pack["texto"]))
         except Exception:
             pass
 
@@ -113,5 +142,6 @@ def respuesta_local_chat(
         "• «¿Cómo está el clima?»\n"
         "• «Busca en Wikipedia sobre el núcleo de la Tierra»\n"
         "• «Últimas noticias de ciencia»\n\n"
-        "Así activo conectores en vivo y te respondo con claridad."
+        "Así activo conectores en vivo y te respondo con claridad "
+        "(sin depender solo de la nube)."
     )
