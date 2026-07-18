@@ -46,22 +46,37 @@ class MemoryController:
             bloques.append(personal)
             meta["personal"] = True
 
-        inmediata = self._gestor.memoria_inmediata(limite=8)
-        if inmediata:
-            bloques.append(inmediata)
-            meta["inmediata"] = True
+        # No inyectar «memoria inmediata» aquí: el historial ya viaja aparte
+        # a Gemini vía chat_con_historial (evita turnos duplicados en el prompt).
+        proyecto, meta_proj = self._gestor.memoria_proyecto()
+        if proyecto:
+            bloques.append(proyecto)
+            meta["proyecto"] = meta_proj
 
-        rag, meta_rag = self._gestor.contexto_rag(consulta or "")
-        if rag:
-            bloques.append(rag)
-            meta["rag"] = meta_rag
+        if self._gestor.activa:
+            from cognicion.memoria.tipos import CAPAS_RAG
+            from cognicion.memoria.vectorial import obtener_memoria
 
-        # Fallback JSON de sesiones (ligero, siempre disponible)
+            capas = [c.value for c in CAPAS_RAG]
+            rag = obtener_memoria().contexto_rag(
+                consulta or "",
+                session_id=self.session_id,
+                capas=capas,
+            )
+            if rag:
+                bloques.append(rag)
+                meta["rag"] = {"capas_consultadas": capas, "rag_usado": True}
+
+        # Fallback JSON de sesiones (hechos, no historial completo)
         snap = self._cargar_snapshot_sesion()
         if snap.get("hechos"):
             lineas = ["[Memoria de sesión — hechos recordados]"]
             for h in snap["hechos"][-12:]:
                 lineas.append(f"- {h}")
+            lineas.append(
+                "Instrucción: Usa estos hechos solo como referencia interna. "
+                "No los cites ni muestres etiquetas técnicas al usuario."
+            )
             bloques.append("\n".join(lineas))
             meta["sesion_json"] = True
 

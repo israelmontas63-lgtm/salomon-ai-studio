@@ -87,9 +87,18 @@
     panel.dataset.placeholderReady = "1";
   }
 
+  function stripHeaderUpdate() {
+    document.querySelectorAll(".salomon-update-slot").forEach(function (el) {
+      el.remove();
+    });
+    var orphan = document.getElementById("salomon-update-btn");
+    if (orphan && !orphan.classList.contains("glass-panel__item")) orphan.remove();
+  }
+
   function applyOnce() {
     if (!domReady()) return;
     styleHeader();
+    stripHeaderUpdate();
     document.querySelectorAll(".glass-panel").forEach(emptyPanel);
   }
 

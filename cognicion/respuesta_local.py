@@ -8,17 +8,14 @@ from __future__ import annotations
 import re
 
 
+# Solo hechos presentables al usuario (NUNCA memoria/RAG cruda).
 _MARCADORES = (
     "[Datos de clima",
     "[Wikipedia",
     "[Wikidata",
     "[Búsqueda web",
     "[Noticias",
-    "[Memoria vectorial",
-    "[Memoria inmediata",
-    "[Memoria de proyecto",
     "[Contexto de visión",
-    "[Auto-corrección",
 )
 
 
@@ -58,6 +55,9 @@ def _limpiar_bloque(texto: str) -> str:
             continue
         if s.startswith("Instrucción:"):
             break
+        if s.startswith("[") and s.endswith("]"):
+            continue
+        s = re.sub(r"\s*\(relevancia:\s*[0-9.]+\)", "", s, flags=re.IGNORECASE)
         lineas.append(s)
     return "\n".join(lineas[:14])
 
@@ -76,12 +76,15 @@ def respuesta_local_chat(
 
     # 1) Si ya hay hechos enriquecidos, presentarlos con estilo (sin hablar de cuota)
     if bloques:
-        cuerpo = "\n\n".join(bloques)
-        return (
-            f"Israel, esto es lo esencial sobre tu consulta:\n\n"
-            f"{cuerpo}\n\n"
-            f"Si quieres, profundizo en «{pregunta[:100]}» o busco otro ángulo."
-        )
+        from cognicion.salida_limpia import sanitizar_salida_chat
+
+        cuerpo = sanitizar_salida_chat("\n\n".join(bloques))
+        if cuerpo:
+            return (
+                f"Israel, esto es lo esencial sobre tu consulta:\n\n"
+                f"{cuerpo}\n\n"
+                f"Si quieres, profundizo en «{pregunta[:100]}» o busco otro ángulo."
+            )
 
     # 2) Respaldo principal: agente de búsqueda web
     if BUSQUEDA_WEB_AUTO and pregunta:

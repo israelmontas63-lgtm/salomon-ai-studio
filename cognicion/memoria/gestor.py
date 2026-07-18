@@ -103,10 +103,8 @@ class GestorMemoria:
             meta["capas_consultadas"].append(TipoMemoria.PROYECTO.value)
             meta.update(meta_proj)
 
-        inmediata = self.memoria_inmediata()
-        if inmediata:
-            bloques.append(inmediata)
-            meta["capas_consultadas"].append(TipoMemoria.INMEDIATA.value)
+        # Historial de turnos NO va en el bloque RAG: Gemini ya recibe
+        # el historial por chat_con_historial (evita reinjectar el hilo).
 
         if self._vectorial.activa:
             capas = [c.value for c in CAPAS_RAG]

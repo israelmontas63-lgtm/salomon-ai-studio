@@ -1,8 +1,9 @@
 /**
- * MÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³dulo de ActualizaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n Proactiva ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â SalomÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n AI
+ * Módulo de Actualización Proactiva — Salomón AI
  * Compara /version.json del servidor vs localStorage.
- * Si el servidor es mÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡s nuevo ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ force-reload invisible.
- * Indicador discreto: "VersiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n: X.X"
+ * Si el servidor es más nuevo → force-reload invisible.
+ * Indicador discreto: "Versión: X.X"
+ * "Actualizar" vive solo dentro del menú H (Herramientas).
  */
 (function () {
   "use strict";
@@ -10,16 +11,10 @@
   var STORAGE_KEY = "salomon_version_manifest";
   var POLL_MS = 25000;
   var VERSION_SCRIPT = "camera-13.0.0";
+  var MENU_LABEL = "Actualizar";
   var polling = false;
   var applying = false;
-  var mountTries = 0;
-
-  var SYNC_ICON =
-    '<svg class="salomon-update-btn__svg" viewBox="0 0 24 24" aria-hidden="true">' +
-    '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
-    'd="M20 12a8 8 0 1 1-2.2-5.4"/>' +
-    '<path fill="currentColor" d="M20 4v5h-5l5-5z"/>' +
-    "</svg>";
+  var menuObserver = null;
 
   function log() {
     try {
@@ -51,10 +46,10 @@
       });
   }
 
-  /** true si remote es mÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡s nuevo que local */
+  /** true si remote es más nuevo que local */
   function isNewer(remote, local) {
     if (!remote) return false;
-    if (!local) return false; // primera visita: solo guardar, no recargar en loop
+    if (!local) return false;
     var rt = Number(remote.timestamp) || 0;
     var lt = Number(local.timestamp) || 0;
     if (rt > 0 && lt > 0 && rt > lt) return true;
@@ -89,67 +84,104 @@
       el.setAttribute("aria-live", "polite");
       document.body.appendChild(el);
     }
-    var ver = (manifest && manifest.version) || "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â";
-    el.textContent = "VersiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n: " + ver;
+    var ver = (manifest && manifest.version) || "—";
+    el.textContent = "Versión: " + ver;
     el.title = manifest
-      ? "build " + (manifest.build || "?") + " ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· " + (manifest.timestamp_iso || "")
-      : "SalomÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n AI";
+      ? "build " + (manifest.build || "?") + " · " + (manifest.timestamp_iso || "")
+      : "Salomón AI";
   }
 
-  function mountInHeader() {
-    var existing = document.getElementById("salomon-update-btn");
-    if (existing) {
-      if (!existing.closest(".studio-header")) existing.remove();
-      else {
-        ensureVersionBadge(readLocal());
-        return true;
+  /** Quita el botón flotante del header (ya no debe aparecer fuera del menú H). */
+  function removeHeaderUpdateButton() {
+    var slots = document.querySelectorAll(".salomon-update-slot");
+    for (var i = 0; i < slots.length; i++) slots[i].remove();
+    var orphan = document.getElementById("salomon-update-btn");
+    if (orphan && !orphan.classList.contains("glass-panel__item")) orphan.remove();
+  }
+
+  function toolsPanelNav() {
+    var panel =
+      document.querySelector(".glass-panel.drawer-open.glass-panel--right") ||
+      document.querySelector(".glass-panel--right.drawer-open") ||
+      document.querySelector('.glass-panel[aria-label="Herramientas"]');
+    if (!panel) {
+      var panels = document.querySelectorAll(".glass-panel");
+      for (var i = 0; i < panels.length; i++) {
+        var h2 = panels[i].querySelector(".glass-panel__header h2");
+        if (h2 && /Herramientas/i.test(h2.textContent || "")) {
+          panel = panels[i];
+          break;
+        }
       }
     }
+    return panel ? panel.querySelector(".glass-panel__list") : null;
+  }
 
-    var header = document.querySelector(".studio-header");
-    if (!header) return false;
+  function findUpdateMenuItem(nav) {
+    if (!nav) return null;
+    var items = nav.querySelectorAll(".glass-panel__item, button");
+    for (var i = 0; i < items.length; i++) {
+      var t = (items[i].textContent || "").replace(/\s+/g, " ").trim();
+      if (t === MENU_LABEL || items[i].id === "salomon-update-btn") return items[i];
+    }
+    return null;
+  }
 
-    document.documentElement.classList.add("salomon-mockup-ui");
+  function onUpdateClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    applyUpdate({ reason: "manual", force: true, silent: false });
+  }
 
-    var slot = document.createElement("div");
-    slot.className = "salomon-update-slot";
-    slot.innerHTML =
-      '<button type="button" id="salomon-update-btn" class="salomon-update-btn" ' +
-      'title="Forzar actualización desde Render" aria-label="Actualizar">' +
-      '<span class="salomon-update-btn__icon">' +
-      SYNC_ICON +
-      "</span>" +
-      '<span class="salomon-update-btn__label">Actualizar</span>' +
-      '<span class="salomon-update-btn__badge" hidden aria-hidden="true"></span>' +
-      "</button>";
+  function ensureUpdateInToolsMenu() {
+    removeHeaderUpdateButton();
+    var nav = toolsPanelNav();
+    if (!nav) return false;
 
-    var btns = header.querySelectorAll(".header-menu-btn");
-    if (btns.length >= 2) btns[1].parentNode.insertBefore(slot, btns[1]);
-    else header.appendChild(slot);
+    var existing = findUpdateMenuItem(nav);
+    if (existing) {
+      existing.id = "salomon-update-btn";
+      existing.classList.add("glass-panel__item", "salomon-update-menu-item");
+      if (!existing.dataset.salomonUpdateBound) {
+        existing.dataset.salomonUpdateBound = "1";
+        existing.addEventListener("click", onUpdateClick);
+      }
+      return true;
+    }
 
-    document.getElementById("salomon-update-btn").addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      applyUpdate({ reason: "manual", force: true, silent: false });
-    });
+    // React aún no pintó items: no insertar placeholder suelto
+    if (!nav.querySelector(".glass-panel__item")) return false;
 
-    ensureToast();
-    ensureVersionBadge(readLocal());
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "salomon-update-btn";
+    btn.className = "glass-panel__item salomon-update-menu-item";
+    btn.textContent = MENU_LABEL;
+    btn.setAttribute("aria-label", MENU_LABEL);
+    btn.title = "Forzar actualización desde Render";
+    btn.dataset.salomonUpdateBound = "1";
+    btn.addEventListener("click", onUpdateClick);
+    nav.appendChild(btn);
     return true;
   }
 
-  function ensureUi() {
-    if (mountInHeader()) return;
-    mountTries += 1;
-    if (mountTries < 40) setTimeout(ensureUi, 250);
+  function watchToolsMenu() {
+    if (menuObserver) return;
+    var root = document.getElementById("root") || document.body;
+    menuObserver = new MutationObserver(function () {
+      ensureUpdateInToolsMenu();
+    });
+    try {
+      menuObserver.observe(root, { childList: true, subtree: true });
+    } catch (e) {}
   }
 
   function setBadge(on) {
     var btn = document.getElementById("salomon-update-btn");
     if (!btn) return;
-    var badge = btn.querySelector(".salomon-update-btn__badge");
     btn.classList.toggle("is-ready", !!on);
-    if (badge) badge.hidden = !on;
+    if (on) btn.setAttribute("data-update-ready", "1");
+    else btn.removeAttribute("data-update-ready");
   }
 
   function toast(msg) {
@@ -234,7 +266,6 @@
       headers: { Accept: "application/json" },
     });
     if (!res.ok) {
-      // Fallback API
       res = await fetch("/api/version?t=" + Date.now(), { cache: "no-store" });
     }
     if (!res.ok) throw new Error("version_http_" + res.status);
@@ -257,10 +288,9 @@
       }
 
       if (isNewer(remote, local)) {
-        log("servidor mÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡s nuevo ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ reload invisible", local.version, "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢", remote.version);
+        log("servidor más nuevo → reload invisible", local.version, "→", remote.version);
         setBadge(true);
         writeLocal(remote);
-        // Invisible: sin toast, force inmediato
         applyUpdate({
           reason: opts.reason || "proactive",
           force: true,
@@ -270,7 +300,6 @@
         return;
       }
 
-      // Misma versiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n: refrescar badge/build local
       writeLocal(remote);
       ensureVersionBadge(remote);
       setBadge(false);
@@ -283,7 +312,6 @@
   function startPolling() {
     if (polling) return;
     polling = true;
-    // Al abrir la app
     checkOnce({ reason: "boot" });
     setInterval(function () {
       checkOnce({ reason: "poll" });
@@ -295,17 +323,22 @@
 
   function registerSw() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/service-worker.js?v=105").then(function (reg) {
+    navigator.serviceWorker.register("/service-worker.js?v=106").then(function (reg) {
       try {
         reg.update();
       } catch (e) {}
     }).catch(function () {
-      navigator.serviceWorker.register("/sw.js?v=105").catch(function () {});
+      navigator.serviceWorker.register("/sw.js?v=106").catch(function () {});
     });
   }
 
   function boot() {
-    ensureUi();
+    document.documentElement.classList.add("salomon-mockup-ui");
+    removeHeaderUpdateButton();
+    ensureToast();
+    ensureVersionBadge(readLocal());
+    ensureUpdateInToolsMenu();
+    watchToolsMenu();
     registerSw();
     startPolling();
     window.SalomonUpdate = {
@@ -317,7 +350,7 @@
         return applyUpdate({ reason: "api", force: true, silent: false });
       },
     };
-    log("actualizaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n proactiva activa", VERSION_SCRIPT);
+    log("actualización proactiva activa", VERSION_SCRIPT);
   }
 
   if (document.readyState === "loading") {

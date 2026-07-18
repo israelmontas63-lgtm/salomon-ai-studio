@@ -121,9 +121,9 @@ html.salomon-mockup-ui .studio-header .header-menu-btn:first-of-type {
   z-index: 4;
 }
 
+/* Actualizar ya no flota en el header: vive en el menú H */
 html.salomon-mockup-ui .studio-header .salomon-update-slot {
-  margin-left: auto !important;
-  z-index: 4;
+  display: none !important;
 }
 
 html.salomon-mockup-ui .studio-header .header-menu-btn:last-of-type {
@@ -133,117 +133,21 @@ html.salomon-mockup-ui .studio-header .header-menu-btn:last-of-type {
   z-index: 4;
 }
 
-/* ——— Actualizar (maqueta) ——— */
+/* ——— Actualizar dentro del menú H (mismo glass item) ——— */
 .salomon-update-slot {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-  height: 56px !important;
-  max-width: min(42vw, 148px);
-  z-index: 5;
-  flex-shrink: 0;
+  display: none !important;
 }
 
-.salomon-update-btn {
-  position: relative;
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 34px;
-  max-width: 100%;
-  padding: 0 12px 0 10px;
-  border-radius: 999px;
-  border: 1.5px solid rgba(212, 175, 55, 0.65);
-  background: transparent;
-  color: #f0d78c;
-  cursor: pointer;
-  font-family: Inter, system-ui, sans-serif;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    background 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease,
-    color 180ms ease;
+.glass-panel__item.salomon-update-menu-item.is-ready,
+#salomon-update-btn.glass-panel__item.is-ready {
+  border-color: rgba(240, 215, 140, 0.85);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.28);
 }
 
-/* Pantallas muy estrechas: solo icono sync (sigue siendo Actualizar) */
-@media (max-width: 360px) {
-  .salomon-update-btn {
-    width: 34px;
-    padding: 0;
-    gap: 0;
-  }
-
-  .salomon-update-btn__label {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-  }
-
-  html.salomon-mockup-ui .studio-header .header-brand::after {
-    letter-spacing: 0.12em;
-    font-size: 0.5rem;
-  }
-}
-
-/* Estado 1 — idle */
-.salomon-update-btn:not(.is-ready) {
-  background: rgba(0, 0, 0, 0.35);
-  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.12);
-}
-
-/* Estado 2 — actualización disponible */
-.salomon-update-btn.is-ready {
-  background: linear-gradient(145deg, #f0d78c, #d4af37 55%, #a8842a);
-  border-color: #f0d78c;
-  color: #1a1508;
-  box-shadow: 0 0 14px rgba(212, 175, 55, 0.45);
-  animation: salomonUpdatePulse 1.4s ease-in-out infinite;
-}
-
-.salomon-update-btn.is-busy {
+.glass-panel__item.salomon-update-menu-item.is-busy,
+#salomon-update-btn.glass-panel__item.is-busy {
   opacity: 0.55;
   pointer-events: none;
-}
-
-.salomon-update-btn__icon {
-  display: inline-flex;
-  width: 16px;
-  height: 16px;
-}
-
-.salomon-update-btn__svg {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
-
-.salomon-update-btn__label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1;
-}
-
-.salomon-update-btn__badge {
-  position: absolute;
-  top: -3px;
-  right: -2px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #f0d78c;
-  border: 1.5px solid #000;
-  box-shadow: 0 0 6px rgba(240, 215, 140, 0.8);
-}
-
-.salomon-update-btn.is-ready .salomon-update-btn__badge {
-  background: #1a1508;
-  border-color: #f0d78c;
 }
 
 #salomon-update-toast {

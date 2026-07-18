@@ -458,6 +458,20 @@ export default function App() {
         return;
       }
 
+      if (item === "Actualizar") {
+        try {
+          if (window.SalomonUpdate?.apply) {
+            window.SalomonUpdate.apply();
+          } else {
+            window.location.href = `/?_salomon_force=${Date.now()}`;
+          }
+        } catch {
+          showVoiceHint("No pude forzar la actualización.");
+        }
+        setToolsOpen(false);
+        return;
+      }
+
       if (item === "Gestor de APIs") {
         pushAiMessage(
           "Gestor de APIs:\n" +

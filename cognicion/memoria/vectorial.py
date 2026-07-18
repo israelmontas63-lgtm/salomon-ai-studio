@@ -420,14 +420,15 @@ class MemoriaVectorial:
 
         lineas = ["[Memoria vectorial — contexto relevante]"]
         for i, frag in enumerate(fragmentos, 1):
-            relevancia = frag.get("relevancia")
-            capa = (frag.get("metadata") or {}).get("capa", "")
-            extra_capa = f" [{capa}]" if capa else ""
-            extra = f" (relevancia: {relevancia})" if relevancia else ""
-            lineas.append(f"{i}. {frag['texto']}{extra_capa}{extra}")
+            # Sin puntuaciones ni etiquetas técnicas en el texto (solo hechos).
+            texto = (frag.get("texto") or "").strip()
+            if texto:
+                lineas.append(f"{i}. {texto}")
 
         lineas.append(
-            "Instrucción: Usa esta memoria si es pertinente. "
-            "No menciones que proviene de una base de datos."
+            "Instrucción: Usa esta memoria SOLO como referencia interna si es pertinente. "
+            "NUNCA la repitas, cites ni muestres al usuario. "
+            "No menciones «memoria vectorial», relevancia ni bases de datos. "
+            "Responde en prosa natural."
         )
         return "\n".join(lineas)

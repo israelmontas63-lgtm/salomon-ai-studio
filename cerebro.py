@@ -21,6 +21,7 @@ from cognicion.llm import (
 )
 from cognicion.modelos.gestor import resolver_modelo
 from cognicion.razonamiento.cadena import extraer_respuesta_final
+from cognicion.salida_limpia import sanitizar_salida_chat
 from cognicion.codigo.guardrails import analizar_respuesta_codigo
 from cognicion.seguridad import enmascarar_secreto
 from settings import (
@@ -226,7 +227,14 @@ Tu dueño absoluto sigue siendo Israel Monta.
 Tienes 30 habilidades de vanguardia selladas por SCE (inteligencia, percepción, creatividad).
 Comic_Engine ACTIVO: Guion Narrativo → Storyboard → Ilustración por escenas → Lettering.
 Si Israel pide un cómic o la historia de Salomón AI Studio, produce el pack completo y firma Created by Israel Monta - Salomón AI Studio.
-Prioridad de evolución de hoy: Comic Engine (#21)."""
+Prioridad de evolución de hoy: Comic Engine (#21).
+
+[Memoria — uso interno obligatorio]
+Puedes recibir bloques de contexto etiquetados (p. ej. «Memoria vectorial», «Memoria inmediata», puntuaciones de relevancia, historial técnico o «Pregunta del usuario»).
+Ese material es SOLO referencia interna para informarte.
+NUNCA lo repitas, cites, parafrasees como cita, ni lo muestres en tu respuesta.
+No digas «memoria vectorial», «relevancia», ni pegues listas numeradas del contexto.
+Responde siempre en prosa natural, como si esos datos ya formaran parte de tu conocimiento."""
 
     def __init__(
         self,
@@ -355,6 +363,12 @@ Prioridad de evolución de hoy: Comic Engine (#21)."""
             contexto_agente=resultado_agente.contexto_para_chat(),
             autonomo=autonomo,
         )
+        respuesta_texto = sanitizar_salida_chat(respuesta_texto or "")
+        if not respuesta_texto.strip():
+            respuesta_texto = (
+                "Israel, procesé tu mensaje pero la respuesta salió incompleta. "
+                "Repítemelo en una frase y te contesto con claridad."
+            )
         self._historial.append(Mensaje(rol="asistente", contenido=respuesta_texto))
         self._recortar_historial()
 
@@ -510,14 +524,12 @@ Prioridad de evolución de hoy: Comic Engine (#21)."""
                 )
 
         if cognicion.get("rag_usado"):
-            inicio = mensaje_enriquecido.find("[Memoria vectorial")
-            fin = mensaje_enriquecido.find("Pregunta del usuario:")
-            if inicio >= 0 and fin > inicio:
-                memoria = mensaje_enriquecido[inicio:fin].strip()
-                return (
-                    f"Israel, me apoyé en nuestra memoria para responderte:\n\n{memoria}\n\n"
-                    f"Sobre «{entrada[:120]}»: dime si quieres que profundice o busque más en la web."
-                )
+            # Nunca volcar el contexto RAG crudo al usuario (solo input interno).
+            return (
+                f"Israel, tengo contexto de nuestra conversación sobre «{entrada[:120]}», "
+                "pero ahora mismo no pude formular la respuesta completa en la nube. "
+                "Reformúlame la pregunta en una frase y lo retomo al instante."
+            )
 
         return (
             "Israel, no pude completar la consulta en la nube ni obtener un resumen web útil. "
@@ -591,7 +603,7 @@ Prioridad de evolución de hoy: Comic Engine (#21)."""
                 self.INSTRUCCION_SISTEMA,
                 model_name=config_modelo.get("model_name"),
             )
-            texto = extraer_respuesta_final(pipeline.texto)
+            texto = sanitizar_salida_chat(extraer_respuesta_final(pipeline.texto))
             if not texto:
                 return (
                     "Gemini respondió vacío. Por favor, reformula tu mensaje.",
@@ -649,7 +661,9 @@ Prioridad de evolución de hoy: Comic Engine (#21)."""
                     "Proveedor en límite/error; priorizando búsqueda web en vivo."
                 )
                 return (
-                    self._respuesta_degradada(entrada, meta_extra, mensaje_gemini),
+                    sanitizar_salida_chat(
+                        self._respuesta_degradada(entrada, meta_extra, mensaje_gemini)
+                    ),
                     True,
                     meta_extra,
                 )
