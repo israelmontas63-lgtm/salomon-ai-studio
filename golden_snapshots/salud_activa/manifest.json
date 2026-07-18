@@ -7,7 +7,7 @@
     "app.py": {
       "source": "app.py",
       "snapshot": "golden_snapshots/salud_activa/app.py",
-      "sha256": "5554de05ddedb74b445625a4c2f5cefb1716f058831cc586f774525ee9cbe7fa"
+      "sha256": "6f140ea39dfccb92d8bbd524c7b2b7472dae85a4c0646d36eeb574a580d7aac7"
     },
     "CameraEngine": {
       "source": "studio/dist/camera-engine.js",

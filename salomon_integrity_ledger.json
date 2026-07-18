@@ -73,7 +73,7 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "5554de05ddedb74b445625a4c2f5cefb1716f058831cc586f774525ee9cbe7fa",
+    "app.py": "6f140ea39dfccb92d8bbd524c7b2b7472dae85a4c0646d36eeb574a580d7aac7",
     "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
     "studio/dist/camera-v13.js": "1d7b7fabcb53ccbbd7d442e719bc25706eeb1aa2b7e07194e72d3bebe5e4a08a",
     "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",

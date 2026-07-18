@@ -1,0 +1,237 @@
+{
+  "protocolo": "SYSTEM_INTEGRITY_CHECK",
+  "nivel": "ISO-9001/27001-style-gate",
+  "ok": true,
+  "started_at": "2026-07-18T15:56:10.748758+00:00",
+  "finished_at": "2026-07-18T15:56:22.429140+00:00",
+  "checks_n": 43,
+  "checks_ok": 43,
+  "checks_fail": 0,
+  "hallazgos": [],
+  "correcciones_necesarias": [],
+  "checks": [
+    {
+      "check": "syntax_all",
+      "ok": true,
+      "detalle": "224 archivos OK"
+    },
+    {
+      "check": "import:nucleo:app",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:nucleo:cerebro",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:nucleo:settings",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:nucleo:SystemGuard",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:seguridad:cognicion.seguridad.sbi_pro",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:seguridad:cognicion.seguridad.identidad",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:seguridad:cognicion.estado_vivo",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:cognitiva:cognicion.cognitivo",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:cognitiva:cognicion.cognitivo.despertar",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:cognitiva:cognicion.cognitivo.episodica",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:cognitiva:cognicion.cognitivo.claridad",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:ejecutiva:cognicion.ejecutivo",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:ejecutiva:cognicion.ejecutivo.orquestador",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:ejecutiva:cognicion.esencia",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "import:orquestacion:cognicion.orquestador",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "endpoint:GET:/api/cognitivo/estado",
+      "ok": true,
+      "detalle": "presente en app.py"
+    },
+    {
+      "check": "endpoint:POST:/api/cognitivo/pre",
+      "ok": true,
+      "detalle": "presente en app.py"
+    },
+    {
+      "check": "endpoint:POST:/api/cognitivo/correccion",
+      "ok": true,
+      "detalle": "presente en app.py"
+    },
+    {
+      "check": "endpoint:POST:/api/cognitivo/consolidar",
+      "ok": true,
+      "detalle": "presente en app.py"
+    },
+    {
+      "check": "endpoint:GET:/api/sbi/estado",
+      "ok": true,
+      "detalle": "presente en app.py"
+    },
+    {
+      "check": "endpoint:POST:/api/sbi/enroll",
+      "ok": true,
+      "detalle": "presente en app.py"
+    },
+    {
+      "check": "endpoint:POST:/api/sbi/verify",
+      "ok": true,
+      "detalle": "presente en app.py"
+    },
+    {
+      "check": "endpoint:GET:/api/ejecutivo/estado",
+      "ok": true,
+      "detalle": "presente en app.py"
+    },
+    {
+      "check": "endpoint:POST:/api/ejecutivo/informe",
+      "ok": true,
+      "detalle": "presente en app.py"
+    },
+    {
+      "check": "capa:cognitiva_protocolo",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "capa:ejecutiva_exclusividad",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "capa:sbi_systemguard_flag",
+      "ok": true,
+      "detalle": ""
+    },
+    {
+      "check": "capa:ejecutiva_sbi_puerta",
+      "ok": true,
+      "detalle": "{'enabled': False, 'enrolled': False, 'modo': 'off', 'puerta': 'SBI-PRO (enrollment recomendado antes de datos sensibles)'}"
+    },
+    {
+      "check": "capa:systemguard_ledger",
+      "ok": true,
+      "detalle": "integrity_ok"
+    },
+    {
+      "check": "capa:sin_conflicto_sbi_dual",
+      "ok": true,
+      "detalle": "SBI y Dual coexisten (SBI gate / Dual aprendizaje)"
+    },
+    {
+      "check": "dep:fastapi",
+      "ok": true,
+      "detalle": "en requirements.txt"
+    },
+    {
+      "check": "dep:uvicorn",
+      "ok": true,
+      "detalle": "en requirements.txt"
+    },
+    {
+      "check": "dep:pydantic",
+      "ok": true,
+      "detalle": "en requirements.txt"
+    },
+    {
+      "check": "dep:httpx",
+      "ok": true,
+      "detalle": "en requirements.txt"
+    },
+    {
+      "check": "dep:numpy",
+      "ok": true,
+      "detalle": "en requirements.txt"
+    },
+    {
+      "check": "dep:chromadb",
+      "ok": true,
+      "detalle": "en requirements.txt"
+    },
+    {
+      "check": "dep:python-dotenv",
+      "ok": true,
+      "detalle": "en requirements.txt"
+    },
+    {
+      "check": "dep_pesada:torch",
+      "ok": true,
+      "detalle": "ausente"
+    },
+    {
+      "check": "dep_pesada:tensorflow",
+      "ok": true,
+      "detalle": "ausente"
+    },
+    {
+      "check": "dep_pesada:transformers",
+      "ok": true,
+      "detalle": "ausente"
+    },
+    {
+      "check": "estructura:maquetas_raiz",
+      "ok": true,
+      "detalle": "sin maquetas sueltas"
+    },
+    {
+      "check": "tdd_bloque_sbi_ejecutivo_dual",
+      "ok": true,
+      "detalle": "n10\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\chromadb\\telemetry\\opentelemetry\\__init__.py:128: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead     if asyncio.iscorout"
+    }
+  ],
+  "capas": [
+    "nucleo",
+    "seguridad",
+    "cognitiva",
+    "ejecutiva",
+    "orquestacion"
+  ],
+  "veredicto": "PASS_LISTO_PARA_PUSH"
+}

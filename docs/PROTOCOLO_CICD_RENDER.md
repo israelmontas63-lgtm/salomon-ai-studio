@@ -17,7 +17,12 @@
 
 ```bash
 python scripts/validate_render_env.py
+python scripts/system_integrity_check.py
 ```
+
+Gate industrial: si `system_integrity_check.py` sale con código ≠ 0 → **detener push**.
+Informe: `docs/INFORME_INTEGRITY_CHECK.md`.
+Arquitectura: `docs/ARQUITECTURA_PRODUCCION.md`.
 
 ## API
 
