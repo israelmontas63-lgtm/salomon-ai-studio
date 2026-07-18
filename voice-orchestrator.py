@@ -8,12 +8,12 @@ from __future__ import annotations
 from typing import Any
 
 from cerebro import ResultadoTTS, texto_a_voz
-from cognicion.voz.cartesia_tts import cartesia_configurado
 from settings import CARTESIA_API_KEY, CARTESIA_MODEL_ID, CARTESIA_VOICE_ID, TTS_ASYNC
 
 
 def voz_configurada() -> bool:
-    return cartesia_configurado()
+    # Lazy: no cargar SDK Cartesia solo para chequear flags de entorno
+    return bool((CARTESIA_API_KEY or "").strip() and (CARTESIA_VOICE_ID or "").strip())
 
 
 def emitir_voz(texto: str) -> ResultadoTTS:

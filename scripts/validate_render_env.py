@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Valida que el TTS use Cartesia vía entorno (sin claves hardcodeadas)."""
+"""Valida TTS Cartesia vía entorno + lazy-load Free Tier (sin claves hardcodeadas)."""
 from __future__ import annotations
 
 import re
@@ -33,8 +33,14 @@ def main() -> int:
     else:
         ERRORS.append("Falta CARTESIA_VOICE_ID en settings.py")
 
-    if "hablar_salomon" in cerebro and "cartesia" in cerebro.lower():
-        OK.append("cerebro.py enlaza TTS a Cartesia Sonic-3.5")
+    head, _, _ = cerebro.partition("def texto_a_voz")
+    if "from cognicion.voz.cartesia_tts import" in head:
+        ERRORS.append("cerebro.py importa cartesia_tts de forma eager (debe ser lazy)")
+    else:
+        OK.append("cerebro.py no importa cartesia_tts al boot")
+
+    if "hablar_salomon" in cerebro and "cartesia_tts" in cerebro:
+        OK.append("cerebro.py enlaza TTS a Cartesia Sonic-3.5 (lazy)")
     else:
         ERRORS.append("cerebro.py no enlaza TTS a Cartesia")
 
@@ -43,10 +49,20 @@ def main() -> int:
     else:
         OK.append("cerebro.py sin ElevenLabs")
 
-    if "sonic-3.5" in voz and "websocket_connect" in voz:
-        OK.append("cartesia_tts.py usa Sonic-3.5 WebSocket")
+    if "sonic-3.5" in voz and "websocket_connect" in voz and "_liberar_recursos" in voz:
+        OK.append("cartesia_tts.py Sonic-3.5 WebSocket + liberación post-uso")
     else:
-        ERRORS.append("Falta integración WebSocket Sonic-3.5")
+        ERRORS.append("Falta WebSocket Sonic-3.5 o _liberar_recursos")
+
+    if 'from cartesia import Cartesia' in voz and "def _cliente" in voz:
+        # debe estar dentro de función, no a nivel módulo antes de defs
+        before_cliente = voz.split("def _cliente")[0]
+        if "from cartesia import Cartesia" in before_cliente:
+            ERRORS.append("import cartesia a nivel de módulo (debe ser solo en _cliente)")
+        else:
+            OK.append("import cartesia diferido dentro de _cliente()")
+    else:
+        ERRORS.append("No se encontró patrón lazy Cartesia")
 
     banned = re.search(
         r'CARTESIA_API_KEY\s*=\s*["\'][^"\']+["\']',

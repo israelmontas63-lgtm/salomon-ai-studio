@@ -29,16 +29,21 @@ from settings import (
     TTS_ASYNC,
 )
 
-from cognicion.voz.cartesia_tts import ResultadoTTS, hablar_salomon
+# Tipo ligero (sin SDK Cartesia) — el motor se importa solo en texto_a_voz()
+from cognicion.voz.tipos import ResultadoTTS
 
 
 def texto_a_voz(texto: str) -> ResultadoTTS:
     """
     Convierte texto en audio con Cartesia Sonic-3.5 (WebSocket, baja latencia).
 
+    Lazy-load: el SDK Cartesia no se carga al importar cerebro/app (boot Free Tier).
     Claves: CARTESIA_API_KEY + CARTESIA_VOICE_ID (solo entorno).
-    Si el servicio cae, soft-fail sin tumbar el chat.
     """
+    if not (texto or "").strip():
+        return ResultadoTTS(tts_disponible=False, error="texto_vacio")
+    from cognicion.voz.cartesia_tts import hablar_salomon  # diferido
+
     return hablar_salomon(texto)
 
 
