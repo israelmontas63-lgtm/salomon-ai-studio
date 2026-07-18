@@ -24,7 +24,7 @@ SBI_DEFAULTS = {
     "SBI_THRESHOLD": "0.82",
     "SBI_OWNER_NAME": "Israel Monta",
     "SBI_CHALLENGE_PHRASE": "Salomon autentica a Israel",
-    "SBI_TEMPLATE_PATH": "data/seguridad/sbi_israel.json",
+    "SBI_TEMPLATE_PATH": "security/credentials/sbi_israel.json",
     "SBI_API_BASE": "http://127.0.0.1:8000",
 }
 
@@ -81,7 +81,10 @@ def main() -> int:
     print("Deja SBI_ENABLED=false en Render hasta enrollar tu voz.", flush=True)
     print("", flush=True)
     print("Siguiente paso (con tu WAV):", flush=True)
-    print("  python api/sbi/enroll.py data/seguridad/samples/israel.wav --activar", flush=True)
+    print(
+        "  python api/sbi/enroll.py security/credentials/voice_signature.wav --activar",
+        flush=True,
+    )
     return 0
 
 

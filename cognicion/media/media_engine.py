@@ -577,6 +577,27 @@ def bridge_colsub_media(
         motor = seleccion["motor"]
         resultado: dict[str, Any]
 
+        # Ruta neuronal única: Fal → Replicate (ServiceManager) antes de gateways legacy
+        if tarea in {"imagen_hd", "video_gen"} and not forzar_motor:
+            try:
+                from cognicion.servicios import obtener_manager
+
+                mgr = obtener_manager()
+                if mgr.activo("media"):
+                    neural = mgr.generar_activo(
+                        prompt_trabajo, video=(tarea == "video_gen")
+                    )
+                    if neural.get("exito"):
+                        return {
+                            **neural,
+                            "tarea": tarea,
+                            "calidad": cfg.get("calidad_forzada") or "pro_ultra",
+                            **enhancer_meta,
+                            "ruta_neuronal": True,
+                        }
+            except Exception:
+                pass
+
         if tarea == "imagen_hd":
             if motor == "flux":
                 resultado = _llamar_flux(prompt_trabajo, cfg)

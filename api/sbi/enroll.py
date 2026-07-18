@@ -4,9 +4,9 @@ Enrollment SBI-PRO: WAV → base64 → POST /api/sbi/enroll
 
 Uso (servidor local o Render URL):
   python api/sbi/setup_env.py
-  python api/sbi/enroll.py ruta/a/israel.wav
-  python api/sbi/enroll.py ruta/a/israel.wav --activar
-  python api/sbi/enroll.py israel.wav --base https://salomon-ai-studio-1.onrender.com
+  python api/sbi/enroll.py security/credentials/voice_signature.wav
+  python api/sbi/enroll.py security/credentials/voice_signature.wav --activar
+  python api/sbi/enroll.py voice_signature.wav --base https://salomon-ai-studio-1.onrender.com
 """
 
 from __future__ import annotations
@@ -22,7 +22,9 @@ sys.path.insert(0, str(ROOT))
 import httpx  # noqa: E402
 
 from api.sbi.common import (  # noqa: E402
+    CREDENTIALS_DIR,
     DEFAULT_BASE,
+    DEFAULT_VOICE_WAV,
     api_key_headers,
     asegurar_dirs,
     token_enroll,
@@ -33,7 +35,13 @@ from api.sbi.common import (  # noqa: E402
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="SBI-PRO enroll (WAV → API)")
-    parser.add_argument("wav", type=Path, help="Ruta al archivo .wav de Israel")
+    parser.add_argument(
+        "wav",
+        type=Path,
+        nargs="?",
+        default=DEFAULT_VOICE_WAV,
+        help=f"Ruta al .wav de Israel (default: {DEFAULT_VOICE_WAV})",
+    )
     parser.add_argument(
         "--base",
         default=DEFAULT_BASE,
@@ -54,16 +62,18 @@ def main() -> int:
     asegurar_dirs()
     wav_path = args.wav if args.wav.is_absolute() else (Path.cwd() / args.wav)
     if not wav_path.is_file():
-        # También buscar en samples/
-        alt = ROOT / "data" / "seguridad" / "samples" / args.wav.name
-        if alt.is_file():
-            wav_path = alt
+        # Vault + samples (nuevo y legacy)
+        for alt in (
+            CREDENTIALS_DIR / args.wav.name,
+            CREDENTIALS_DIR / "samples" / args.wav.name,
+            ROOT / "data" / "seguridad" / "samples" / args.wav.name,
+        ):
+            if alt.is_file():
+                wav_path = alt
+                break
         else:
             print(f"[SBI] No encuentro el WAV: {args.wav}", flush=True)
-            print(
-                f"[SBI] Colócalo en: {ROOT / 'data' / 'seguridad' / 'samples'}",
-                flush=True,
-            )
+            print(f"[SBI] Colócalo en: {CREDENTIALS_DIR}", flush=True)
             return 1
 
     token = token_enroll()
@@ -77,7 +87,7 @@ def main() -> int:
     headers = api_key_headers()
     headers["X-SBI-Enroll-Token"] = token
 
-    print(f"[SBI] Enviando enrollment → {url}", flush=True)
+    print(f"[SBI] Enviando enrollment -> {url}", flush=True)
     print(f"[SBI] Archivo: {wav_path} ({wav_path.stat().st_size} bytes)", flush=True)
 
     try:

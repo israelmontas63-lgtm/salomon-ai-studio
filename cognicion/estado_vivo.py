@@ -63,11 +63,11 @@ def responder_con_nucleo(
             "una sola línea de pensamiento, sin ruido."
         )
 
-    # Saludos cortos: voz HD Cognitiva local (evita fugas de infraestructura)
+    # Saludos cortos: protocolo de inicio (energía + identidad + disponibilidad)
     if _es_saludo(msg) and not contexto.strip():
         return (
-            "Israel, aquí estoy. Mientras afinaba el hilo, dejé listo el ritmo "
-            "de hoy. Cuando quieras, entramos directo a lo que importa."
+            "¡Israel! Aquí estoy — mente unificada, disponible al cien. "
+            "Dime el siguiente paso y lo trabajamos con sentido común."
         )
 
     prompt = msg

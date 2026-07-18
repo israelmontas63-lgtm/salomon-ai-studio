@@ -11,3 +11,11 @@ Pillow>=10.0.0
 numpy>=1.26.0
 chromadb>=0.5.0
 cartesia[websockets]>=2.0.0
+# Proveedores Render (lazy; wrappers HTTP si el SDK falta)
+google-genai>=1.0.0
+openai>=1.40.0
+cohere>=5.0.0
+deepgram-sdk>=3.0.0
+elevenlabs>=1.0.0
+fal-client>=0.5.0
+replicate>=0.25.0

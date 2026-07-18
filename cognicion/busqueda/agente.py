@@ -28,31 +28,6 @@ _MARCADORES_LIMITE = (
     "rate limit",
 )
 
-_MARCADORES_BUSQUEDA = (
-    "busca",
-    "buscar",
-    "búsqueda",
-    "busqueda",
-    "internet",
-    "en la web",
-    "actualidad",
-    "noticias",
-    "quién es",
-    "quien es",
-    "qué es",
-    "que es",
-    "cuándo",
-    "cuando ocurrió",
-    "precio de",
-    "últimas",
-    "ultimas",
-    "hoy",
-    "2024",
-    "2025",
-    "2026",
-)
-
-
 def necesita_busqueda_web(
     mensaje: str,
     *,
@@ -60,24 +35,23 @@ def necesita_busqueda_web(
     respuesta_previa: str | None = None,
     forzar: bool = False,
 ) -> bool:
-    """Decide si hay que activar el agente de búsqueda."""
-    if forzar or llm_limitado:
+    """Activa web SOLO con pedido explícito de Israel (Memory Cortex)."""
+    from cognicion.busqueda.pedido_explicito import (
+        es_saludo_o_charla_simple,
+        pedido_busqueda_explicito,
+    )
+
+    if forzar:
         return True
-    t = (mensaje or "").strip().lower()
-    if not t:
+    # Saludos / charla: NUNCA salir a internet (ni por cuota LLM)
+    if es_saludo_o_charla_simple(mensaje):
         return False
-    if any(m in t for m in _MARCADORES_BUSQUEDA):
+    if pedido_busqueda_explicito(mensaje):
         return True
-    if "?" in t and len(t) >= 25:
-        # Preguntas factuales / abiertas
-        if any(
-            t.startswith(p) or f" {p}" in t
-            for p in ("qué ", "que ", "quién ", "quien ", "cuál ", "cual ", "dónde ", "donde ")
-        ):
-            return True
-    prev = (respuesta_previa or "").lower()
-    if prev and respuesta_parece_limite_o_vacia(prev):
-        return True
+    # Cuota LLM agotada: solo si ya hubo pedido explícito en el mensaje
+    # (no inventar búsquedas de películas / Wikipedia)
+    _ = llm_limitado
+    _ = respuesta_previa
     return False
 
 

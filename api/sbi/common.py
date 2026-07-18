@@ -15,7 +15,12 @@ if str(ROOT) not in sys.path:
 
 from dotenv import load_dotenv
 
+CREDENTIALS_DIR = ROOT / "security" / "credentials"
+DEFAULT_TEMPLATE = "security/credentials/sbi_israel.json"
+DEFAULT_VOICE_WAV = CREDENTIALS_DIR / "voice_signature.wav"
+
 load_dotenv(ROOT / ".env")
+load_dotenv(CREDENTIALS_DIR / "sbi.env", override=True)
 
 DEFAULT_BASE = os.getenv("SBI_API_BASE", "http://127.0.0.1:8000").rstrip("/")
 
@@ -46,8 +51,13 @@ def api_key_headers() -> dict[str, str]:
 
 
 def upsert_env(clave: str, valor: str, *, env_path: Path | None = None) -> None:
-    """Crea o actualiza una clave en .env sin borrar el resto."""
-    path = env_path or (ROOT / ".env")
+    """Crea o actualiza una clave en .env (o sbi.env del vault) sin borrar el resto."""
+    if env_path is None and clave.startswith("SBI_"):
+        # Preferir vault si ya existe; si no, .env raíz.
+        vault = CREDENTIALS_DIR / "sbi.env"
+        path = vault if vault.is_file() else (ROOT / ".env")
+    else:
+        path = env_path or (ROOT / ".env")
     lineas: list[str] = []
     if path.is_file():
         lineas = path.read_text(encoding="utf-8").splitlines()
@@ -72,11 +82,14 @@ def generar_secreto(nbytes: int = 24) -> str:
 
 
 def asegurar_dirs() -> Path:
-    dest = ROOT / "data" / "seguridad"
+    dest = CREDENTIALS_DIR
     dest.mkdir(parents=True, exist_ok=True)
-    samples = ROOT / "data" / "seguridad" / "samples"
+    samples = dest / "samples"
     samples.mkdir(parents=True, exist_ok=True)
-    keep = dest / ".gitkeep"
+    # Compat: carpeta histórica de samples (docs antiguos)
+    legacy = ROOT / "data" / "seguridad" / "samples"
+    legacy.mkdir(parents=True, exist_ok=True)
+    keep = ROOT / "data" / "seguridad" / ".gitkeep"
     if not keep.exists():
         keep.write_text("", encoding="utf-8")
     return dest

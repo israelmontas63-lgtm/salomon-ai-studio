@@ -467,7 +467,8 @@ def proveedor_respaldo_disponible() -> str | None:
 
 
 def _orden_fallback(desde: str) -> list[str]:
-    preferidos = [desde, "groq", "openai", "gemini", "local"]
+    # Cadena oficial Render: Gemini → Groq → OpenAI → local
+    preferidos = [desde, "gemini", "groq", "openai", "local"]
     orden: list[str] = []
     for nombre in preferidos:
         if nombre not in orden:
@@ -476,6 +477,7 @@ def _orden_fallback(desde: str) -> list[str]:
         if nombre not in orden:
             orden.append(nombre)
     return orden
+
 
 
 def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:

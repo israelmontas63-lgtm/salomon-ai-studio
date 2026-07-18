@@ -46,40 +46,31 @@ PALABRAS_WIKIDATA = (
 )
 
 PALABRAS_NOTICIAS = (
-    "noticias",
     "últimas noticias",
     "ultimas noticias",
-    "titulares",
-    "qué pasó",
-    "que paso",
+    "busca noticias",
+    "buscar noticias",
+    "noticias de hoy",
+    "noticias sobre",
+    "noticias de",
+    "titulares de",
+    "titulares sobre",
     "novedades sobre",
-    "actualidad de",
     "news about",
     "headlines",
-    "noticias de",
-    "noticias sobre",
 )
 
 GOOGLE_NEWS_RSS = "https://news.google.com/rss/search?q={query}&hl=es&gl=DO&ceid=DO:es"
 
+# Wikipedia SOLO con pedido explícito (Memory Cortex — sin "qué es" / "quién es")
 PALABRAS_WIKIPEDIA = (
     "wikipedia",
-    "wiki",
-    "quién es",
-    "quien es",
-    "qué es",
-    "que es",
-    "define",
-    "definición",
-    "definicion",
-    "historia de",
-    "biografía",
-    "biografia",
-    "cuéntame sobre",
-    "cuentame sobre",
-    "información sobre",
-    "informacion sobre",
     "busca en wikipedia",
+    "buscar en wikipedia",
+    "en wikipedia",
+    "según wikipedia",
+    "segun wikipedia",
+    "wiki:",
 )
 
 
@@ -99,8 +90,10 @@ class ConectorConocimiento(Protocol):
 
 
 def es_consulta_wikipedia(texto: str) -> bool:
-    t = (texto or "").lower()
-    return any(p in t for p in PALABRAS_WIKIPEDIA)
+    from cognicion.busqueda.pedido_explicito import pedido_busqueda_explicito
+
+    # Memory Cortex: Wikipedia solo con «Busca en wikipedia sobre…»
+    return pedido_busqueda_explicito(texto) and "wikipedia" in (texto or "").lower()
 
 
 def es_consulta_wikidata(texto: str) -> bool:
@@ -111,13 +104,16 @@ def es_consulta_wikidata(texto: str) -> bool:
 
 
 def es_consulta_busqueda(texto: str) -> bool:
-    t = (texto or "").lower()
-    return any(p in t for p in PALABRAS_BUSQUEDA)
+    from cognicion.busqueda.pedido_explicito import pedido_busqueda_explicito
+
+    return pedido_busqueda_explicito(texto)
 
 
 def es_consulta_noticias(texto: str) -> bool:
-    t = (texto or "").lower()
-    return any(p in t for p in PALABRAS_NOTICIAS)
+    from cognicion.busqueda.pedido_explicito import pedido_busqueda_explicito
+
+    # Noticias externas solo bajo la misma orden canónica de web
+    return pedido_busqueda_explicito(texto)
 
 
 def extraer_tema_noticias(texto: str) -> str | None:

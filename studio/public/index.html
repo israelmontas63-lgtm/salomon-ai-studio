@@ -20,29 +20,32 @@
     <meta property="og:title" content="Salomon AI" />
     <meta property="og:description" content="Asistente de inteligencia artificial — PWA nativa." />
     <meta property="og:site_name" content="Salomon AI Studio" />
-    <link rel="manifest" href="/manifest.json?v=105" />
-    <link rel="manifest" href="/manifest.webmanifest?v=105" />
+    <link rel="manifest" href="/manifest.json?v=110" />
+    <link rel="manifest" href="/manifest.webmanifest?v=110" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/salomon-theme.css?v=103" />
-    <link rel="stylesheet" href="/splash.css?v=103" />
-    <link rel="stylesheet" href="/drawers.css?v=103" />
-    <link rel="stylesheet" crossorigin href="/assets/index-CJUgt2ya.css?v=103" />
-    <link rel="stylesheet" href="/header-logo-spec.css?v=103" />
-    <link rel="stylesheet" href="/voice-orchestrator.css?v=103" />
-    <link rel="stylesheet" href="/thinking-animation-spec.css?v=103" />
+    <link rel="stylesheet" href="/salomon-theme.css?v=110" />
+    <link rel="stylesheet" href="/splash.css?v=110" />
+    <link rel="stylesheet" href="/drawers.css?v=110" />
+    <link rel="stylesheet" crossorigin href="/assets/index-CVNkhEWW.css?v=110" />
+    <link rel="stylesheet" href="/header-logo-spec.css?v=110" />
+    <link rel="stylesheet" href="/voice-orchestrator.css?v=110" />
+    <link rel="stylesheet" href="/thinking-animation-spec.css?v=110" />
     <link rel="stylesheet" href="/camera-v13.css?v=31" />
-    <link rel="stylesheet" href="/salomon-ui-shield.css?v=107" />
-    <link rel="stylesheet" href="/salomon-estructura.css?v=103" />
+    <link rel="stylesheet" href="/salomon-ui-shield.css?v=110" />
+    <link rel="stylesheet" href="/salomon-estructura.css?v=110" />
   </head>
   <body>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        console.log("Limpiando memoria de interfaz...");
         document.title = "Salomón";
         document.documentElement.lang = "es";
       });
+      window.__SalomonNucleoReparacion105 = true;
+      window.__SalomonVoiceProtocol108 = true;
+      window.__SalomonKernel109 = true;
+      window.__SalomonKernelAuto = false;
     </script>
 
     <div id="salomon-splash" aria-live="polite">
@@ -56,26 +59,34 @@
 
     <div id="root"></div>
 
-    <script>
-      /* v105: ventana de reparacion — antes de kernel/camara */
-      window.__SalomonNucleoReparacion105 = true;
-    </script>
-    <script src="/salomon-self-heal.js?v=105"></script>
-    <script src="/standalone-boot.js?v=105" data-salomon-boot="1"></script>
-    <script type="module" crossorigin src="/assets/index-BdcDx9nN.js?v=105"></script>
-    <script src="/drawers.js?v=107" defer></script>
-    <script src="/media-panel.js?v=95" defer></script>
-    <script src="/visual-progress.js?v=70" defer></script>
-    <script src="/bca-indicator.js?v=31" defer></script>
-    <script src="/salomon-orchestrator-bridge.js?v=31" defer></script>
+    <!-- 1) Jerarquía kernel (orden estricto — evita requireMod) -->
+    <script src="/core/config.js?v=110"></script>
+    <script src="/boot/permissions_check.js?v=110"></script>
+    <script src="/core/core.js?v=110"></script>
+    <script src="/core/peripherals/VoiceCore.js?v=110"></script>
+    <script src="/core/peripherals/VisionAgent.js?v=110"></script>
+    <script src="/core/peripherals/HomeGateway.js?v=110"></script>
+    <script src="/core/main.js?v=110"></script>
+
+    <!-- 2) React + UI / boot auxiliares (carpetas, no huérfanos) -->
+    <script type="module" crossorigin src="/assets/index-D4VmnNWn.js?v=110"></script>
+    <script src="/boot/standalone-boot.js?v=110" data-salomon-boot="1"></script>
+    <script src="/boot/salomon-self-heal.js?v=110"></script>
+    <script src="/ui/drawers.js?v=110" defer></script>
+    <script src="/ui/media-panel.js?v=110" defer></script>
+    <script src="/ui/visual-progress.js?v=110" defer></script>
+    <script src="/ui/bca-indicator.js?v=110" defer></script>
+    <script src="/ui/salomon-orchestrator-bridge.js?v=110" defer></script>
+    <script src="/tools/camera_actions.js?v=1" defer></script>
+    <!-- CRITICAL: rutas fijas (SystemGuard) -->
     <script src="/camera-engine.js?v=20.1" defer></script>
-    <script src="/camera-v13.js?v=20.1" defer></script>
+    <script src="/camera-v13.js?v=20.2" defer></script>
     <script src="/salomon-security-kernel.js?v=23.105" defer></script>
-    <script src="/salomon-ui-shield.js?v=105" defer></script>
-    <script src="/vision-overlay.js?v=31" defer></script>
-    <script src="/pwa-nativa.js?v=105" defer></script>
-    <script src="/reconexion-perifericos.js?v=105" defer></script>
-    <script src="/salomon-fase1.js?v=2" defer></script>
-    <script src="/salomon-update.js?v=107" defer></script>
+    <script src="/ui/salomon-ui-shield.js?v=110" defer></script>
+    <script src="/ui/vision-overlay.js?v=110" defer></script>
+    <script src="/boot/pwa-nativa.js?v=110" defer></script>
+    <script src="/boot/reconexion-perifericos.js?v=110" defer></script>
+    <script src="/ui/salomon-fase1.js?v=3" defer></script>
+    <script src="/boot/salomon-update.js?v=110" defer></script>
   </body>
 </html>

@@ -8,8 +8,8 @@ from acciones.hablar import hablar
 from cognicion.llm import generar_texto, llm_disponible
 
 _FALLBACK = (
-    "¡Hola, Israel! Soy Salomón — elegante, enérgico y listo "
-    "para crear algo valioso contigo hoy."
+    "¡Israel! Aquí estoy — Salomón en línea, mente unificada y a tu disposición total. "
+    "Voz, visión y razonamiento sincronizados. Dime qué hacemos."
 )
 
 

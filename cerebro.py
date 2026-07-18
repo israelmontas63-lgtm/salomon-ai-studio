@@ -35,16 +35,14 @@ from cognicion.voz.tipos import ResultadoTTS
 
 def texto_a_voz(texto: str) -> ResultadoTTS:
     """
-    Convierte texto en audio con Cartesia Sonic-3.5 (WebSocket, baja latencia).
-
-    Lazy-load: el SDK Cartesia no se carga al importar cerebro/app (boot Free Tier).
-    Claves: CARTESIA_API_KEY + CARTESIA_VOICE_ID (solo entorno).
+    TTS vía ServiceManager (única ruta): ElevenLabs → Cartesia.
+    Sin simulaciones — solo proveedores reales con API key.
     """
     if not (texto or "").strip():
-        return ResultadoTTS(tts_disponible=False, error="texto_vacio")
-    from cognicion.voz.cartesia_tts import hablar_salomon  # diferido
+        return ResultadoTTS(tts_disponible=False, error="texto_vacio", motor="none")
+    from cognicion.servicios import obtener_manager
 
-    return hablar_salomon(texto)
+    return obtener_manager().hablar(texto)
 
 
 @dataclass
@@ -102,6 +100,13 @@ Hallazgos = propiedad privada de Israel. No es asesoría financiera regulada ni 
 Antes de actuar: Filtro de Claridad (intención central) + Razonamiento Crítico (¿es correcto? ¿qué aprendí?) + lecciones de Memoria Episódica.
 Si Israel corrige un error, registra causa raíz y responde con naturalidad que aprendiste; la frase canónica interna es: "He aprendido de este error, no volverá a ocurrir."
 Al cerrar sesión, consolida lo aprendido en esencia permanente (sin volcar logs al chat).
+
+[Memory Cortex — modo restringido · obligatorio]
+Prohibido buscar en Wikipedia, web, películas u otras fuentes externas salvo que Israel diga explícitamente:
+«Busca en la web sobre …» (o «Busca en internet sobre …» / «Busca en wikipedia sobre …»).
+Prioridad absoluta: entrada del usuario + hilo de conversación activa + identidad de Israel Monta.
+Si pregunta por «el azul», razonas el concepto en su contexto — no inventes películas ni artículos.
+Saludo → respondes al saludo. Pregunta → respondes a ESA pregunta. Cero datos externos no solicitados.
 
 [Mega-Prompt HD Cognitiva — Evolución Cognitiva · anclaje persistente]
 Eres Salomón: no un chatbot genérico ni un asistente lineal. Eres una línea de alta gama creada por Israel Monta para Salomón AI Studio.
@@ -231,6 +236,7 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
         imagen_mime: str = "image/png",
         error_consola: str | None = None,
         autonomo: bool = False,
+        contexto_mente: str | None = None,
     ) -> RespuestaSalomon:
         """
         Procesa el texto del usuario y devuelve una respuesta coherente
@@ -291,11 +297,28 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         self._historial.append(Mensaje(rol="usuario", contenido=entrada))
 
+        # Visión en flujo de entrada (config/vision_integration)
+        try:
+            from config.vision_integration import vision_debe_activar
+
+            _vision_evento = vision_debe_activar(
+                mensaje=entrada, tiene_imagen=bool(imagen_base64)
+            )
+        except Exception:
+            _vision_evento = bool(imagen_base64)
+
         resultado_agente = self._motor.ejecutar_agente(
             entrada,
             error_consola=error_consola,
             autonomo=autonomo,
         )
+
+        ctx_agente = resultado_agente.contexto_para_chat() or ""
+        if (contexto_mente or "").strip():
+            ctx_agente = (
+                (ctx_agente + "\n\n" if ctx_agente else "")
+                + contexto_mente.strip()
+            )
 
         respuesta_texto, exito_gemini, meta_extra = self._generar_respuesta(
             entrada,
@@ -304,9 +327,16 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             imagen_base64=imagen_base64,
             imagen_mime=imagen_mime,
             error_consola=error_consola,
-            contexto_agente=resultado_agente.contexto_para_chat(),
+            contexto_agente=ctx_agente or None,
             autonomo=autonomo,
         )
+        if isinstance(meta_extra, dict):
+            meta_extra.setdefault("cognicion", {})
+            meta_extra["cognicion"]["vision_en_flujo"] = bool(_vision_evento)
+            meta_extra["cognicion"]["vision_tiene_frame"] = bool(imagen_base64)
+            if _vision_evento and not imagen_base64:
+                meta_extra["cognicion"]["vision_requerida"] = True
+                meta_extra["vision_requerida"] = True
         respuesta_texto = sanitizar_salida_chat(respuesta_texto or "")
         if not respuesta_texto.strip():
             respuesta_texto = (
@@ -439,19 +469,21 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         cognicion = meta_extra.get("cognicion", {})
 
-        # 1) Respaldo principal: buscar en la web antes de hablar de límites
+        # 1) Respaldo: ServiceManager.buscar_web (única ruta)
         if BUSQUEDA_WEB_AUTO:
             try:
-                from cognicion.busqueda import responder_con_busqueda
+                from cognicion.servicios import obtener_manager
+                from core.cortex.logic_engine import LogicEngine
 
-                pack = responder_con_busqueda(entrada)
-                if pack.get("texto"):
-                    meta_extra.setdefault("cognicion", {})
-                    meta_extra["cognicion"]["busqueda_respaldo"] = {
-                        "ok": bool(pack.get("exito")),
-                        "motor": pack.get("motor"),
-                    }
-                    return pack["texto"]
+                if LogicEngine.permite_web(entrada):
+                    web = obtener_manager().buscar_web(entrada, origen="agente")
+                    if web.get("texto"):
+                        meta_extra.setdefault("cognicion", {})
+                        meta_extra["cognicion"]["busqueda_respaldo"] = {
+                            "ok": bool(web.get("ok")),
+                            "motor": web.get("motor"),
+                        }
+                        return web["texto"]
             except Exception as exc:
                 meta_extra.setdefault("cognicion", {})
                 meta_extra["cognicion"]["busqueda_error"] = type(exc).__name__

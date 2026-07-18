@@ -25,15 +25,20 @@ ProgressFn = Callable[[str, dict[str, Any]], None]
 
 
 def _necesita_busqueda(mensaje: str, tiene_imagen: bool) -> bool:
+    from cognicion.busqueda.pedido_explicito import (
+        es_saludo_o_charla_simple,
+        pedido_busqueda_explicito,
+    )
+
     t = (mensaje or "").strip().lower()
     if tiene_imagen and len(t) < 8:
         return False
     if len(t) < 3:
         return False
-    # Saludos cortos → no orquesta
-    if t in ("hola", "hi", "hey", "buenas", "saludos") or t.startswith("hola "):
+    if es_saludo_o_charla_simple(mensaje):
         return False
-    return True
+    # Memory Cortex: solo pedido explícito de Israel
+    return pedido_busqueda_explicito(mensaje)
 
 
 def _percepcion_vision(

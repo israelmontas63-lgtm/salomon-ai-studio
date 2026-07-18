@@ -5,13 +5,15 @@
 (function () {
   "use strict";
 
-  var VERSION = "20.1.0";
+  var VERSION = "20.2.0";
   var Manager = window.SalomonMediaStreamManager;
   if (!Manager) {
     console.error("[CameraEngine] MediaStreamManager no cargado — incluye camera-engine.js antes");
     return;
   }
 
+  var ZOOM_MIN = 1;
+  var ZOOM_MAX = 4;
   var ui = {
     open: false,
     locked: true,
@@ -20,6 +22,11 @@
     freeze: null,
     flash: null,
     manager: null,
+    zoom: 1,
+    zoomTarget: 1,
+    zoomDisplay: 1,
+    zoomRaf: 0,
+    pinch: { active: false, startDist: 0, startZoom: 1, moved: false },
   };
 
   function log() {
@@ -66,6 +73,7 @@
       ui.manager.stop();
       ui.manager = null;
     }
+    resetZoom();
     if (ui.root && ui.root.parentNode) ui.root.parentNode.removeChild(ui.root);
     ui.root = null;
     ui.video = null;
@@ -118,15 +126,113 @@
   }
 
   function rotateCamera() {
+    // Solo cambio de facing (visual/stream). NUNCA captura.
     if (!ui.manager || !ui.manager.isReady()) return;
     var next = ui.manager.getFacing() === "user" ? "environment" : "user";
     ui.manager.switchFacing(next).then(function () {
       syncEngineStatus(ui.manager.getStatus());
+      paintZoom(ui.zoomDisplay || 1);
     });
+  }
+
+  function clampZoom(z) {
+    return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+  }
+
+  function touchDistance(t0, t1) {
+    var dx = t0.clientX - t1.clientX;
+    var dy = t0.clientY - t1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function paintZoom(z) {
+    var zoom = clampZoom(z);
+    ui.zoom = zoom;
+    if (!ui.video) return;
+    ui.video.style.transformOrigin = "center center";
+    ui.video.style.willChange = "transform";
+    var mirror = ui.manager && ui.manager.getFacing() === "user";
+    ui.video.style.transform = (mirror ? "scaleX(-1) " : "") + "scale(" + zoom + ")";
+    if (ui.root) ui.root.dataset.zoom = String(zoom.toFixed(2));
+  }
+
+  function tickZoom() {
+    ui.zoomRaf = 0;
+    var cur = ui.zoomDisplay;
+    var tgt = ui.zoomTarget;
+    var next = cur + (tgt - cur) * 0.32;
+    if (Math.abs(tgt - next) < 0.002) next = tgt;
+    ui.zoomDisplay = next;
+    paintZoom(next);
+    if (next !== tgt) ui.zoomRaf = requestAnimationFrame(tickZoom);
+  }
+
+  function setZoomTarget(z) {
+    ui.zoomTarget = clampZoom(z);
+    if (!ui.zoomRaf) ui.zoomRaf = requestAnimationFrame(tickZoom);
+  }
+
+  function resetZoom() {
+    if (ui.zoomRaf) cancelAnimationFrame(ui.zoomRaf);
+    ui.zoomRaf = 0;
+    ui.zoom = 1;
+    ui.zoomTarget = 1;
+    ui.zoomDisplay = 1;
+    ui.pinch.active = false;
+    ui.pinch.moved = false;
+    ui.pinch.startDist = 0;
+    ui.pinch.startZoom = 1;
+    paintZoom(1);
+  }
+
+  function installPinchZoom(stage) {
+    if (!stage || stage.dataset.uiPinch === "1") return;
+    stage.dataset.uiPinch = "1";
+    var opts = { capture: true, passive: false };
+
+    function onStart(e) {
+      if (!ui.open) return;
+      if (!e.touches || e.touches.length < 2) return;
+      ui.pinch.active = true;
+      ui.pinch.moved = false;
+      ui.pinch.startDist = touchDistance(e.touches[0], e.touches[1]);
+      ui.pinch.startZoom = ui.zoomTarget || ui.zoomDisplay || 1;
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+    }
+
+    function onMove(e) {
+      if (!ui.open || !ui.pinch.active) return;
+      if (!e.touches || e.touches.length < 2) return;
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+      var dist = touchDistance(e.touches[0], e.touches[1]);
+      if (!ui.pinch.startDist) return;
+      var ratio = dist / ui.pinch.startDist;
+      if (Math.abs(ratio - 1) > 0.03) ui.pinch.moved = true;
+      setZoomTarget(ui.pinch.startZoom * ratio);
+    }
+
+    function onEnd(e) {
+      if (!ui.pinch.active) return;
+      if (e.touches && e.touches.length >= 2) return;
+      ui.pinch.active = false;
+      if (ui.pinch.moved) {
+        setTimeout(function () {
+          ui.pinch.moved = false;
+        }, 320);
+      }
+    }
+
+    stage.addEventListener("touchstart", onStart, opts);
+    stage.addEventListener("touchmove", onMove, opts);
+    stage.addEventListener("touchend", onEnd, opts);
+    stage.addEventListener("touchcancel", onEnd, opts);
   }
 
   function mount() {
     destroyRoot();
+    resetZoom();
     var root = document.createElement("div");
     root.className = "cam13-root";
     root.setAttribute("data-salomon-camera-v13", "1");
@@ -151,11 +257,12 @@
     flash.className = "cam13-flash";
     flash.setAttribute("aria-hidden", "true");
 
+    // Hit-area visual: NO captura (reservada al botón disparo).
+    // Handler legacy encapsulado en tools/camera_actions.js
     var preview = document.createElement("div");
     preview.className = "cam13-stage-hit";
-    bindTap(preview, function () {
-      takePicture();
-    });
+    preview.setAttribute("aria-hidden", "true");
+    preview.style.pointerEvents = "none";
 
     var lock = document.createElement("button");
     lock.type = "button";
@@ -235,6 +342,26 @@
     ui.video = video;
     ui.freeze = freeze;
     ui.flash = flash;
+
+    // Pinch-to-zoom sobre viewport (fluido). Rotación/facing no captura.
+    installPinchZoom(root);
+    if (document.documentElement.dataset.cam13Orient !== "1") {
+      document.documentElement.dataset.cam13Orient = "1";
+      function onOrientVisual() {
+        var actions = window.SalomonCameraActions;
+        if (actions && typeof actions.onOrientationVisualOnly === "function") {
+          actions.onOrientationVisualOnly({ log: log });
+        } else {
+          log("orientation → visual only (no capture)");
+        }
+      }
+      window.addEventListener("orientationchange", onOrientVisual, false);
+      try {
+        if (screen.orientation && screen.orientation.addEventListener) {
+          screen.orientation.addEventListener("change", onOrientVisual);
+        }
+      } catch (e) {}
+    }
 
     ui.manager = new Manager({
       videoEl: video,

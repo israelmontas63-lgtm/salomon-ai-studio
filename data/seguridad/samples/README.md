@@ -1,17 +1,33 @@
 # Samples SBI-PRO
 
-Coloca aquí tu archivo de voz (WAV PCM 16-bit mono/stereo), por ejemplo:
+## Opción A — Captura por micrófono
 
-`israel.wav`
+```bash
+pip install sounddevice
+python api/sbi/capturar.py
+```
 
-Luego, con el servidor en marcha:
+Lee en voz alta: **Salomon autentica a Israel**
+
+## Opción B — Colocar WAV manualmente
+
+Guarda tu grabación como:
+
+`data/seguridad/samples/israel.wav`
+
+(PCM 16-bit; mono preferido)
+
+## Enrolamiento (sin activar aún)
 
 ```bash
 python api/sbi/setup_env.py
-python api/sbi/enroll.py data/seguridad/samples/israel.wav --activar
-python api/sbi/verify.py data/seguridad/samples/israel.wav
+python api/sbi/enroll.py data/seguridad/samples/israel.wav
 ```
 
-Frase recomendada al grabar (challenge):
+Solo tras éxito y tu frase:
 
-> Salomon autentica a Israel
+`APROBADO: Activar SBI_ENABLED=true`
+
+…ejecutamos activación (`SBI_ENABLED=true` local + Render).
+
+**No uses** los MP3 de `data/audio/salomon_*.mp3` (son voz TTS de Salomón, no la tuya).

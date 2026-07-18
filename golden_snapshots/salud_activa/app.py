@@ -17,7 +17,9 @@ import uuid
 from settings import ROOT_DIR
 from dotenv import load_dotenv
 
+# Root .env + vault SBI (firma/plantilla/tokens en security/credentials/)
 load_dotenv(ROOT_DIR / ".env")
+load_dotenv(ROOT_DIR / "security" / "credentials" / "sbi.env", override=True)
 
 from cognicion.registro import configurar_registro, evento, obtener_logger
 
@@ -75,6 +77,9 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/comic/estado",
         "/api/media/estado",
         "/api/autonoma/fase1/estado",
+        "/api/nucleo/perceptivo",
+        "/api/mente/conexion",
+        "/api/core/kernel",
     }
 )
 
@@ -636,8 +641,32 @@ def _salud_payload() -> dict:
             "version": "104.0.0",
             "protocol": "RECONEXION_EMERGENCIA_PUERTOS_PERIFERICOS",
         },
+        "nucleo_perceptivo": _nucleo_perceptivo_payload(),
+        "mente": _mente_conexion_payload(),
         "protocol": ver.get("protocol") or "SALOMON_VIVIENTE",
     }
+
+
+def _mente_conexion_payload() -> dict:
+    try:
+        from mente.conexion import conexion_cerebral_estado
+
+        return conexion_cerebral_estado()
+    except Exception as exc:
+        return {"ok": False, "conexion": "ERROR", "error": type(exc).__name__}
+
+
+def _nucleo_perceptivo_payload() -> dict:
+    try:
+        from config import estado_nucleo_perceptivo
+
+        return estado_nucleo_perceptivo()
+    except Exception as exc:
+        return {
+            "ok": False,
+            "confirmacion": "Núcleo perceptivo incompleto — revisar config/",
+            "error": type(exc).__name__,
+        }
 
 
 def _salud_dashboard_html(payload: dict) -> str:
@@ -774,6 +803,51 @@ def salud(request: Request):
         if json_i < 0 or html_i < json_i:
             return HTMLResponse(content=_salud_dashboard_html(payload), status_code=200)
     return payload
+
+
+@app.get("/api/nucleo/perceptivo")
+def nucleo_perceptivo() -> dict:
+    """Visión + Voz + Memory Cortex — confirmación de núcleo."""
+    return _nucleo_perceptivo_payload()
+
+
+@app.get("/api/mente/conexion")
+def mente_conexion() -> dict:
+    """Estado de conexión cerebral unificada (arquitectura semántica)."""
+    from mente.conexion import conexion_cerebral_estado
+
+    return conexion_cerebral_estado()
+
+
+@app.get("/api/core/kernel")
+def api_core_kernel() -> dict:
+    """Kernel /core — MainController.init estado."""
+    from core.cortex.main_controller import MainController
+
+    return MainController.estado()
+
+
+@app.post("/api/core/kernel/init")
+def api_core_kernel_init() -> dict:
+    """Fuerza init() del kernel Python (saludo + locks)."""
+    from core.cortex.main_controller import MainController
+
+    return MainController.init()
+
+
+@app.get("/core/{path:path}")
+def core_static(path: str):
+    """Sirve studio/dist/core/** (kernel JS)."""
+    from fastapi.responses import FileResponse
+
+    safe = path.replace("\\", "/").lstrip("/")
+    if ".." in safe.split("/"):
+        raise HTTPException(status_code=400, detail="ruta_invalida")
+    ruta = STUDIO_DIR / "core" / safe
+    if not ruta.is_file():
+        raise HTTPException(status_code=404, detail="core_asset_missing")
+    media = "application/javascript" if safe.endswith(".js") else "text/plain"
+    return FileResponse(ruta, media_type=media, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/api/salud/detalle")
@@ -926,8 +1000,13 @@ def chat(body: ChatRequest) -> ChatResponse:
             tts_disponible=False,
         )
 
-    respuesta = salomon.procesar_entrada(
+    # Conexión cerebral unificada (mente/ → cerebro)
+    from mente.conexion import procesar_unificado
+
+    respuesta = procesar_unificado(
         body.mensaje,
+        session_id=session_id,
+        salomon=salomon,
         lat=body.lat,
         lon=body.lon,
         imagen_base64=body.imagen_base64,
@@ -1059,32 +1138,17 @@ def nuevo_chat(session_id: str | None = None, reiniciar: bool = False) -> Sessio
     else:
         session_id, salomon = _obtener_o_crear_sesion(session_id)
 
-    mensajes_previos = [
-        m for m in salomon.historial if m.rol in ("usuario", "asistente")
-    ]
+    # Protocolo de inicio cerebral (siempre al abrir / nuevo chat)
+    from mente.protocolo_inicio import protocolo_inicio
 
-    if mensajes_previos and not reiniciar:
-        ultimo = next(
-            (m.contenido for m in reversed(salomon.historial) if m.rol == "asistente"),
-            "Bienvenido de nuevo.",
-        )
-        return SessionResponse(
-            session_id=session_id,
-            mensaje=ultimo,
-            tts_disponible=False,
-        )
-
-    # Ciclo completo: agente de contenido → frase → ElevenLabs → UI
-    from acciones.bienvenida import ciclo_bienvenida_completa
-
-    ciclo = ciclo_bienvenida_completa()
+    ciclo = protocolo_inicio(session_id)
     frase = ciclo["frase"]
-    _persistir_turno(session_id, "Hola", frase)
+    _persistir_turno(session_id, "[inicio]", frase)
     return SessionResponse(
         session_id=session_id,
         mensaje=frase,
         audio_base64=ciclo.get("audio_base64"),
-        audio_mime=ciclo.get("audio_mime") or "audio/mpeg",
+        audio_mime=ciclo.get("audio_mime") or "audio/wav",
         tts_disponible=bool(ciclo.get("tts_disponible")),
     )
 
@@ -2392,10 +2456,22 @@ def camera_v13_js() -> FileResponse:
     return _archivo_studio("camera-v13.js", "application/javascript")
 
 
+@app.get("/tools/camera_actions.js")
+def tools_camera_actions_js() -> FileResponse:
+    """Captura UI legacy encapsulada (desconectada; shutter-only activo)."""
+    return _archivo_studio("tools/camera_actions.js", "application/javascript")
+
+
 @app.get("/salomon-ui-shield.js")
 def salomon_ui_shield_js() -> FileResponse:
     """UI Shield: interacciones (cámara/voz/burbujas)."""
     return _archivo_studio("salomon-ui-shield.js", "application/javascript")
+
+
+@app.get("/salomon-fase1.js")
+def salomon_fase1_js() -> FileResponse:
+    """Fase1 fetch bridge — Memory Cortex (búsqueda solo explícita)."""
+    return _archivo_studio("salomon-fase1.js", "application/javascript")
 
 
 @app.get("/salomon-self-heal.js")

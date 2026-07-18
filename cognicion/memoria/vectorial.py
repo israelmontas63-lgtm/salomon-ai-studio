@@ -17,6 +17,23 @@ _instancia_global: "MemoriaVectorial | None" = None
 _FALLBACK_PATH = MEMORIA_DIR.parent / "memoria_json_fallback.jsonl"
 
 
+class _CohereChromaEF:
+    """EmbeddingFunction Chroma → ServiceManager.embeddings (Cohere)."""
+
+    def __init__(self, manager: Any) -> None:
+        self._mgr = manager
+
+    def name(self) -> str:
+        return "cohere_salomon"
+
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        texts = [str(t) for t in (input or [])]
+        if not texts:
+            return []
+        return self._mgr.embed_texts(texts)
+
+
+
 def reiniciar_instancia() -> "MemoriaVectorial":
     """Fuerza re-init (reconexión de emergencia)."""
     global _instancia_global
@@ -58,12 +75,30 @@ class MemoriaVectorial:
                 )
             except Exception:
                 cliente = chromadb.PersistentClient(path=str(MEMORIA_DIR))
-            self._coleccion = cliente.get_or_create_collection(
-                name="salomon_conocimiento",
-                metadata={"hnsw:space": "cosine"},
-            )
+
+            # Cohere embeddings cuando hay COHERE_API_KEY (ruta neuronal)
+            self._coleccion = None
+            try:
+                from cognicion.servicios import obtener_manager
+
+                mgr = obtener_manager()
+                if mgr.cohere_disponible():
+                    self._coleccion = cliente.get_or_create_collection(
+                        name="salomon_conocimiento_cohere",
+                        metadata={"hnsw:space": "cosine", "embedder": "cohere"},
+                        embedding_function=_CohereChromaEF(mgr),
+                    )
+                    self.motor = "chroma_cohere"
+            except Exception:
+                self._coleccion = None
+
+            if self._coleccion is None:
+                self._coleccion = cliente.get_or_create_collection(
+                    name="salomon_conocimiento",
+                    metadata={"hnsw:space": "cosine"},
+                )
+                self.motor = "chroma_local"
             self._disponible = True
-            self.motor = "chroma_local"
             self._sembrar_conocimiento_base()
             return
         except Exception as exc:

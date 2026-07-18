@@ -265,15 +265,23 @@ export default function App() {
           }
         }
 
+        // Kernel /core MainController.init() puede haber disparado saludo enérgico
+        const coreG = window.__SalomonCoreGreeting;
         const data = await iniciarSesion(stored);
         persistSession(data.session_id);
+        const welcomeText =
+          (coreG?.frase && Date.now() - (coreG.at || 0) < 12000
+            ? coreG.frase
+            : null) ||
+          data.mensaje ||
+          "";
 
         const welcomeId = nextId();
         setMessages([
           {
             id: welcomeId,
             role: "ai",
-            text: data.mensaje || "",
+            text: welcomeText,
             typing: true,
             saved: false,
             audioBase64: null,
@@ -282,10 +290,10 @@ export default function App() {
         ]);
         setAppStatus("speaking");
         attachAudioInBackground(welcomeId, {
-          texto: data.mensaje,
+          texto: welcomeText,
           audio_base64: data.audio_base64,
           audio_mime: data.audio_mime,
-          metadata: {},
+          metadata: { kernel: !!coreG?.frase },
         });
       } catch {
         setAppStatus("offline");

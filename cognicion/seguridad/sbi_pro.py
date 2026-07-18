@@ -49,7 +49,9 @@ def _cfg() -> dict[str, Any]:
     )
     threshold = float(os.getenv("SBI_THRESHOLD", "0.82") or "0.82")
     threshold = min(0.99, max(0.50, threshold))
-    rel = (os.getenv("SBI_TEMPLATE_PATH", "data/seguridad/sbi_israel.json") or "").strip()
+    rel = (
+        os.getenv("SBI_TEMPLATE_PATH", "security/credentials/sbi_israel.json") or ""
+    ).strip()
     path = Path(rel)
     if not path.is_absolute():
         path = ROOT_DIR / path

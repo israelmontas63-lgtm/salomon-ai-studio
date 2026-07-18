@@ -14,7 +14,9 @@
   "dir": "ltr",
   "categories": ["productivity", "utilities", "education"],
   "prefer_related_applications": false,
-  "permissions": ["camera", "microphone"],
+  "permissions": ["microphone", "camera"],
+  "optional_permissions": ["microphone", "camera"],
+  "features": ["microphone", "camera"],
   "icons": [
     {
       "src": "/icon-192-v2.png",

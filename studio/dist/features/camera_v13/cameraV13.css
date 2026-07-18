@@ -1,0 +1,354 @@
+/* Cámara Salomón AI v20 — CameraEngine + freeze buffer */
+:root {
+  --cam13-dorado: #c9a227;
+  --cam13-dorado-claro: #e8c860;
+  --cam13-gap-2mm: 7.56px;
+  --cam13-ctrl-z: 60;
+  --cam13-crossfade: 200ms;
+}
+
+.cam13-root {
+  position: fixed;
+  inset: 0;
+  z-index: 400000;
+  background: #111;
+  isolation: isolate;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cam13-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 1;
+  background: #111;
+}
+
+.cam13-video.is-mirror {
+  transform: scaleX(-1);
+}
+
+.cam13-freeze {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity var(--cam13-crossfade) ease-out;
+  background: #111;
+}
+
+.cam13-freeze.is-visible {
+  opacity: 1;
+}
+
+/* State machine: controles solo en READY */
+.cam13-root:not([data-engine-status="READY"]) .cam13-ctrl,
+.cam13-root:not([data-engine-status="READY"]) .cam13-shutter,
+.cam13-root:not([data-engine-status="READY"]) .cam13-icon,
+.cam13-root:not([data-engine-status="READY"]) .cam13-lock,
+.cam13-root:not([data-engine-status="READY"]) .cam13-stage-hit {
+  pointer-events: none !important;
+  opacity: 0.45;
+}
+
+.cam13-root[data-engine-status="READY"] .cam13-ctrl,
+.cam13-root[data-engine-status="READY"] .cam13-shutter,
+.cam13-root[data-engine-status="READY"] .cam13-icon,
+.cam13-root[data-engine-status="READY"] .cam13-lock,
+.cam13-root[data-engine-status="READY"] .cam13-stage-hit {
+  pointer-events: auto !important;
+  opacity: 1;
+}
+
+.cam13-root[data-engine-status="READY"] .cam13-icon.is-on {
+  opacity: 1;
+}
+
+.cam13-root.is-switching .cam13-icon[data-cam-action="rotateCamera"] {
+  pointer-events: none !important;
+  opacity: 0.4;
+}
+
+.cam13-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.cam13-root.is-shot .cam13-flash {
+  animation: cam13-flash 180ms ease-out forwards;
+}
+
+@keyframes cam13-flash {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+/* Preview: debajo de controles — ya no tapa botones */
+.cam13-stage-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cam13-lock {
+  position: absolute;
+  top: calc(14px + 21mm + env(safe-area-inset-top, 0px));
+  left: 14px;
+  z-index: var(--cam13-ctrl-z);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(201, 162, 39, 0.65);
+  background: rgba(10, 10, 10, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--cam13-dorado-claro);
+  padding: 0;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.cam13-lock svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  pointer-events: none;
+}
+
+.cam13-lock.is-locked {
+  border-color: var(--cam13-dorado);
+  box-shadow: 0 0 12px rgba(201, 162, 39, 0.45);
+}
+
+.cam13-cluster-right {
+  position: absolute;
+  top: calc(14px + 21mm + env(safe-area-inset-top, 0px));
+  right: 14px;
+  z-index: var(--cam13-ctrl-z);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cam13-gap-2mm);
+  pointer-events: auto !important;
+}
+
+.cam13-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(201, 162, 39, 0.65);
+  background: rgba(10, 10, 10, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--cam13-dorado);
+  padding: 0;
+  position: relative;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.cam13-icon * {
+  pointer-events: none;
+}
+
+.cam13-icon.is-on {
+  background: rgba(212, 175, 55, 0.28);
+  box-shadow: 0 0 0 2px rgba(232, 200, 96, 0.45), 0 0 12px rgba(201, 162, 39, 0.4);
+}
+
+.cam13-ico-cam {
+  width: 20px;
+  height: 14px;
+  border: 1.6px solid var(--cam13-dorado);
+  border-radius: 4px;
+  position: relative;
+}
+
+.cam13-ico-cam::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  margin: -4px 0 0 -4px;
+  border: 1.6px solid var(--cam13-dorado);
+  border-radius: 50%;
+}
+
+.cam13-icon.is-on .cam13-ico-cam {
+  background: rgba(212, 175, 55, 0.4);
+}
+
+.cam13-ico-flip svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--cam13-dorado);
+  stroke-width: 1.8;
+}
+
+.cam13-shutter-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(max(12px, 28px - 7mm) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--cam13-ctrl-z);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.cam13-shutter {
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 35% 30%, var(--cam13-dorado-claro), var(--cam13-dorado));
+  box-shadow: 0 0 16px rgba(201, 162, 39, 0.5);
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.cam13-shutter * {
+  pointer-events: none;
+}
+
+.cam13-shutter:disabled {
+  opacity: 0.55;
+}
+
+.cam13-ring-plata {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    transparent 42%,
+    rgba(192, 192, 192, 0.05) 55%,
+    rgba(232, 232, 232, 0.55) 78%,
+    rgba(192, 192, 192, 0.85) 92%,
+    transparent 100%
+  );
+  animation: cam13-breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes cam13-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+.cam13-ico-cam-dark {
+  width: 26px;
+  height: 20px;
+  border: 2.2px solid #1a1508;
+  border-radius: 5px;
+  position: relative;
+  z-index: 2;
+}
+
+.cam13-ico-cam-dark::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border: 2px solid #1a1508;
+  border-radius: 50%;
+}
+
+.cam13-root.is-shot .cam13-ring-plata {
+  animation: cam13-shot 0.85s ease-out forwards;
+}
+
+@keyframes cam13-shot {
+  0% { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* Mientras cámara aislada abierta: ocultar chrome del asistente */
+html.camera-v13-open .bottom-bar,
+html.camera-v13-open .studio-header,
+html.camera-v13-open .chat-body,
+html.camera-v13-open .ui-camera-overlay,
+html.camera-v13-open #ui-camera-overlay,
+html.camera-v14-open .bottom-bar,
+html.camera-v14-open .studio-header,
+html.camera-v14-open .chat-body,
+html.camera-v14-open .ui-camera-overlay,
+html.camera-v14-open #ui-camera-overlay,
+html.camera-v15-open .bottom-bar,
+html.camera-v15-open .studio-header,
+html.camera-v15-open .chat-body,
+html.camera-v15-open .ui-camera-overlay,
+html.camera-v15-open #ui-camera-overlay,
+html.camera-v16-open .bottom-bar,
+html.camera-v16-open .studio-header,
+html.camera-v16-open .chat-body,
+html.camera-v16-open .ui-camera-overlay,
+html.camera-v16-open #ui-camera-overlay,
+html.camera-v20-open .bottom-bar,
+html.camera-v20-open .studio-header,
+html.camera-v20-open .chat-body,
+html.camera-v20-open .ui-camera-overlay,
+html.camera-v20-open #ui-camera-overlay {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+html.camera-v13-open .camera-modal,
+html.camera-v13-open .camera-view,
+html.camera-v14-open .camera-modal,
+html.camera-v14-open .camera-view,
+html.camera-v15-open .camera-modal,
+html.camera-v15-open .camera-view,
+html.camera-v16-open .camera-modal,
+html.camera-v16-open .camera-view,
+html.camera-v20-open .camera-modal,
+html.camera-v20-open .camera-view {
+  display: none !important;
+}

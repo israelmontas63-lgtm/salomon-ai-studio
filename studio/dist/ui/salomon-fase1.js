@@ -167,9 +167,8 @@
 
   function looksLikeResearch(m) {
     var t = String(m || "").trim().toLowerCase();
-    return /(qué es|que es|busca|investiga|según|segun|wikipedia|explica|analiza|cómo funciona|como funciona|fuentes|definición|definicion|por qué|porque)/.test(
-      t
-    );
+    // Memory Cortex: ÚNICAMENTE «Busca en la web sobre…»
+    return /\b(busca|buscar)\s+en\s+(la\s+web|internet|wikipedia)\s+sobre\b/.test(t);
   }
 
   function shouldUseFase1(url, init) {
@@ -187,8 +186,8 @@
       var m = String(body.mensaje || "").trim();
       // Conversación / saludo → cerebro (Estado Vivo / HD Cognitiva)
       if (isConversational(m)) return false;
-      // Investigación con sustancia → Fase 1 (síntesis bajo núcleo)
-      if (looksLikeResearch(m) || m.length >= 28) return true;
+      // Investigación SOLO si Israel lo pidió explícitamente
+      if (looksLikeResearch(m)) return true;
     } catch (e) {
       return false;
     }

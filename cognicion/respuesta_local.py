@@ -115,14 +115,16 @@ def respuesta_local_chat(
             "dime qué necesitas y lo atendemos."
         )
 
-    # 2) Respaldo principal: agente de búsqueda web
+    # 2) Respaldo: ServiceManager (única ruta web)
     if BUSQUEDA_WEB_AUTO and pregunta:
         try:
-            from cognicion.busqueda import responder_con_busqueda
+            from cognicion.servicios import obtener_manager
+            from core.cortex.logic_engine import LogicEngine
 
-            pack = responder_con_busqueda(pregunta)
-            if pack.get("texto"):
-                return _con_israel(str(pack["texto"]))
+            if LogicEngine.permite_web(pregunta):
+                web = obtener_manager().buscar_web(pregunta, origen="agente")
+                if web.get("texto"):
+                    return _con_israel(str(web["texto"]))
         except Exception:
             pass
 

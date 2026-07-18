@@ -25,6 +25,9 @@
     flipSeq: 0,
     agentLockTimer: 0,
     zoom: 1,
+    zoomTarget: 1,
+    zoomDisplay: 1,
+    zoomRaf: 0,
     pinch: { active: false, startDist: 0, startZoom: 1, moved: false },
     stageEl: null,
     stageTapHandler: null,
@@ -598,50 +601,46 @@
       document.addEventListener(type, blockChat, CAPTURE_OPTS);
     });
 
-    function onScreenShutter(e) {
-      if (!isCamMode()) return;
-      if (camera.pinch.active || camera.pinch.moved) return;
-      if (isCaptureExemptTarget(e.target) && !isScreenShutterTarget(e.target)) return;
-      if (!isPrimaryGesture(e)) return;
-      if (!isScreenShutterTarget(e.target)) return;
-      // 2 dedos = pellizco, no foto
-      if (e.touches && e.touches.length > 0) return;
-      if (e.changedTouches && e.changedTouches.length > 1) return;
-      if (e.cancelable) e.preventDefault();
-      e.stopImmediatePropagation();
-      e.stopPropagation();
-      if (!canTakeShot()) return;
-      log("pantalla â†’ capturePhoto");
-      capturePhoto();
+    // Pantalla / volumen: DESCONECTADOS del flujo UI (shutter-only).
+    // Handlers viven en tools/camera_actions.js por si se reactivan.
+    var actions = window.SalomonCameraActions;
+    var captureCtx = {
+      canTakeShot: canTakeShot,
+      capturePhoto: capturePhoto,
+      isCamMode: isCamMode,
+      isPrimaryGesture: isPrimaryGesture,
+      isCaptureExemptTarget: isCaptureExemptTarget,
+      isScreenShutterTarget: isScreenShutterTarget,
+      camera: camera,
+      CAPTURE_OPTS: CAPTURE_OPTS,
+      log: log,
+      suppressShotWindow: function () {
+        lastShotAt = Date.now();
+      },
+    };
+    if (actions && typeof actions.bindLegacyUiCaptures === "function") {
+      actions.bindLegacyUiCaptures(captureCtx);
     }
-    document.addEventListener("touchend", onScreenShutter, CAPTURE_OPTS);
-    document.addEventListener("pointerup", onScreenShutter, CAPTURE_OPTS);
 
-    if (document.documentElement.dataset.uiCamVol !== "1") {
-      document.documentElement.dataset.uiCamVol = "1";
-      function onVolume(e) {
-        if (!isCamMode()) return;
-        var k = e.key || "";
-        var c = e.code || "";
-        if (
-          k === "AudioVolumeUp" ||
-          k === "AudioVolumeDown" ||
-          c === "VolumeUp" ||
-          c === "VolumeDown" ||
-          c === "AudioVolumeUp" ||
-          c === "AudioVolumeDown"
-        ) {
-          if (e.cancelable) e.preventDefault();
-          e.stopImmediatePropagation();
-          if (!canTakeShot()) return;
-          log("volumen â†’ capturePhoto");
-          capturePhoto();
+    // Orientación / rotación: solo visual — NUNCA captura
+    if (document.documentElement.dataset.uiCamOrient !== "1") {
+      document.documentElement.dataset.uiCamOrient = "1";
+      function onOrientVisual() {
+        lastShotAt = Date.now();
+        if (actions && typeof actions.onOrientationVisualOnly === "function") {
+          actions.onOrientationVisualOnly(captureCtx);
+        } else {
+          log("orientation → visual only (no capture)");
         }
       }
-      document.addEventListener("keydown", onVolume, true);
-      document.addEventListener("keyup", onVolume, true);
+      window.addEventListener("orientationchange", onOrientVisual, false);
+      try {
+        if (screen.orientation && screen.orientation.addEventListener) {
+          screen.orientation.addEventListener("change", onOrientVisual);
+        }
+      } catch (orientErr) {}
     }
-    log("muro CAPTURA + gatillos pantalla/volumen v2");
+    log("muro CAPTURA shutter-only (pantalla/volumen desconectados)");
   }
 
   /** BotÃ³n central / mic = disparador con icono cÃ¡mara */
@@ -680,31 +679,48 @@
     });
   }
 
+  function ensureVoiceModeBadge(btn, label) {
+    var wrap = btn.closest(".voice-btn-wrap") || btn.parentElement;
+    if (!wrap) return;
+    var badge = wrap.querySelector(".voice-mode-badge");
+    if (!label) {
+      if (badge) badge.remove();
+      return;
+    }
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "voice-mode-badge";
+      wrap.appendChild(badge);
+    }
+    badge.textContent = label;
+    badge.setAttribute("data-mode", label === "IA" ? "ia" : "dictado");
+  }
+
   function wireVoiceGestures(btn) {
-    // Solo feedback visual en modo CHAT (CAPTURA lo corta el shutter gate)
+    // Feedback visual Dictado (1) / IA (2). Captura en cam la corta el shutter gate.
+    // El STT real lo maneja React VoiceButton; aquí: badge + puerto audio.
     btn.addEventListener(
-      "click",
+      "pointerup",
       function (e) {
-        if (isCamMode()) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          return;
-        }
+        if (isCamMode()) return;
         var now = Date.now();
         var dbl = now - lastTap < 320;
         lastTap = now;
         if (dbl) {
           btn.dataset.uiMode = "conversation";
           btn.dataset.uiFlash = "1";
+          ensureVoiceModeBadge(btn, "IA");
           haptic([12, 30, 12]);
           setTimeout(function () {
             btn.dataset.uiFlash = "0";
           }, 900);
+          // Remap hardware: abrir puerto de audio
           startAudioReactive(btn);
         } else {
           setTimeout(function () {
             if (Date.now() - lastTap >= 300 && !isCamMode()) {
               btn.dataset.uiMode = "dictation";
+              ensureVoiceModeBadge(btn, "Dictado");
               startAudioReactive(btn);
             }
           }, 300);
@@ -1050,18 +1066,21 @@
     return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
   }
 
-  function applyCameraZoom(z) {
-    camera.zoom = clampZoom(z);
+  function paintCameraZoom(z) {
+    var zoom = clampZoom(z);
+    camera.zoom = zoom;
     var video = camera.videoEl || document.querySelector("#ui-camera-overlay video");
     var stage = document.querySelector("#ui-camera-overlay .ui-camera-stage");
     if (video) {
       video.style.transformOrigin = "center center";
+      video.style.willChange = "transform";
       var mirror = modoInterfaz === "camara-frontal";
-      video.style.transform = (mirror ? "scaleX(-1) " : "") + "scale(" + camera.zoom + ")";
+      video.style.transform = (mirror ? "scaleX(-1) " : "") + "scale(" + zoom + ")";
     }
-    if (stage) stage.dataset.zoom = String(camera.zoom.toFixed(2));
+    if (stage) stage.dataset.zoom = String(zoom.toFixed(2));
+  }
 
-    // Zoom Ã³ptico/hardware si el track lo soporta (cÃ¡mara trasera)
+  function applyHardwareZoom(z) {
     try {
       var track = camera.stream && camera.stream.getVideoTracks && camera.stream.getVideoTracks()[0];
       if (track && typeof track.getCapabilities === "function") {
@@ -1069,23 +1088,53 @@
         if (caps.zoom) {
           var min = caps.zoom.min || 1;
           var max = caps.zoom.max || ZOOM_MAX;
-          var hw = min + ((camera.zoom - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN)) * (max - min);
+          var hw = min + ((clampZoom(z) - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN)) * (max - min);
           track.applyConstraints({ advanced: [{ zoom: hw }] }).catch(function () {});
         }
       }
     } catch (e) {}
   }
 
+  function tickCameraZoom() {
+    camera.zoomRaf = 0;
+    var cur = camera.zoomDisplay;
+    var tgt = camera.zoomTarget;
+    var next = cur + (tgt - cur) * 0.32;
+    if (Math.abs(tgt - next) < 0.002) next = tgt;
+    camera.zoomDisplay = next;
+    paintCameraZoom(next);
+    if (next !== tgt) {
+      camera.zoomRaf = requestAnimationFrame(tickCameraZoom);
+    } else {
+      applyHardwareZoom(next);
+    }
+  }
+
+  /** Zoom con interpolación (sin saltos). target → RAF lerp. */
+  function applyCameraZoom(z) {
+    camera.zoomTarget = clampZoom(z);
+    if (!camera.zoomRaf) {
+      camera.zoomRaf = requestAnimationFrame(tickCameraZoom);
+    }
+  }
+
   function resetCameraZoom() {
+    if (camera.zoomRaf) {
+      cancelAnimationFrame(camera.zoomRaf);
+      camera.zoomRaf = 0;
+    }
     camera.zoom = 1;
+    camera.zoomTarget = 1;
+    camera.zoomDisplay = 1;
     camera.pinch.active = false;
     camera.pinch.moved = false;
     camera.pinch.startDist = 0;
     camera.pinch.startZoom = 1;
-    applyCameraZoom(1);
+    paintCameraZoom(1);
+    applyHardwareZoom(1);
   }
 
-  /** Pellizco en preview: abrir = zoom in Â· cerrar = zoom out (sobre todo trasera) */
+  /** Pellizco en preview: abrir = zoom in · cerrar = zoom out (fluido) */
   function installPinchZoom(stage) {
     if (!stage || stage.dataset.uiPinch === "1") return;
     stage.dataset.uiPinch = "1";
@@ -1096,7 +1145,7 @@
       camera.pinch.active = true;
       camera.pinch.moved = false;
       camera.pinch.startDist = touchDistance(e.touches[0], e.touches[1]);
-      camera.pinch.startZoom = camera.zoom || 1;
+      camera.pinch.startZoom = camera.zoomTarget || camera.zoomDisplay || camera.zoom || 1;
       if (e.cancelable) e.preventDefault();
       e.stopPropagation();
     }
@@ -1110,7 +1159,6 @@
       if (!camera.pinch.startDist) return;
       var ratio = dist / camera.pinch.startDist;
       if (Math.abs(ratio - 1) > 0.03) camera.pinch.moved = true;
-      // Abrir dedos â†’ acerca; cerrar â†’ aleja / normal
       applyCameraZoom(camera.pinch.startZoom * ratio);
     }
 
@@ -1118,7 +1166,6 @@
       if (!camera.pinch.active) return;
       if (e.touches && e.touches.length >= 2) return;
       camera.pinch.active = false;
-      // Evitar foto al soltar el pellizco
       if (camera.pinch.moved) {
         lastShotAt = Date.now();
         setTimeout(function () {
@@ -1209,27 +1256,27 @@
     });
   }
 
-  /** Preview: toque = disparo (solo si modoInterfaz es camara-*) */
+  /** Preview: toque YA NO dispara (shutter-only). Legacy en camera_actions. */
   function bindStageShutter(stage) {
     unbindStageShutter();
-    function onTap(ev) {
-      if (!isCamMode()) return;
-      if (camera.pinch.active || camera.pinch.moved) return;
-      if (ev.target && ev.target.closest && ev.target.closest(".ui-smart-button, .ui-camera-close")) {
-        return;
-      }
-      if (!isPrimaryGesture(ev)) return;
-      if (ev.cancelable) ev.preventDefault();
-      ev.stopImmediatePropagation();
-      ev.stopPropagation();
-      if (!canTakeShot()) return;
-      capturePhoto();
-    }
     camera.stageEl = stage;
+    var actions = window.SalomonCameraActions;
+    if (!actions || !actions.UI_AUTO_CAPTURE) {
+      camera.stageTapHandler = null;
+      log("stage shutter desconectado (camera_actions)");
+      return;
+    }
+    var ctx = {
+      canTakeShot: canTakeShot,
+      capturePhoto: capturePhoto,
+      isCamMode: isCamMode,
+      isPrimaryGesture: isPrimaryGesture,
+      camera: camera,
+      CAPTURE_OPTS: CAPTURE_OPTS,
+      log: log,
+    };
+    var onTap = actions.bindLegacyStageShutter(stage, ctx);
     camera.stageTapHandler = onTap;
-    ["touchend", "pointerup", "click"].forEach(function (type) {
-      stage.addEventListener(type, onTap, type === "click" ? true : CAPTURE_OPTS);
-    });
   }
 
   function unbindStageShutter() {
@@ -1644,7 +1691,43 @@
       });
       mo.observe(root, { childList: true, subtree: true });
     } catch (e) {}
-    log("activo modo-interfaz-291");
+    // Puerto de voz — config/voice_parameters (mic siempre listo)
+    window.__SalomonVoicePort = {
+      micAlwaysReady: true,
+      sttLang: "es-ES",
+      protocol: "tap1_dictado_tap2_ia",
+      tts: "/api/tts",
+      chat: "/api/chat",
+      sincronizado: true,
+      nucleo: "salomon_input_audio",
+    };
+    window.__SalomonVisionPort = {
+      activa: true,
+      inInputFlow: true,
+      engine: "camera-engine",
+      nucleo: "procesar_entrada+imagen_base64",
+    };
+    // Precalentar permiso de mic si el SO ya lo otorgó (sin prompt agresivo)
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        if (navigator.permissions && navigator.permissions.query) {
+          navigator.permissions.query({ name: "microphone" }).then(function (st) {
+            if (st && st.state === "granted") {
+              navigator.mediaDevices
+                .getUserMedia({ audio: true, video: false })
+                .then(function (stream) {
+                  stream.getTracks().forEach(function (t) {
+                    t.stop();
+                  });
+                  log("voice port warm — mic ready");
+                })
+                .catch(function () {});
+            }
+          }).catch(function () {});
+        }
+      }
+    } catch (warmErr) {}
+    log("activo modo-interfaz-292-shutter-pinch + nucleo perceptivo");
   }
 
   if (document.readyState === "loading") {
@@ -1654,7 +1737,7 @@
   }
 
   window.SalomonUIShield = {
-    version: "modo-interfaz-291",
+    version: "modo-interfaz-292-shutter-pinch",
     getModoInterfaz: getModoInterfaz,
     setModoInterfaz: setModoInterfaz,
     isCamMode: isCamMode,
@@ -1667,6 +1750,7 @@
     syncCameraUiState: syncCameraUiState,
     syncWritingUiState: syncWritingUiState,
     applyCameraZoom: applyCameraZoom,
+    resetCameraZoom: resetCameraZoom,
   };
 })();
 

@@ -894,6 +894,34 @@ html.salomon-cam-mode .control-btn--main.is-cam-shutter .ui-cam-swirl-plata {
   overflow: visible !important;
 }
 
+/* Badge Modo Dictado / IA */
+.voice-mode-badge {
+  position: absolute;
+  left: 50%;
+  bottom: -1.35rem;
+  transform: translateX(-50%);
+  z-index: 6;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  color: #f4f1ea;
+  background: rgba(12, 14, 18, 0.82);
+  border: 1px solid rgba(220, 220, 220, 0.35);
+}
+.voice-mode-badge[data-mode="dictado"] {
+  border-color: rgba(180, 210, 255, 0.55);
+  color: #d9e8ff;
+}
+.voice-mode-badge[data-mode="ia"] {
+  border-color: rgba(255, 200, 120, 0.55);
+  color: #ffe2b0;
+}
+
 /* Dictado: anillo metal giratorio */
 .ui-voice-orbit {
   pointer-events: none;

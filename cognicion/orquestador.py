@@ -15,7 +15,6 @@ from cognicion.autocorreccion.ciclo import (
     preparar_contexto_autocorreccion,
 )
 from cognicion.conectores import consultar_conectores
-from cognicion.busqueda import necesita_busqueda_web, responder_con_busqueda
 from cognicion.memoria.gestor import GestorMemoria
 from cognicion.memoria.memory_controller import MemoryController
 from cognicion.memoria.vectorial import obtener_memoria
@@ -193,26 +192,34 @@ class MotorCognicion:
                     meta["cognicion"]["rag_usado"] = True
                     meta["cognicion"]["memoria"] = meta_memoria
 
-        # Búsqueda web en el camino de /api/chat (agente externo)
-        if BUSQUEDA_WEB_AUTO and necesita_busqueda_web(entrada):
+        # Búsqueda web → ServiceManager (agentes autorizados en modo ejecución + SBI)
+        from core.cortex.logic_engine import LogicEngine
+
+        LogicEngine.lockLocalAgents()
+        meta["cognicion"]["memory_cortex"] = "contexto_local"
+        meta["cognicion"]["identidad_primaria"] = "Israel Monta"
+        meta["cognicion"]["logic_engine_locked"] = LogicEngine.locked()
+        if BUSQUEDA_WEB_AUTO and LogicEngine.permite_web(entrada):
             try:
-                pack = responder_con_busqueda(entrada)
-                busq = pack.get("busqueda") or {}
-                texto_busq = (pack.get("texto") or "").strip()
+                from cognicion.servicios import obtener_manager
+
+                web = obtener_manager().buscar_web(entrada, origen="agente")
+                texto_busq = (web.get("texto") or "").strip()
                 if texto_busq:
                     bloques.append(
-                        "[Búsqueda web en vivo]\n"
+                        "[Búsqueda web en vivo — flujo neuronal / agentes]\n"
                         f"{texto_busq[:2200]}\n"
                         "Instrucción: Usa estos hechos actuales en tu respuesta. "
                         "Cita el origen de forma natural si aplica."
                     )
                     meta["busqueda_web_agente"] = True
                     meta["busqueda_consultada"] = True
-                    meta["busqueda_motor"] = pack.get("motor") or busq.get("motor")
+                    meta["busqueda_motor"] = web.get("motor")
                     meta["cognicion"]["busqueda_web"] = {
-                        "ok": bool(pack.get("exito")),
-                        "motor": pack.get("motor") or busq.get("motor"),
+                        "ok": bool(web.get("ok")),
+                        "motor": web.get("motor"),
                     }
+                    meta["cognicion"]["memory_cortex"] = "web_agentes"
             except Exception as exc:
                 meta["cognicion"]["busqueda_web_error"] = type(exc).__name__
 

@@ -12,8 +12,10 @@ from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).resolve().parent
 load_dotenv(ROOT_DIR / ".env")
+load_dotenv(ROOT_DIR / "security" / "credentials" / "sbi.env", override=True)
 
 DATA_DIR = ROOT_DIR / "data"
+CREDENTIALS_DIR = ROOT_DIR / "security" / "credentials"
 MEMORIA_DIR = DATA_DIR / "memoria_chroma"
 SESIONES_DB = DATA_DIR / "sesiones.db"
 AGENTE_BACKUP_DIR = DATA_DIR / "agente_backups"
@@ -56,6 +58,42 @@ OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "").strip()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant").strip()
 
+# ── Cohere (RAG / embeddings) ─────────────────────────────────────────────
+COHERE_API_KEY = os.getenv("COHERE_API_KEY", "").strip()
+COHERE_EMBED_MODEL = os.getenv("COHERE_EMBED_MODEL", "embed-multilingual-v3.0").strip()
+
+# ── Deepgram (STT — voz a texto) ──────────────────────────────────────────
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "").strip()
+DEEPGRAM_MODEL = os.getenv("DEEPGRAM_MODEL", "nova-2").strip() or "nova-2"
+DEEPGRAM_LANGUAGE = os.getenv("DEEPGRAM_LANGUAGE", "es").strip() or "es"
+
+# ── ElevenLabs (TTS — texto a voz) ────────────────────────────────────────
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "").strip()
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
+ELEVENLABS_MODEL_ID = os.getenv(
+    "ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"
+).strip() or "eleven_multilingual_v2"
+
+# ── Fal.ai + Replicate (imagen / video) ───────────────────────────────────
+FAL_KEY = os.getenv("FAL_KEY", "").strip()
+REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN", "").strip()
+
+# Validación estricta de claves (false en Free Tier / local; true en prod)
+PROVIDERS_STRICT = os.getenv("PROVIDERS_STRICT", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+
+# Modo ejecución neuronal (producción Render) — sin simulaciones
+MODO_EJECUCION = os.getenv("MODO_EJECUCION", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+
 # ── Cognición ──────────────────────────────────────────────────────────────
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "5"))
 AGENTE_AUTONOMO_HABILITADO = os.getenv("AGENTE_AUTONOMO", "false").strip().lower() in (
@@ -72,7 +110,7 @@ SEGURIDAD_HABILITADA = os.getenv("SEGURIDAD_HABILITADA", "true").strip().lower()
 )
 
 # ── SBI-PRO — Speaker Biometric Identity (Israel Monta) ─────────────────────
-# off/soft/strict vía módulo; plantilla en data/seguridad/ (gitignored).
+# off/soft/strict vía módulo; vault en security/credentials/ (gitignored).
 SBI_ENABLED = os.getenv("SBI_ENABLED", "false").strip().lower() in (
     "1", "true", "yes", "on",
 )
@@ -86,7 +124,7 @@ SBI_CHALLENGE_PHRASE = os.getenv(
     "SBI_CHALLENGE_PHRASE", "Salomon autentica a Israel"
 ).strip()
 SBI_TEMPLATE_PATH = os.getenv(
-    "SBI_TEMPLATE_PATH", "data/seguridad/sbi_israel.json"
+    "SBI_TEMPLATE_PATH", "security/credentials/sbi_israel.json"
 ).strip()
 
 # ── Cerebro Ejecutivo (Israel Montas — propiedad privada) ──────────────────
@@ -102,11 +140,17 @@ MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "gemini").strip().lower()
 LLM_FALLBACK = os.getenv("LLM_FALLBACK", "true").strip().lower() in (
     "1", "true", "yes", "on",
 )
-LLM_LOCAL_FALLBACK = os.getenv("LLM_LOCAL_FALLBACK", "true").strip().lower() in (
-    "1", "true", "yes", "on",
-)
+# En ejecución: no degradar a local si hay claves cloud (salvo override explícito)
+_llm_local_raw = os.getenv("LLM_LOCAL_FALLBACK")
+if _llm_local_raw is None:
+    LLM_LOCAL_FALLBACK = not MODO_EJECUCION
+else:
+    LLM_LOCAL_FALLBACK = _llm_local_raw.strip().lower() in (
+        "1", "true", "yes", "on",
+    )
 
 # ── Búsqueda web (Tavily preferido; DDG/noticias como respaldo) ────────────
+# Memory Cortex: aunque AUTO=true, solo dispara con «Busca en la web sobre…»
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "").strip()
 BUSQUEDA_WEB_AUTO = os.getenv("BUSQUEDA_WEB_AUTO", "true").strip().lower() in (
     "1",
@@ -114,6 +158,21 @@ BUSQUEDA_WEB_AUTO = os.getenv("BUSQUEDA_WEB_AUTO", "true").strip().lower() in (
     "yes",
     "on",
 )
+
+# ── Núcleo perceptivo (config/voice_parameters + vision_integration) ────────
+try:
+    from config.voice_parameters import MIC_ALWAYS_READY, STT_LANG, voice_parameters
+    from config.vision_integration import VISION_ENABLED, VISION_IN_INPUT_FLOW, vision_parameters
+
+    VOICE_PARAMS = voice_parameters()
+    VISION_PARAMS = vision_parameters()
+except Exception:
+    MIC_ALWAYS_READY = True
+    STT_LANG = "es-ES"
+    VISION_ENABLED = True
+    VISION_IN_INPUT_FLOW = True
+    VOICE_PARAMS = {"sincronizado": True}
+    VISION_PARAMS = {"activa": True}
 
 # ── Colsub Media — Multi-Model Routing (Pro/Ultra) ─────────────────────────
 MEDIA_CALIDAD_FORZADA = os.getenv("MEDIA_CALIDAD_FORZADA", "pro_ultra").strip()

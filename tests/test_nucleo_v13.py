@@ -48,7 +48,11 @@ def test_busqueda_web_agente_importable():
     assert callable(necesita_busqueda_web)
     assert callable(responder_con_busqueda)
     assert hasattr(agente_mod, "buscar_web")
-    assert necesita_busqueda_web("busca en internet el clima de hoy en Santo Domingo")
+    assert necesita_busqueda_web(
+        "Busca en la web sobre el clima de hoy en Santo Domingo"
+    )
+    assert not necesita_busqueda_web("qué película sobre el azul")
+    assert not necesita_busqueda_web("busca películas")
 
 
 def test_mime_defaults_mpeg():
