@@ -2341,7 +2341,14 @@ def api_backup_import(body: BackupImportRequest) -> dict:
 
 @app.get("/")
 def index():
-    """Raíz pública — sirve la PWA (nunca 503 por UI faltante)."""
+    """Raíz pública — maqueta Premium (carcasa) para móvil / Render."""
+    carcasa = STUDIO_DIR / "carcasa_base.html"
+    if carcasa.is_file():
+        return FileResponse(
+            carcasa,
+            media_type="text/html; charset=utf-8",
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )
     if STUDIO_DIR.exists() and (STUDIO_DIR / "index.html").exists():
         return FileResponse(
             STUDIO_DIR / "index.html",
@@ -2358,6 +2365,31 @@ def index():
             "salud": "/api/salud",
         },
     )
+
+
+@app.get("/carcasa")
+def carcasa_premium():
+    """Maqueta Premium dorado/plata — misma vista que la raíz."""
+    carcasa = STUDIO_DIR / "carcasa_base.html"
+    if carcasa.is_file():
+        return FileResponse(
+            carcasa,
+            media_type="text/html; charset=utf-8",
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )
+    return JSONResponse(status_code=404, content={"error": "carcasa_base.html no encontrada"})
+
+
+@app.get("/asistente")
+def asistente_pwa():
+    """PWA anterior (studio/dist/index.html)."""
+    if STUDIO_DIR.exists() and (STUDIO_DIR / "index.html").exists():
+        return FileResponse(
+            STUDIO_DIR / "index.html",
+            media_type="text/html; charset=utf-8",
+            headers={"Cache-Control": "no-cache"},
+        )
+    return JSONResponse(status_code=404, content={"error": "UI asistente no encontrada"})
 
 
 def _archivo_studio(

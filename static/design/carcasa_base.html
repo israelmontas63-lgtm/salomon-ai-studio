@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Salomón AI — Premium</title>
+  <style>
+    :root {
+      --negro: #000000;
+      --dorado: #D4AF37;
+      --plata: #C0C0C0;
+      --sombra: 0 4px 14px rgba(212, 175, 55, 0.28);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #0a0a0a;
+      color: var(--plata);
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.35;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
+
+    /*
+      Estructura validada (intocable):
+      A Cámara(+Giro) | B Input(+Mic) | C Envío S
+      display: flex · una fila · centrados
+    */
+    .control-bar {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      width: 100%;
+      padding: 28px 16px;
+      background: var(--negro);
+    }
+
+    .bloque {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border: 2px solid var(--dorado);
+      background: var(--negro);
+      box-shadow: var(--sombra);
+      color: var(--plata);
+    }
+
+    /* ——— Bloque A: círculo Cámara (padre del Giro) ——— */
+    .bloque-a {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .bloque-a .camara {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      color: var(--plata);
+      cursor: pointer;
+      border-radius: 50%;
+    }
+
+    .bloque-a .camara svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: var(--plata);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Giro [7] — hijo de Cámara, mismo eje, encima */
+    .bloque-a .giro {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 10px);
+      transform: translateX(-50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--dorado);
+      background: var(--negro);
+      box-shadow: var(--sombra);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--plata);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .bloque-a .giro svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: var(--plata);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ——— Bloque B: píldora Input (padre del Micro) ——— */
+    .bloque-b {
+      width: 240px;
+      height: 56px;
+      border-radius: 999px;
+      flex-direction: row;
+      gap: 10px;
+      padding: 0 8px 0 14px;
+      flex-shrink: 0;
+    }
+
+    .bloque-b .micro {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid var(--dorado);
+      background: var(--negro);
+      box-shadow: var(--sombra);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--plata);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .bloque-b .micro svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: var(--plata);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .bloque-b .campo {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      background: transparent;
+      color: var(--plata);
+      font-size: 15px;
+      outline: none;
+      padding: 0 8px 0 0;
+    }
+
+    .bloque-b .campo::placeholder {
+      color: rgba(192, 192, 192, 0.45);
+    }
+
+    /* ——— Bloque C: círculo Envío S ——— */
+    .bloque-c {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--plata);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">zona de chat</div>
+
+  <div class="control-bar" id="control-bar">
+    <!-- Bloque A: Cámara + Giro interno -->
+    <div class="bloque bloque-a" id="el-3" data-bloque="A">
+      <button type="button" class="giro" id="el-7" aria-label="Girar cámara">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 12a8 8 0 0 1 13.5-5.8" />
+          <path d="M17 4v4h-4" />
+          <path d="M20 12a8 8 0 0 1-13.5 5.8" />
+          <path d="M7 20v-4h4" />
+        </svg>
+      </button>
+      <button type="button" class="camara" aria-label="Cámara">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 8h3l2-2h6l2 2h3v10H4V8z" />
+          <circle cx="12" cy="13" r="3.2" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Bloque B: Input + Mic interno -->
+    <div class="bloque bloque-b" id="el-5" data-bloque="B">
+      <button type="button" class="micro" id="el-4" aria-label="Micrófono">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="9" y="3" width="6" height="11" rx="3" />
+          <path d="M6 11a6 6 0 0 0 12 0" />
+          <path d="M12 17v4" />
+          <path d="M9 21h6" />
+        </svg>
+      </button>
+      <input class="campo" type="text" placeholder="Escribe a Salomón…" aria-label="Mensaje" />
+    </div>
+
+    <!-- Bloque C: Envío S -->
+    <button type="button" class="bloque bloque-c" id="el-6" data-bloque="C" aria-label="Enviar">
+      S
+    </button>
+  </div>
+</body>
+</html>
