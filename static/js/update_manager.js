@@ -150,7 +150,9 @@
         const assets = [
           "/",
           "/static/css/styles.css",
+          "/static/css/global.css",
           "/static/css/settings_layer.css",
+          "/static/js/main.js",
           "/static/js/settings_manager.js",
           "/static/js/update_manager.js",
           "/static/js/input_engine.js",

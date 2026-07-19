@@ -16,6 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/global.css" />
   <link rel="stylesheet" href="/static/css/boton.css" />
   <link rel="stylesheet" href="/static/css/camera_overlay.css" />
   <link rel="stylesheet" href="/static/css/vision.css" />
@@ -51,7 +52,7 @@
     </main>
 
     <div class="camera-stage" id="camera-stage" aria-hidden="true">
-      <video id="camera-video" playsinline muted autoplay></video>
+      <video id="camera-video" playsinline muted></video>
     </div>
 
     <footer class="control-bar" id="control-bar">
@@ -104,18 +105,7 @@
     <button type="button" class="update-toast__btn" id="update-toast-btn">Actualizar</button>
   </div>
 
-  <!-- Capas de UI (defer = orden garantizado tras DOM) -->
-  <script src="/static/js/ui_controller.js" defer></script>
-  <script src="/static/js/ui_manager.js" defer></script>
-  <script src="/static/js/camera_logic.js" defer></script>
-  <script src="/static/js/camera_full.js" defer></script>
-  <script src="/static/js/vision_engine.js" defer></script>
-  <script src="/static/js/input_engine.js" defer></script>
-  <script src="/static/js/update_manager.js" defer></script>
-  <script src="/static/js/settings_manager.js" defer></script>
-  <script src="/static/js/app.js" defer></script>
-  <script src="/static/js/components/SmartButton.js" defer></script>
-  <!-- SW al final del body: registro instantáneo para instalabilidad -->
-  <script src="/static/js/pwa-register.js" defer></script>
+  <!-- Performance Overhaul: bootstrap mínimo → lazy load del resto -->
+  <script src="/static/js/main.js" defer></script>
 </body>
 </html>

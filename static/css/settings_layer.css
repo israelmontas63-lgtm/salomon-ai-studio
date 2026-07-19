@@ -27,7 +27,7 @@ body.control-layer-open #btn-settings {
   -webkit-backdrop-filter: blur(6px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease-out;
+  transition: opacity 0.1s cubic-bezier(0.4, 0, 0.2, 1);
   padding: calc(70px + env(safe-area-inset-top, 0px)) 16px 24px;
 }
 
@@ -47,7 +47,8 @@ body.control-layer-open #btn-settings {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(212, 175, 55, 0.18);
   padding: 18px 16px 16px;
   transform: translateY(-12px);
-  transition: transform 0.2s ease-out;
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
 
 .control-layer.is-open .control-layer__sheet {

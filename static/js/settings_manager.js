@@ -108,7 +108,7 @@
         setTimeout(() => {
           if (node && node.parentNode) node.parentNode.removeChild(node);
           if (this.root === node) this.root = null;
-        }, 200);
+        }, 100);
       }
 
       window.dispatchEvent(new CustomEvent("salomon:control-layer", { detail: { open: false } }));

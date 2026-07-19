@@ -9,7 +9,8 @@
   z-index: 80;
   padding: 0 12px calc(12px + env(safe-area-inset-bottom, 0px));
   pointer-events: none;
-  transition: transform 0.2s ease-out;
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
   background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.85) 35%, #000 100%);
 }
 

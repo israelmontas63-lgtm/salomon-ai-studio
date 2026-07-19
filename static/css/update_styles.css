@@ -10,7 +10,7 @@
   z-index: 200;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.1s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid #d4af37;
   background: rgba(0, 0, 0, 0.92);
   color: #c0c0c0;

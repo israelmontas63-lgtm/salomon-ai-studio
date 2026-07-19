@@ -85,14 +85,13 @@
     async openCamera() {
       if (this._switching) return;
       this._switching = true;
-      this.facingMode = "environment"; // trasera por defecto
+      this.facingMode = "environment";
       this.focusMode = "continuous";
       try {
-        requestAnimationFrame(() => {
-          if (this.camWrap) this.camWrap.classList.add("is-active");
-          if (this.stage) this.stage.classList.add("is-visible");
-          this._emit(States.CAMARA_ACTIVA);
-        });
+        // UI inmediata — stream en paralelo perceptivo
+        if (this.camWrap) this.camWrap.classList.add("is-active");
+        if (this.stage) this.stage.classList.add("is-visible");
+        this._emit(States.CAMARA_ACTIVA);
         await this._startStream(this.facingMode);
       } catch (err) {
         await this.closeCamera();
@@ -122,11 +121,17 @@
       this._switching = true;
       const prev = this.facingMode;
       this.facingMode = this.facingMode === "environment" ? "user" : "environment";
+
+      // Disparo UI inmediato — sin esperar al stream
+      if (this.stage) {
+        this.stage.classList.toggle("is-mirror", this.facingMode === "user");
+        this.stage.classList.toggle("is-selfie", this.facingMode === "user");
+      }
+      this.state = States.CAMARA_ACTIVA;
+      this._emit(States.CAMARA_ACTIVA);
+
       try {
-        await this._startStream(this.facingMode);
-        // Mantener gatillo (CÁMARA_ACTIVA) en selfie
-        this.state = States.CAMARA_ACTIVA;
-        this._emit(States.CAMARA_ACTIVA);
+        await this._startStream(this.facingMode, { fast: true, skipFocus: true });
         this._notify(
           this.facingMode === "user"
             ? "Modo Selfie activo. El gatillo sigue listo."
@@ -134,6 +139,10 @@
         );
       } catch (err) {
         this.facingMode = prev;
+        if (this.stage) {
+          this.stage.classList.toggle("is-mirror", prev === "user");
+          this.stage.classList.toggle("is-selfie", prev === "user");
+        }
         this._notify("No se pudo girar la cámara.");
       } finally {
         this._switching = false;
@@ -212,48 +221,113 @@
       if (this.state !== States.CAMARA_ACTIVA || !this.video) return;
       this._emit(States.DISPARO);
 
+      // Flash en 2 rAF (sin layout thrashing / offsetWidth)
       requestAnimationFrame(() => {
-        if (this.stage) {
-          this.stage.classList.remove("is-flash");
-          void this.stage.offsetWidth;
-          this.stage.classList.add("is-flash");
-        }
-
-        try {
-          const w = this.video.videoWidth || 720;
-          const h = this.video.videoHeight || 960;
-          const canvas = document.createElement("canvas");
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext("2d");
-          if (this.facingMode === "user") {
-            ctx.translate(w, 0);
-            ctx.scale(-1, 1);
+        if (this.stage) this.stage.classList.remove("is-flash");
+        requestAnimationFrame(() => {
+          if (this.stage) this.stage.classList.add("is-flash");
+          // Encode JPEG fuera del frame crítico (~60 FPS)
+          const encode = () => this._encodeCaptureFrame();
+          if (window.SalomonMain && window.SalomonMain.deferHeavy) {
+            window.SalomonMain.deferHeavy(encode);
+          } else {
+            setTimeout(encode, 0);
           }
-          ctx.drawImage(this.video, 0, 0, w, h);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-          window.dispatchEvent(
-            new CustomEvent("salomon:camera-capture", {
-              detail: {
-                dataUrl: dataUrl,
-                facingMode: this.facingMode,
-                focusMode: this.focusMode,
-              },
-            })
-          );
-        } catch (_) {
-          this._notify("No se pudo capturar el frame.");
-        }
-
-        this.state = States.CAMARA_ACTIVA;
-        this._emit(States.CAMARA_ACTIVA);
-        setTimeout(() => {
-          if (this.stage) this.stage.classList.remove("is-flash");
-        }, 200);
+          this.state = States.CAMARA_ACTIVA;
+          this._emit(States.CAMARA_ACTIVA);
+          setTimeout(() => {
+            if (this.stage) this.stage.classList.remove("is-flash");
+          }, 120);
+        });
       });
     },
 
-    async _startStream(facingMode) {
+    _encodeCaptureFrame() {
+      if (!this.video) return;
+      var self = this;
+      var mirror = this.facingMode === "user";
+      var facingMode = this.facingMode;
+      var focusMode = this.focusMode;
+
+      function emit(dataUrl) {
+        window.dispatchEvent(
+          new CustomEvent("salomon:camera-capture", {
+            detail: {
+              dataUrl: dataUrl,
+              facingMode: facingMode,
+              focusMode: focusMode,
+            },
+          })
+        );
+      }
+
+      function fallbackCanvas() {
+        try {
+          var w = self.video.videoWidth || 720;
+          var h = self.video.videoHeight || 960;
+          var canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext("2d", { alpha: false });
+          if (!ctx) return;
+          if (mirror) {
+            ctx.translate(w, 0);
+            ctx.scale(-1, 1);
+          }
+          ctx.drawImage(self.video, 0, 0, w, h);
+          emit(canvas.toDataURL("image/jpeg", 0.85));
+        } catch (_) {
+          self._notify("No se pudo capturar el frame.");
+        }
+      }
+
+      // Worker + ImageBitmap si el dispositivo lo soporta (sin bloquear UI)
+      if (
+        typeof Worker !== "undefined" &&
+        typeof createImageBitmap === "function" &&
+        typeof OffscreenCanvas !== "undefined"
+      ) {
+        createImageBitmap(this.video)
+          .then(function (bitmap) {
+            try {
+              if (!self._captureWorker) {
+                self._captureWorker = new Worker("/static/js/workers/capture_worker.js");
+              }
+              var worker = self._captureWorker;
+              var onMsg = function (ev) {
+                worker.removeEventListener("message", onMsg);
+                if (ev.data && ev.data.type === "ENCODE_DONE" && ev.data.dataUrl) {
+                  emit(ev.data.dataUrl);
+                } else {
+                  fallbackCanvas();
+                }
+              };
+              worker.addEventListener("message", onMsg);
+              worker.postMessage(
+                {
+                  type: "ENCODE_FRAME",
+                  bitmap: bitmap,
+                  width: bitmap.width,
+                  height: bitmap.height,
+                  mirror: mirror,
+                },
+                [bitmap]
+              );
+            } catch (_) {
+              fallbackCanvas();
+            }
+          })
+          .catch(function () {
+            fallbackCanvas();
+          });
+        return;
+      }
+
+      fallbackCanvas();
+    },
+
+    async _startStream(facingMode, opts) {
+      opts = opts || {};
       this._stopStream();
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("getUserMedia no disponible");
@@ -263,18 +337,33 @@
         audio: false,
         video: {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: opts.fast ? 960 : 1280 },
+          height: { ideal: opts.fast ? 540 : 720 },
         },
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       this.stream = stream;
 
-      // Intentar foco continuo al abrir
-      try {
-        await this.setFocusMode(this.focusMode === "macro" || this.focusMode === "micro" ? this.focusMode : "continuous");
-      } catch (_) {}
+      if (!opts.skipFocus) {
+        try {
+          // Foco en idle — no bloquear el primer frame
+          const self = this;
+          const mode =
+            this.focusMode === "macro" || this.focusMode === "micro"
+              ? this.focusMode
+              : "continuous";
+          if (window.SalomonMain && window.SalomonMain.deferHeavy) {
+            window.SalomonMain.deferHeavy(function () {
+              self.setFocusMode(mode);
+            });
+          } else {
+            setTimeout(function () {
+              self.setFocusMode(mode);
+            }, 0);
+          }
+        } catch (_) {}
+      }
 
       await new Promise((resolve, reject) => {
         requestAnimationFrame(() => {

@@ -1,0 +1,98 @@
+/**
+ * Salomón AI — Performance Overhaul (global)
+ * Transiciones ≤0.15s · cubic-bezier(0.4, 0, 0.2, 1) · 60 FPS
+ * Created by Israel Monta - Salomón AI Studio
+ */
+
+:root {
+  --salomon-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --salomon-fast: 0.1s;
+  --salomon-snap: 0.15s;
+  --salomon-motion: var(--salomon-fast) var(--salomon-ease);
+  --salomon-motion-snap: var(--salomon-snap) var(--salomon-ease);
+}
+
+/* Preferencia del sistema: menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --salomon-fast: 0.01s;
+    --salomon-snap: 0.01s;
+  }
+}
+
+/* Capas UI — respuesta instantánea percibida */
+.control-layer {
+  transition: opacity var(--salomon-motion) !important;
+}
+
+.control-layer__sheet {
+  transition: transform var(--salomon-motion) !important;
+  will-change: transform;
+}
+
+.input-layer {
+  transition: transform var(--salomon-motion) !important;
+  will-change: transform;
+}
+
+.camera-stage {
+  transition:
+    opacity var(--salomon-motion),
+    transform var(--salomon-motion) !important;
+  will-change: opacity, transform;
+}
+
+body.vision-immersive .camera-stage {
+  transition: opacity var(--salomon-motion) !important;
+}
+
+.btn-flip {
+  transition:
+    opacity var(--salomon-motion),
+    transform var(--salomon-motion) !important;
+  will-change: opacity, transform;
+}
+
+.update-toast {
+  transition:
+    opacity var(--salomon-motion),
+    transform var(--salomon-motion) !important;
+}
+
+.smart-button {
+  transition:
+    transform var(--salomon-motion),
+    box-shadow var(--salomon-motion),
+    border-color var(--salomon-motion) !important;
+}
+
+.control-tool,
+.circle-btn,
+.profile-btn,
+.input-send {
+  transition: transform var(--salomon-motion) !important;
+}
+
+/* Flash disparo más corto */
+.camera-stage.is-flash::after {
+  animation: cam-flash 100ms var(--salomon-ease) forwards !important;
+}
+
+/* Evitar layout thrashing en capas fijas */
+.control-layer,
+.input-layer,
+.camera-stage,
+.update-toast {
+  contain: layout style;
+}
+
+.phone {
+  contain: layout;
+}
+
+/* GPU compositing para capas animadas */
+.control-layer.is-open .control-layer__sheet,
+.input-layer.is-open,
+.camera-stage.is-visible {
+  backface-visibility: hidden;
+}
