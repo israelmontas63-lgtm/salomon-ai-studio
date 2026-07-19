@@ -236,16 +236,72 @@ class _DeepgramHttp:
 
 
 class _ElevenLabsHttp:
+    # Adam (premade) — case-sensitive; typos en Render suelen romper TTS.
+    VOICE_ADAM = "pNInz6obpgDQGcFmaJgB"
+
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
+        self._voice_resuelta: str | None = None
+
+    def _resolver_voice_id(self, preferida: str | None = None) -> str:
+        """Si el Voice ID de env está mal tipado, usa Adam o la 1ª voz de la cuenta."""
+        import httpx
+        from settings import ELEVENLABS_VOICE_ID
+
+        if self._voice_resuelta:
+            return self._voice_resuelta
+
+        candidatas: list[str] = []
+        for v in (preferida, ELEVENLABS_VOICE_ID, self.VOICE_ADAM):
+            v = (v or "").strip()
+            if v and v not in candidatas:
+                candidatas.append(v)
+
+        # Corregir solo mayúsculas/minúsculas frente al catálogo de la cuenta
+        try:
+            r = httpx.get(
+                "https://api.elevenlabs.io/v1/voices",
+                headers={"xi-api-key": self.api_key, "Accept": "application/json"},
+                timeout=30.0,
+            )
+            if r.status_code == 200:
+                voces = (r.json() or {}).get("voices") or []
+                ids = [str(v.get("voice_id") or "") for v in voces if v.get("voice_id")]
+                lower_map = {i.lower(): i for i in ids}
+                for c in candidatas:
+                    if c in ids:
+                        self._voice_resuelta = c
+                        return c
+                    if c.lower() in lower_map:
+                        self._voice_resuelta = lower_map[c.lower()]
+                        _log.info(
+                            "elevenlabs_voice_id_corregido de=%s a=%s",
+                            c,
+                            self._voice_resuelta,
+                        )
+                        return self._voice_resuelta
+                # Adam por nombre
+                for v in voces:
+                    nombre = (v.get("name") or "").lower()
+                    if "adam" in nombre and v.get("voice_id"):
+                        self._voice_resuelta = str(v["voice_id"])
+                        return self._voice_resuelta
+                if ids:
+                    self._voice_resuelta = ids[0]
+                    return self._voice_resuelta
+        except Exception as exc:
+            _log.info("elevenlabs_voices_lookup_fail error=%s", type(exc).__name__)
+
+        if candidatas:
+            self._voice_resuelta = candidatas[0]
+            return self._voice_resuelta
+        raise ClienteNoDisponible("ELEVENLABS_VOICE_ID no configurada")
 
     def tts(self, texto: str, voice_id: str | None = None) -> bytes:
         import httpx
-        from settings import ELEVENLABS_MODEL_ID, ELEVENLABS_VOICE_ID
+        from settings import ELEVENLABS_MODEL_ID
 
-        vid = voice_id or ELEVENLABS_VOICE_ID
-        if not vid:
-            raise ClienteNoDisponible("ELEVENLABS_VOICE_ID no configurada")
+        vid = self._resolver_voice_id(voice_id)
         r = httpx.post(
             f"https://api.elevenlabs.io/v1/text-to-speech/{vid}",
             headers={
@@ -259,6 +315,23 @@ class _ElevenLabsHttp:
             },
             timeout=90.0,
         )
+        if r.status_code == 404:
+            # Invalidar caché y reintentar con catálogo vivo
+            self._voice_resuelta = None
+            vid = self._resolver_voice_id(None)
+            r = httpx.post(
+                f"https://api.elevenlabs.io/v1/text-to-speech/{vid}",
+                headers={
+                    "xi-api-key": self.api_key,
+                    "Content-Type": "application/json",
+                    "Accept": "audio/mpeg",
+                },
+                json={
+                    "text": texto,
+                    "model_id": ELEVENLABS_MODEL_ID,
+                },
+                timeout=90.0,
+            )
         r.raise_for_status()
         return r.content
 
