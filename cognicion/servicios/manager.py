@@ -95,8 +95,16 @@ class ServiceManager(ServiceRegistry):
 
         # 1) ElevenLabs
         slot = seleccionar(Servicio.TTS)
+        ultimo_error = ""
         if slot and slot.nombre == "elevenlabs":
             try:
+                from settings import ELEVENLABS_VOICE_ID
+
+                if not (ELEVENLABS_VOICE_ID or "").strip():
+                    raise ClienteNoDisponible(
+                        "ELEVENLABS_VOICE_ID requerida para TTS "
+                        "(la API key está, pero falta el Voice ID en Render/.env)"
+                    )
                 audio = self.tts(t)
                 self._ultimo["tts"] = "elevenlabs"
                 evento(_log, "tts_ok", motor="elevenlabs", bytes=len(audio))
@@ -107,7 +115,13 @@ class ServiceManager(ServiceRegistry):
                     motor="elevenlabs",
                 )
             except Exception as exc:
-                evento(_log, "tts_elevenlabs_fail", error=type(exc).__name__)
+                ultimo_error = str(exc) or type(exc).__name__
+                evento(
+                    _log,
+                    "tts_elevenlabs_fail",
+                    error=type(exc).__name__,
+                    detalle=ultimo_error[:200],
+                )
 
         # 2) Cartesia (respaldo real si hay clave)
         try:
@@ -117,14 +131,17 @@ class ServiceManager(ServiceRegistry):
             if res.tts_disponible:
                 self._ultimo["tts"] = "cartesia"
                 return res
+            if res.error:
+                ultimo_error = ultimo_error or str(res.error)
             if slot is None or slot.nombre != "elevenlabs":
                 return res
         except Exception as exc:
+            ultimo_error = ultimo_error or (str(exc) or type(exc).__name__)
             evento(_log, "tts_cartesia_fail", error=type(exc).__name__)
 
         return ResultadoTTS(
             tts_disponible=False,
-            error="tts_sin_proveedor",
+            error=ultimo_error or "tts_sin_proveedor",
             motor="none",
         )
 

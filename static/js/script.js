@@ -140,6 +140,7 @@
 
       if (res.ok && data.exito !== false && data.texto) {
         addBubble(data.texto, "bot");
+        reproducirAudioRespuesta(data);
       } else {
         addBubble(formatError(data, res.status), "bot");
       }
@@ -148,6 +149,36 @@
       addBubble("Hubo un problema de conexión con el servidor. ¿Reintentamos?", "bot");
     } finally {
       setLoading(false);
+    }
+  }
+
+  var _audioActual = null;
+
+  function reproducirAudioRespuesta(data) {
+    if (!data || !data.audio_base64) {
+      if (data && data.tts_disponible === false) {
+        console.warn("[SalomonTTS] sin audio:", data.error || "tts_disponible=false");
+      }
+      return;
+    }
+    try {
+      var mime = data.audio_mime || "audio/mpeg";
+      var src = "data:" + mime + ";base64," + data.audio_base64;
+      if (_audioActual) {
+        try {
+          _audioActual.pause();
+        } catch (_) {}
+      }
+      var audio = new Audio(src);
+      _audioActual = audio;
+      var playPromise = audio.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(function (err) {
+          console.warn("[SalomonTTS] autoplay bloqueado o fallo de reproducción:", err);
+        });
+      }
+    } catch (err) {
+      console.warn("[SalomonTTS] error al reproducir stream:", err);
     }
   }
 

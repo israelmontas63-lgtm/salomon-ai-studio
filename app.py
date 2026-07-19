@@ -105,6 +105,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/proveedores",
         "/api/stt",
         "/api/tts",
+        "/api/voice_test",
         "/api/carcasa-check",
     }
 )
@@ -1036,6 +1037,52 @@ def api_tts(body: TextoRequest) -> TtsResponse:
         tts_disponible=resultado.tts_disponible,
         error=resultado.error,
     )
+
+
+@app.get("/api/voice_test")
+@app.post("/api/voice_test")
+def api_voice_test() -> dict:
+    """
+    Diagnóstico de salida de voz (ElevenLabs).
+    Genera un audio corto y reporta si el stream llega listo para la UI.
+    """
+    from settings import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
+    from cognicion.servicios import obtener_manager
+
+    key_ok = bool((ELEVENLABS_API_KEY or "").strip())
+    voice_ok = bool((ELEVENLABS_VOICE_ID or "").strip())
+    resultado = obtener_manager().hablar(
+        "Prueba de voz Salomón. Voice test ElevenLabs."
+    )
+    audio = resultado.audio_base64 or ""
+    return {
+        "ok": bool(resultado.tts_disponible and audio),
+        "test": "voice_test",
+        "conexion_elevenlabs": {
+            "api_key": key_ok,
+            "voice_id": voice_ok,
+            "voice_id_len": len((ELEVENLABS_VOICE_ID or "").strip()),
+        },
+        "tts_disponible": bool(resultado.tts_disponible),
+        "motor": getattr(resultado, "motor", None),
+        "audio_mime": resultado.audio_mime or "audio/mpeg",
+        "audio_base64_len": len(audio),
+        "stream_listo_para_ui": bool(audio),
+        "error": resultado.error,
+        "mensaje": (
+            "Audio generado — la UI debe reproducir audio_base64."
+            if audio
+            else (
+                "Falta ELEVENLABS_VOICE_ID en Render Environment / .env"
+                if key_ok and not voice_ok
+                else (resultado.error or "No se generó audio")
+            )
+        ),
+        "ui_hint": (
+            "Si hay audio_base64 pero no oyes nada: permiso de autoplay del navegador "
+            "o la UI no está llamando a Audio.play()."
+        ),
+    }
 
 
 @app.post("/api/stt")

@@ -56,6 +56,7 @@ def inventario_claves() -> dict[str, str]:
         "COHERE_API_KEY": S.COHERE_API_KEY,
         "DEEPGRAM_API_KEY": S.DEEPGRAM_API_KEY,
         "ELEVENLABS_API_KEY": S.ELEVENLABS_API_KEY,
+        "ELEVENLABS_VOICE_ID": getattr(S, "ELEVENLABS_VOICE_ID", ""),
         "FAL_KEY": S.FAL_KEY,
         "REPLICATE_API_TOKEN": S.REPLICATE_API_TOKEN,
         "CARTESIA_API_KEY": getattr(S, "CARTESIA_API_KEY", ""),
@@ -95,7 +96,11 @@ def cadenas() -> dict[Servicio, list[ProviderSlot]]:
         ],
         Servicio.TTS: [
             ProviderSlot(
-                "elevenlabs", "ELEVENLABS_API_KEY", _presente(S.ELEVENLABS_API_KEY)
+                "elevenlabs",
+                "ELEVENLABS_API_KEY",
+                # API key sola no basta: hace falta Voice ID para sintetizar.
+                _presente(S.ELEVENLABS_API_KEY)
+                and _presente(getattr(S, "ELEVENLABS_VOICE_ID", "")),
             ),
             ProviderSlot(
                 "cartesia",
