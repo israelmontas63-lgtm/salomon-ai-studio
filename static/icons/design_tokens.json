@@ -1,0 +1,32 @@
+{
+  "design_tokens": {
+    "dimensions": {
+      "canvas": 512,
+      "safe_area": 0.82,
+      "outer_ring": 0.05,
+      "gold_border": 0.035,
+      "ring_separation": 0.03,
+      "logo_scale": 0.58,
+      "corner_radius_ratio": 0.2109375
+    },
+    "colors": {
+      "white_halo": "#FFFFFF",
+      "gold_frame": "#C9A227",
+      "metal_black": "#0A0A0A"
+    },
+    "rendering": {
+      "contrast_ratio": 7.0,
+      "interpolation": "lanczos",
+      "format": "png_high_res"
+    }
+  },
+  "validation": {
+    "mustRemainCentered": true,
+    "allowDistortion": false,
+    "allowCropping": false,
+    "minimumContrastRatio": 7,
+    "preserveAspectRatio": true,
+    "responsiveScaling": true
+  },
+  "master_asset": "255542.png"
+}
