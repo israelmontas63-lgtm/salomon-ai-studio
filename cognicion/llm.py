@@ -545,6 +545,28 @@ def gemini_disponible() -> bool:
     return _PROVEEDORES["gemini"].disponible()
 
 
+def _modelo_para_proveedor(proveedor: ModelProvider, model_name: str | None) -> str | None:
+    """
+    Evita pasar un model_name de Gemini (p.ej. gemini-2.0-flash) a Groq/OpenAI
+    en el fallback — eso provoca NotFoundError y tumba toda la cadena.
+    """
+    if not model_name:
+        return None
+    m = model_name.strip().lower()
+    nombre = proveedor.nombre
+    if nombre == "gemini":
+        return model_name if ("gemini" in m or m.startswith("models/")) else None
+    if nombre == "openai":
+        if m.startswith(("gpt-", "o1", "o3", "o4", "chatgpt")):
+            return model_name
+        return None
+    if nombre == "groq":
+        if any(x in m for x in ("llama", "mixtral", "gemma", "qwen", "deepseek")):
+            return model_name
+        return None
+    return None
+
+
 def chat_con_historial(
     mensaje: str,
     historial: list[dict],
@@ -553,14 +575,19 @@ def chat_con_historial(
 ) -> str:
     return _ejecutar_con_respaldo(
         lambda proveedor: proveedor.chat_con_historial(
-            mensaje, historial, system_instruction, model_name
+            mensaje,
+            historial,
+            system_instruction,
+            _modelo_para_proveedor(proveedor, model_name),
         )
     )
 
 
 def generar_texto(prompt: str, model_name: str | None = None) -> str:
     return _ejecutar_con_respaldo(
-        lambda proveedor: proveedor.generar_texto(prompt, model_name)
+        lambda proveedor: proveedor.generar_texto(
+            prompt, _modelo_para_proveedor(proveedor, model_name)
+        )
     )
 
 

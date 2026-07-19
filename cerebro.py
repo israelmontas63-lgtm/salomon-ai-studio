@@ -508,10 +508,18 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         if cognicion.get("rag_usado"):
             # Nunca volcar el contexto RAG crudo al usuario (solo input interno).
+            # Si el LLM falló, preferir respuesta local coherente antes que este muro.
+            try:
+                from cognicion.respuesta_local import respuesta_local_chat
+
+                local = (respuesta_local_chat(entrada, [], "") or "").strip()
+                if local:
+                    return local
+            except Exception:
+                pass
             return (
-                f"Israel, tengo contexto de nuestra conversación sobre «{entrada[:120]}», "
-                "pero ahora mismo no pude formular la respuesta completa en la nube. "
-                "Reformúlame la pregunta en una frase y lo retomo al instante."
+                f"Israel, sobre «{entrada[:120]}»: el motor principal está saturado "
+                "y estoy usando respaldo. Reformúlame en una frase y lo retomo al instante."
             )
 
         return (
