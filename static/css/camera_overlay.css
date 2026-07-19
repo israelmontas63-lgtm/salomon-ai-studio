@@ -1,0 +1,135 @@
+/* Salomón AI — Cámara Inteligente (overlay + giro) */
+
+.cam-wrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+
+.cam-wrap.is-active .circle-btn {
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.45), 0 4px 14px rgba(212, 175, 55, 0.3);
+}
+
+/* Giro: absoluto sobre la cámara, desplegable */
+.btn-flip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) scale(0.6);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #d4af37;
+  background: #000000;
+  color: #c0c0c0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 70;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.28);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.btn-flip img {
+  width: 18px;
+  height: 18px;
+  display: block;
+  pointer-events: none;
+}
+
+.cam-wrap.is-active .btn-flip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) scale(1);
+}
+
+.btn-flip:active {
+  transform: translateX(-50%) scale(0.92);
+}
+
+/* Preview de cámara */
+.camera-stage {
+  position: fixed;
+  left: 50%;
+  bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%) scale(0.96);
+  width: min(320px, 88vw);
+  aspect-ratio: 3 / 4;
+  border-radius: 18px;
+  border: 2px solid #d4af37;
+  background: #000;
+  overflow: hidden;
+  z-index: 45;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 18px rgba(212, 175, 55, 0.22);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.camera-stage.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) scale(1);
+}
+
+.camera-stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+.camera-stage.is-mirror video {
+  transform: scaleX(-1);
+}
+
+/* Flash de disparo */
+.camera-stage.is-flash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0.85;
+  animation: cam-flash 180ms ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes cam-flash {
+  from {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Smart Button como gatillo */
+.smart-button.is-shutter .smart-button__icon {
+  width: 34px;
+  height: 34px;
+}
+
+.smart-button.is-shutter {
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.4), 0 8px 24px rgba(212, 175, 55, 0.45);
+}
+
+.smart-button__glyph {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  color: #c0c0c0;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.smart-button__glyph[hidden],
+.smart-button__icon[hidden] {
+  display: none !important;
+}

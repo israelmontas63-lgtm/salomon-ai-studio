@@ -3,12 +3,15 @@
  * Cachea CSS/JS/assets; HTML y /api van a red (hot-reload en móvil).
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v2";
+const CACHE = "salomon-premium-v3";
 const PRECACHE = [
   "/",
   "/static/css/styles.css",
   "/static/css/boton.css",
+  "/static/css/camera_overlay.css",
   "/static/js/app.js",
+  "/static/js/ui_controller.js",
+  "/static/js/camera_logic.js",
   "/static/js/components/SmartButton.js",
   "/static/manifest.json",
   "/static/assets/logo-ss.svg",
@@ -16,6 +19,8 @@ const PRECACHE = [
   "/static/assets/icon-settings.svg",
   "/static/assets/icon-camera.svg",
   "/static/assets/icon-mic.svg",
+  "/static/assets/icon-flip.svg",
+  "/static/assets/icon-shutter.svg",
 ];
 
 function isApi(path) {

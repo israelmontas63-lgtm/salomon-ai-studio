@@ -15,6 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <link rel="stylesheet" href="/static/css/boton.css" />
+  <link rel="stylesheet" href="/static/css/camera_overlay.css" />
 </head>
 <body>
   <div class="phone">
@@ -44,21 +45,32 @@
 ¿Sobre qué obra quieres que profundice?</div>
     </main>
 
+    <!-- Preview cámara (CÁMARA_ACTIVA) -->
+    <div class="camera-stage" id="camera-stage" aria-hidden="true">
+      <video id="camera-video" playsinline muted autoplay></video>
+    </div>
+
     <footer class="control-bar" id="control-bar">
       <div class="control-side">
         <button type="button" class="circle-btn" id="btn-aa" aria-label="Texto">Aa</button>
       </div>
 
-      <!-- Smart Button: círculo central exacto 80px -->
-      <button type="button" class="smart-button" id="smart-button" aria-label="Smart Button">
-        <img class="smart-button__icon" src="/static/assets/icon-mic.svg" alt="" />
-        <span class="smart-button__label">Smart Button</span>
+      <!-- Botón central IA: IDLE = S | CÁMARA_ACTIVA = gatillo -->
+      <button type="button" class="smart-button" id="smart-button" aria-label="Salomón AI" data-role="ai">
+        <span class="smart-button__glyph">S</span>
+        <img class="smart-button__icon" src="/static/assets/icon-shutter.svg" alt="" hidden />
+        <span class="smart-button__label">Salomón AI</span>
       </button>
 
       <div class="control-side">
-        <button type="button" class="circle-btn" id="btn-cam" aria-label="Cámara">
-          <img src="/static/assets/icon-camera.svg" alt="" />
-        </button>
+        <div class="cam-wrap" id="cam-wrap">
+          <button type="button" class="btn-flip" id="btn-flip" aria-label="Girar cámara" tabindex="-1">
+            <img src="/static/assets/icon-flip.svg" alt="" />
+          </button>
+          <button type="button" class="circle-btn" id="btn-cam" aria-label="Cámara">
+            <img src="/static/assets/icon-camera.svg" alt="" />
+          </button>
+        </div>
       </div>
 
       <form class="composer composer--smart" id="form-chat" autocomplete="off">
@@ -68,6 +80,8 @@
     </footer>
   </div>
 
+  <script src="/static/js/ui_controller.js" defer></script>
+  <script src="/static/js/camera_logic.js" defer></script>
   <script src="/static/js/app.js" defer></script>
   <script src="/static/js/components/SmartButton.js" defer></script>
   <script src="/static/js/pwa-register.js" defer></script>
