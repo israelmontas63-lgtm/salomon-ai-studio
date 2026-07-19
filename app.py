@@ -93,6 +93,8 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/core/kernel/init",
         "/api/chat",
         "/api/ai-process",
+        "/api/process",
+        "/api/motor/estado",
         "/api/chat/nuevo",
         "/api/proveedores",
         "/api/stt",
@@ -1053,6 +1055,43 @@ def api_hablar(body: HablarRequest) -> dict:
     return hablar(body.texto)
 
 
+@app.get("/api/motor/estado")
+def api_motor_estado() -> dict:
+    """Estado del motor LLM sin exponer secretos (solo flags booleanos)."""
+    from settings import (
+        GEMINI_API_KEY,
+        GROQ_API_KEY,
+        MODEL_PROVIDER,
+        OPENAI_API_KEY,
+    )
+
+    provider = (MODEL_PROVIDER or "gemini").strip().lower()
+    keys = {
+        "gemini": bool(GEMINI_API_KEY),
+        "openai": bool(OPENAI_API_KEY),
+        "groq": bool(GROQ_API_KEY),
+    }
+    activo = keys.get(provider, False) or any(keys.values())
+    return {
+        "ok": True,
+        "motor": "fastAPI",
+        "provider": provider,
+        "keys_configuradas": keys,
+        "listo": activo,
+        "endpoints": {
+            "process": "/api/process",
+            "ai_process": "/api/ai-process",
+            "chat": "/api/chat",
+        },
+        "mensaje": (
+            "Motor listo: al menos una API key LLM está configurada en el entorno."
+            if activo
+            else "Falta API key: define GEMINI_API_KEY (o OPENAI_API_KEY / GROQ_API_KEY) en .env / Render."
+        ),
+    }
+
+
+@app.post("/api/process", response_model=ChatResponse)
 @app.post("/api/ai-process", response_model=ChatResponse)
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(body: ChatRequest) -> ChatResponse:

@@ -74,6 +74,48 @@
   transform: scale(0.95);
 }
 
+.input-send.is-loading,
+.input-send:disabled {
+  opacity: 0.55;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.input-send.is-loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(212, 175, 55, 0.25);
+  border-top-color: #d4af37;
+  border-radius: 50%;
+  animation: salomon-spin 0.7s linear infinite;
+}
+
+.input-send {
+  position: relative;
+}
+
+.input-send.is-loading svg {
+  opacity: 0;
+}
+
+@keyframes salomon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.bubble.typing {
+  opacity: 0.75;
+  font-style: italic;
+}
+
+body.salomon-processing #btn-aa {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
 /* Aa activo */
 #btn-aa.is-input-open {
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.45), 0 4px 14px rgba(212, 175, 55, 0.28);
