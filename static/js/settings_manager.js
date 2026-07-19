@@ -30,26 +30,31 @@
     tools: TOOLS.slice(),
 
     init() {
-      const gear = document.getElementById("btn-settings");
-      if (!gear) return;
+      // Arranque seguro: no tocar DOM si aún no existe el gear
+      try {
+        const gear = document.getElementById("btn-settings");
+        if (!gear) return;
 
-      // Única entrada al Control Layer — captura en fase bubble aislada
-      gear.addEventListener(
-        "click",
-        (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          this.toggle();
-        },
-        true
-      );
+        // Única entrada al Control Layer — captura aislada
+        gear.addEventListener(
+          "click",
+          (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            this.toggle();
+          },
+          true
+        );
 
-      window.SalomonSettings = this;
-      window.addEventListener("salomon:build-meta", (ev) => {
-        const build = ev.detail && ev.detail.build;
-        if (build) this.setBuildMeta(build);
-      });
+        window.SalomonSettings = this;
+        window.addEventListener("salomon:build-meta", (ev) => {
+          const build = ev.detail && ev.detail.build;
+          if (build && this.metaEl) this.setBuildMeta(build);
+        });
+      } catch (_) {
+        /* sin errores de consola si el nodo no está listo */
+      }
     },
 
     isOpen() {
@@ -243,11 +248,18 @@
   };
 
   function boot() {
+    // Solo tras DOM parseado (defer + readyState)
+    if (!document.body || !document.getElementById("btn-settings")) {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", boot, { once: true });
+      }
+      return;
+    }
     SettingsManager.init();
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
   } else {
     boot();
   }

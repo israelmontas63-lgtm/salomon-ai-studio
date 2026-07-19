@@ -104,6 +104,7 @@
     <button type="button" class="update-toast__btn" id="update-toast-btn">Actualizar</button>
   </div>
 
+  <!-- Capas de UI (defer = orden garantizado tras DOM) -->
   <script src="/static/js/ui_controller.js" defer></script>
   <script src="/static/js/ui_manager.js" defer></script>
   <script src="/static/js/camera_logic.js" defer></script>
@@ -114,6 +115,7 @@
   <script src="/static/js/settings_manager.js" defer></script>
   <script src="/static/js/app.js" defer></script>
   <script src="/static/js/components/SmartButton.js" defer></script>
+  <!-- SW al final del body: registro instantáneo para instalabilidad -->
   <script src="/static/js/pwa-register.js" defer></script>
 </body>
 </html>

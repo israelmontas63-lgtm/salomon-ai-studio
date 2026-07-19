@@ -1,11 +1,12 @@
 /**
- * Salomón AI — Service Worker Premium v7
+ * Salomón AI — Service Worker Premium v9 (PWA install integrity)
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v8";
+const CACHE = "salomon-premium-v9";
 const PRECACHE = [
   "/",
+  "/manifest.json",
   "/static/css/styles.css",
   "/static/css/boton.css",
   "/static/css/camera_overlay.css",
@@ -27,6 +28,8 @@ const PRECACHE = [
   "/static/js/pwa-register.js",
   "/static/manifest.json",
   "/static/assets/logo-ss.svg",
+  "/static/assets/icon-192.png",
+  "/static/assets/icon-512.png",
   "/static/assets/icon-settings.svg",
   "/static/assets/icon-camera.svg",
   "/static/assets/icon-mic.svg",
