@@ -66,6 +66,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/cognicion/vdcp/estado",
         "/api/cognicion/cognitive-core",
         "/api/cognicion/multimodal",
+        "/api/cognicion/vision",
         "/api/agentes/estado",
         "/api/esencia",
         "/api/sbi/estado",

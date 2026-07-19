@@ -23,6 +23,21 @@
   async function sendMessage(mensaje) {
     const msg = (mensaje || "").trim();
     if (!msg || busy) return;
+
+    // Visión de Agente: mira / macro / micro
+    if (window.SalomonVision && window.SalomonVision.parseCommand(msg).handled) {
+      addBubble(msg, "user");
+      input.value = "";
+      busy = true;
+      try {
+        await window.SalomonVision.handleChatCommand(msg);
+      } finally {
+        busy = false;
+        input.focus();
+      }
+      return;
+    }
+
     busy = true;
     addBubble(msg, "user");
     input.value = "";
@@ -30,10 +45,25 @@
     typing.classList.add("typing");
 
     try {
+      const payload = { mensaje: msg, session_id: sessionId };
+      // Si hay ojos activos, adjunta el último frame al chat
+      if (
+        window.SalomonVision &&
+        window.SalomonVision.isActive() &&
+        window.SalomonVision.session.lastFrameDataUrl
+      ) {
+        const raw = window.SalomonVision.session.lastFrameDataUrl.replace(
+          /^data:image\/\w+;base64,/,
+          ""
+        );
+        payload.imagen_base64 = raw;
+        payload.imagen_mime = "image/jpeg";
+      }
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mensaje: msg, session_id: sessionId }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(function () {
         return {};

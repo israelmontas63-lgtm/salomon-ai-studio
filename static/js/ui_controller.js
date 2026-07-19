@@ -22,6 +22,11 @@
       this.showLogoS();
       window.addEventListener("salomon:camera-state", (ev) => {
         const state = (ev.detail && ev.detail.state) || "IDLE";
+        const wrap = document.getElementById("cam-wrap");
+        if (wrap && ev.detail && ev.detail.facingMode) {
+          wrap.dataset.facing = ev.detail.facingMode;
+        }
+        // Selfie mantiene gatillo; OFF/IDLE vuelve a logo S
         if (state === "CAMARA_ACTIVA" || state === "DISPARO") {
           this.showShutter();
         } else {
