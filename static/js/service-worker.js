@@ -1,9 +1,9 @@
 /**
- * Salomón AI — Service Worker Premium v13 (Master Definitivo pixel-clone)
+ * Salomón AI — Service Worker Premium v14 (sync icono maestro definitivo)
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v13";
+const CACHE = "salomon-premium-v14";
 const PRECACHE = [
   "/",
   "/manifest.json",

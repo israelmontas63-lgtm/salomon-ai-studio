@@ -158,6 +158,10 @@
           "/static/js/input_engine.js",
           "/static/js/camera_logic.js",
           "/static/manifest.json",
+          "/static/assets/icon-192.png",
+          "/static/assets/icon-512.png",
+          "/static/assets/apple-touch-icon.png",
+          "/manifest.json",
           "/service-worker.js?v=" + Date.now(),
         ];
         await Promise.all(
