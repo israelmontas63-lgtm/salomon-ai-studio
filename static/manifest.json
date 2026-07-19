@@ -40,9 +40,15 @@
       "purpose": "maskable"
     },
     {
-      "src": "/static/assets/logo-ss.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/static/assets/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/assets/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
       "purpose": "any"
     }
   ]
