@@ -1,9 +1,9 @@
 /**
- * Salomón AI — Service Worker Premium v14 (sync icono maestro definitivo)
+ * Salomón AI — Service Worker Premium v15 (Icono Adaptativo Alto Contraste)
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v14";
+const CACHE = "salomon-premium-v15";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -30,15 +30,14 @@ const PRECACHE = [
   "/static/js/pwa-register.js",
   "/static/js/workers/capture_worker.js",
   "/static/manifest.json",
-  "/static/assets/master-definitivo.png",
-  "/static/assets/master-255542.png",
-  "/static/assets/icon-master.png",
+  "/static/icons/icon-192.png",
+  "/static/icons/icon-512.png",
+  "/static/icons/icon-1024.png",
+  "/static/icons/apple-touch-icon.png",
+  "/static/icons/icon-master.png",
   "/static/assets/icon-192.png",
   "/static/assets/icon-512.png",
-  "/static/assets/icon-1024.png",
   "/static/assets/apple-touch-icon.png",
-  "/static/assets/icon-halo-preview.png",
-  "/static/assets/maqueta-icono-definitivo.png",
   "/static/assets/icon-settings.svg",
   "/static/assets/icon-camera.svg",
   "/static/assets/icon-mic.svg",
