@@ -55,6 +55,7 @@
       // Prioridad: activar state lock de inmediato
       if (L) L.activate("smart_button");
       this.root.classList.add("is-ai-locked", "is-active");
+      this._notify("Modo IA exclusivo: cámara y menús bloqueados. Habla ahora…");
       this.toggleMic();
     }
 

@@ -14,12 +14,26 @@ def estado_nucleo_perceptivo() -> dict:
     voz = voice_status()
     vision = vision_status()
     cortex = cortex_status()
-    ok = bool(voz.get("sincronizado") and vision.get("activa") and cortex.get("externo_bloqueado"))
-    frase = (
-        "Visión activa, Módulo de Voz sincronizado, Contexto externo bloqueado"
-        if ok
-        else "Núcleo perceptivo incompleto — revisar config/"
+    proveedores = estado_proveedores()
+    # En modo neuronal (web_agentes) externo_bloqueado=False es CORRECTO, no un fallo.
+    cortex_ok = bool(cortex.get("modo")) and (
+        bool(cortex.get("externo_bloqueado")) or bool(cortex.get("web_agentes"))
     )
+    ok = bool(
+        voz.get("sincronizado")
+        and vision.get("activa")
+        and cortex_ok
+        and proveedores.get("llm_disponible")
+    )
+    if ok and cortex.get("web_agentes"):
+        frase = (
+            "Núcleo perceptivo neuronal OK — voz sincronizada, visión activa, "
+            "LLM listo, agentes web autorizados"
+        )
+    elif ok:
+        frase = "Visión activa, Módulo de Voz sincronizado, Contexto externo bloqueado"
+    else:
+        frase = "Núcleo perceptivo incompleto — revisar config/"
     return {
         "ok": ok,
         "confirmacion": frase,
@@ -27,5 +41,5 @@ def estado_nucleo_perceptivo() -> dict:
         "vision": vision,
         "cortex": cortex,
         "identidad_primaria": "Israel Monta",
-        "proveedores": estado_proveedores(),
+        "proveedores": proveedores,
     }

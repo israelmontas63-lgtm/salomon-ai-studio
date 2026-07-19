@@ -27,11 +27,37 @@
   /**
    * Prioridad del botón central: activa el bloqueo de estado.
    */
+  function syncServer(activo, why) {
+    try {
+      fetch("/api/ai/lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          activo: !!activo,
+          reason: why || reason || "smart_button",
+          session_id: sessionId,
+        }),
+        credentials: "same-origin",
+        keepalive: true,
+      }).catch(function () {});
+    } catch (_) {}
+  }
+
   function activate(why) {
     if (is_ai_active) return true;
     is_ai_active = true;
     reason = why || "smart_button";
     setBodyLock(true);
+    // Cerrar capas secundarias si estaban abiertas
+    try {
+      if (window.SalomonUiManager && window.SalomonUiManager.hide) {
+        window.SalomonUiManager.hide();
+      }
+      if (window.SalomonSettings && window.SalomonSettings.close) {
+        window.SalomonSettings.close();
+      }
+    } catch (_) {}
+    syncServer(true, reason);
     emit({ action: "activate", reason: reason });
     return true;
   }
@@ -45,6 +71,7 @@
     var prev = reason;
     reason = "";
     setBodyLock(false);
+    syncServer(false, why || "done");
     emit({ action: "release", reason: why || "done", previous: prev });
     return true;
   }
