@@ -17,6 +17,22 @@ Los paths históricos (`cerebro.py`, `mente/`, `cognicion/`) **siguen vivos** co
 5. `/core/peripherals/HomeGateway.js`
 6. `/core/main.js` → permisos → `MainController.init()` → `VoiceCore.enableNoiseGate()` si mic OK
 
+## Level 9 — Plug-and-Play (`plugins/`)
+
+Habilidad 30-X #9: instalar periféricas sin apagar el núcleo.
+
+| Plugin | Capa | Rol |
+|--------|------|-----|
+| `function_calling` | nucleo | Herramientas LLM |
+| `voice_core` | periferica | Noise gate / audio port |
+| `vision_agent` | periferica | Cámara / visión |
+| `home_gateway` | periferica | Rutas canónicas |
+| `audio_stack` | periferica | Deepgram + ElevenLabs |
+| `media_stack` | periferica | Fal → Replicate |
+| `reconexion_perifericos` | periferica | Reconexión emergencia |
+
+API: `GET /api/level9` · `POST /api/level9/hot-plug` · `POST /api/level9/rescan`
+
 ## Carpetas anti-huérfanos (JS)
 
 | Carpeta | Contenido |

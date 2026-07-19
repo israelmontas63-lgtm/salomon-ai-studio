@@ -1,0 +1,8 @@
+{
+  "id": "function_calling",
+  "version": "1.0.0",
+  "entry": "plugin.py",
+  "capa": "nucleo",
+  "skills": [9],
+  "descripcion": "Function calling OpenAI/Groq — herramientas sin tocar el núcleo"
+}

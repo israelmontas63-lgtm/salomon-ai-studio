@@ -1,0 +1,1 @@
+# Plugin periférico home_gateway

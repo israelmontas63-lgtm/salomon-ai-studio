@@ -77,6 +77,12 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/identidad",
         "/api/inmune",
         "/api/conectividad",
+        "/api/level9",
+        "/api/level9/hot-plug",
+        "/api/level9/rescan",
+        "/api/plugins",
+        "/api/plugins/hot-plug",
+        "/api/plugins/rescan",
         "/api/auditoria/cruzada",
         "/api/web/arquitecto",
         "/api/pwa/estado",
@@ -1634,6 +1640,42 @@ def api_conectividad_reconectar() -> dict:
     return ejecutar_reconexion_emergencia()
 
 
+@app.get("/api/level9")
+@app.get("/api/plugins")
+def api_level9_estado() -> dict:
+    """
+    Level 9 — Arquitectura Modular Plug-and-Play (30-X #9).
+    Inventario de periféricas hot-plug sin apagar el núcleo.
+    """
+    from cognicion.plugins.cargador import estado_level9
+
+    return estado_level9()
+
+
+class HotPlugRequest(BaseModel):
+    plugin_id: str = Field(..., min_length=1, max_length=80)
+
+
+@app.post("/api/level9/hot-plug")
+@app.post("/api/plugins/hot-plug")
+def api_level9_hot_plug(body: HotPlugRequest) -> dict:
+    """Instala/reactiva un plugin periférico en caliente."""
+    from cognicion.plugins.cargador import hot_plug
+
+    return hot_plug(body.plugin_id.strip(), app=app)
+
+
+@app.post("/api/level9/rescan")
+@app.post("/api/plugins/rescan")
+def api_level9_rescan() -> dict:
+    """Re-descubre y activa todos los plugins sin reiniciar el proceso."""
+    from cognicion.capas.loader import inicializar_capas
+    from cognicion.plugins.cargador import estado_level9
+
+    resultados = inicializar_capas(app, force=True)
+    return {"ok": True, "resultados": resultados, "level9": estado_level9()}
+
+
 @app.get("/api/auditoria/cruzada")
 def api_auditoria_cruzada() -> dict:
     """Auditoría cruzada Cursor↔Salomón + reparación forzosa (v105)."""
@@ -1697,7 +1739,7 @@ def nucleo_estado() -> dict:
     from cognicion.modelos.gestor import listar_tareas
     from cognicion.mcp.cliente import estado_mcp
     from cognicion.nucleo import obtener_nucleo
-    from cognicion.plugins.cargador import descubrir_plugins
+    from cognicion.plugins.cargador import descubrir_plugins, estado_level9
 
     nucleo = obtener_nucleo()
     return {
@@ -1711,6 +1753,7 @@ def nucleo_estado() -> dict:
         ],
         "mcp": estado_mcp(),
         "plugins_descubiertos": descubrir_plugins(),
+        "level9": estado_level9(),
     }
 
 

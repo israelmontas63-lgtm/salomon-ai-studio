@@ -1,0 +1,8 @@
+{
+  "id": "voice_core",
+  "version": "1.0.0",
+  "entry": "plugin.py",
+  "capa": "periferica",
+  "skills": [9, 13, 20],
+  "descripcion": "Periférica VoiceCore — noise gate 300–3400 Hz + puerto audio"
+}

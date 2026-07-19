@@ -1,0 +1,8 @@
+{
+  "id": "reconexion_perifericos",
+  "version": "1.0.5",
+  "entry": "plugin.py",
+  "capa": "periferica",
+  "skills": [9, 10],
+  "descripcion": "Protocolo de reconexión de emergencia — puertos, memoria, MediaDevices"
+}

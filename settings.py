@@ -11,7 +11,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).resolve().parent
+# Local: _render_repo/.env; también acepta .env del workspace padre (SALOMON AI SS/.env).
 load_dotenv(ROOT_DIR / ".env")
+load_dotenv(ROOT_DIR.parent / ".env")
 load_dotenv(ROOT_DIR / "security" / "credentials" / "sbi.env", override=True)
 
 DATA_DIR = ROOT_DIR / "data"
@@ -76,7 +78,11 @@ ELEVENLABS_MODEL_ID = os.getenv(
 
 # ── Fal.ai + Replicate (imagen / video) ───────────────────────────────────
 FAL_KEY = os.getenv("FAL_KEY", "").strip()
-REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN", "").strip()
+# Alias: algunos paneles usan REPLICATE_API_KEY; el código canónico es REPLICATE_API_TOKEN.
+REPLICATE_API_TOKEN = (
+    os.getenv("REPLICATE_API_TOKEN", "").strip()
+    or os.getenv("REPLICATE_API_KEY", "").strip()
+)
 
 # Validación estricta de claves (false en Free Tier / local; true en prod)
 PROVIDERS_STRICT = os.getenv("PROVIDERS_STRICT", "false").strip().lower() in (
