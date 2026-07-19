@@ -29,6 +29,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 from cerebro import SalomonAI
@@ -44,6 +45,14 @@ from persistencia import (
 
 from settings import ROOT_DIR as BASE_DIR, AGENTE_AUTONOMO_HABILITADO, APRENDIZAJE_ASYNC, LLM_FALLBACK, LOG_LEVEL, MODEL_PROVIDER, SALOMON_API_KEY, TTS_ASYNC
 STUDIO_DIR = BASE_DIR / "studio" / "dist"
+TEMPLATES_DIR = BASE_DIR / "templates"
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+_UI_NO_CACHE = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
 
 app = FastAPI(title="Salomón AI", version="1.0.0")
 _log = obtener_logger("api")
@@ -81,6 +90,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/mente/conexion",
         "/api/core/kernel",
         "/api/core/kernel/init",
+        "/api/chat",
         "/api/chat/nuevo",
         "/api/proveedores",
         "/api/stt",
@@ -2340,77 +2350,59 @@ def api_backup_import(body: BackupImportRequest) -> dict:
     return herramientas.importar_backup(body.contenido)
 
 
-# Ruta exacta exigida: static/design/carcasa_base.html (relativa a la raíz del repo)
-CARCASA_FILE = BASE_DIR / "static" / "design" / "carcasa_base.html"
-
-_CARCASA_HEADERS = {
-    "Cache-Control": "no-cache, no-store, must-revalidate",
-    "Pragma": "no-cache",
-    "Expires": "0",
-}
+# UI Premium por capas: templates/ + static/css + static/js + static/assets
+INDEX_TEMPLATE = "index.html"
 
 
-def _respuesta_carcasa():
-    """Sirve únicamente static/design/carcasa_base.html."""
-    if not CARCASA_FILE.is_file():
+def _respuesta_ui_premium(request: Request):
+    """Sirve templates/index.html (estilos y JS solo vía /static/…)."""
+    index_path = TEMPLATES_DIR / INDEX_TEMPLATE
+    if not index_path.is_file():
         return JSONResponse(
             status_code=404,
             content={
-                "error": "carcasa_base.html no encontrada",
-                "ruta_esperada": str(CARCASA_FILE),
-                "existe": False,
+                "error": "templates/index.html no encontrado",
+                "ruta_esperada": str(index_path),
             },
         )
-    return FileResponse(
-        CARCASA_FILE,
-        media_type="text/html; charset=utf-8",
-        headers=_CARCASA_HEADERS,
+    return templates.TemplateResponse(
+        request,
+        INDEX_TEMPLATE,
+        headers=_UI_NO_CACHE,
     )
 
 
 @app.get("/")
-def index():
-    """Raíz pública — maqueta Premium (carcasa)."""
-    if CARCASA_FILE.is_file():
-        return _respuesta_carcasa()
-    if STUDIO_DIR.exists() and (STUDIO_DIR / "index.html").exists():
-        return FileResponse(
-            STUDIO_DIR / "index.html",
-            media_type="text/html; charset=utf-8",
-            headers={"Cache-Control": "no-cache"},
-        )
-    return JSONResponse(
-        status_code=200,
-        content={
-            "estado": "ok",
-            "servicio": "Salomón AI",
-            "ui": "pendiente",
-            "mensaje": "API activa. Compila la UI con: cd studio && npm run build",
-            "salud": "/api/salud",
-        },
-    )
+def index(request: Request):
+    """Raíz pública — UI Premium (templates/index.html)."""
+    return _respuesta_ui_premium(request)
 
 
 @app.get("/carcasa")
 @app.get("/carcasa/")
 @app.get("/carcasa_base.html")
 @app.get("/vista-carcasa")
-def carcasa_premium():
-    """
-    Ruta pública explícita:
-    /carcasa → static/design/carcasa_base.html
-    """
-    return _respuesta_carcasa()
+def carcasa_premium(request: Request):
+    """Alias de la UI Premium (misma plantilla que /)."""
+    return _respuesta_ui_premium(request)
 
 
 @app.get("/api/carcasa-check")
 def carcasa_check():
-    """Diagnóstico rápido: confirma que el archivo existe en el deploy."""
+    """Diagnóstico: capas UI Premium presentes en el deploy."""
+    css = BASE_DIR / "static" / "css" / "styles.css"
+    js = BASE_DIR / "static" / "js" / "app.js"
+    assets = BASE_DIR / "static" / "assets"
+    index_path = TEMPLATES_DIR / INDEX_TEMPLATE
     return {
-        "ok": CARCASA_FILE.is_file(),
-        "ruta": "static/design/carcasa_base.html",
-        "absoluta": str(CARCASA_FILE),
-        "endpoints": ["/carcasa", "/vista-carcasa", "/carcasa_base.html", "/static/design/carcasa_base.html"],
+        "ok": index_path.is_file() and css.is_file() and js.is_file(),
+        "capas": {
+            "templates": str(index_path),
+            "css": str(css),
+            "js": str(js),
+            "assets": str(assets),
+        },
+        "endpoints": ["/", "/carcasa", "/static/css/styles.css", "/static/js/app.js"],
     }
 
 
@@ -2470,14 +2462,20 @@ def bca_indicator_js() -> FileResponse:
 
 
 @app.get("/manifest.json")
-def manifest_json() -> FileResponse:
-    """PWA manifest (Android Chrome / Install App)."""
-    return _archivo_studio("manifest.json", "application/manifest+json")
-
-
 @app.get("/manifest.webmanifest")
-def manifest_web() -> FileResponse:
-    return _archivo_studio("manifest.webmanifest", "application/manifest+json")
+def manifest_json() -> FileResponse:
+    """PWA manifest Premium (static/) con fallback studio."""
+    premium = BASE_DIR / "static" / "manifest.json"
+    if premium.is_file():
+        return FileResponse(
+            premium,
+            media_type="application/manifest+json",
+            headers={"Cache-Control": "no-cache"},
+        )
+    try:
+        return _archivo_studio("manifest.json", "application/manifest+json")
+    except HTTPException:
+        return _archivo_studio("manifest.webmanifest", "application/manifest+json")
 
 
 @app.get("/favicon-v2.ico")
@@ -2671,15 +2669,20 @@ def drawers_js() -> FileResponse:
 
 
 @app.get("/sw.js")
-def service_worker() -> FileResponse:
-    return _archivo_studio("sw.js", "application/javascript")
-
-
 @app.get("/service-worker.js")
 def service_worker_nativo() -> FileResponse:
-    """PWA nativa v97 — Service Worker canónico."""
+    """Service Worker Premium (static/js) — scope '/'."""
+    premium = BASE_DIR / "static" / "js" / "service-worker.js"
+    if premium.is_file():
+        return FileResponse(
+            premium,
+            media_type="application/javascript",
+            headers={
+                "Service-Worker-Allowed": "/",
+                "Cache-Control": "no-cache",
+            },
+        )
     resp = _archivo_studio("service-worker.js", "application/javascript")
-    # Cabecera para scope raíz
     if hasattr(resp, "headers"):
         resp.headers["Service-Worker-Allowed"] = "/"
         resp.headers["Cache-Control"] = "no-cache"

@@ -1,7 +1,7 @@
 # Estilo de Marca — Salomón
 
 Documento de personalidad. Define cómo debe sonar Salomón en chat, guiones y contenido.
-Canon vivo inyectado: `cerebro.py` → `INSTRUCCION_SISTEMA` + `mega_prompt_evolucion_cognitiva.md` (HD Cognitiva).
+Canon vivo inyectado: `cerebro.py` → `INSTRUCCION_SISTEMA` + `salomon_premium.md` (Prompt Maestro) + `mega_prompt_evolucion_cognitiva.md` (HD Cognitiva).
 
 ---
 
