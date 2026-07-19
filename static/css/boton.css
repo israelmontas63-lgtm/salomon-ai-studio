@@ -65,6 +65,31 @@
   animation: smart-pulse 1.4s ease-in-out infinite;
 }
 
+/* State lock: IA activa → exclusividad del botón central */
+body.ai-active #btn-cam,
+body.ai-active #btn-flip,
+body.ai-active #btn-settings,
+body.ai-active #btn-aa,
+body.ai-active #input-layer {
+  pointer-events: none !important;
+  opacity: 0.35;
+  filter: grayscale(0.2);
+}
+
+body.ai-active #smart-button {
+  pointer-events: auto !important;
+  z-index: 120;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.45), 0 10px 28px rgba(212, 175, 55, 0.45);
+}
+
+body.ai-active .smart-button.is-ai-locked {
+  border-color: #d4af37;
+}
+
+body.ai-active #chat {
+  pointer-events: none;
+}
+
 .smart-button.is-camera {
   border-color: #d4af37;
 }

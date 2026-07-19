@@ -3,7 +3,7 @@
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v20";
+const CACHE = "salomon-premium-v21";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -27,6 +27,7 @@ const PRECACHE = [
   "/static/js/vision_engine.js",
   "/static/js/update_manager.js",
   "/static/js/settings_manager.js",
+  "/static/js/ai_state_lock.js",
   "/static/js/components/SmartButton.js",
   "/static/js/pwa-register.js",
   "/static/js/workers/capture_worker.js",

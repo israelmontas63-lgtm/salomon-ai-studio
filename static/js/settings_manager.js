@@ -68,6 +68,8 @@
 
     openLayer() {
       if (this.open) return;
+      // State lock IA: menús secundarios bloqueados
+      if (window.SalomonAILock && !window.SalomonAILock.canUseSecondary()) return;
       this.open = true;
       document.body.classList.add("control-layer-open");
       // Aislamiento neuronal: cerrar input sheet si estuviera abierto (solo UI flag)

@@ -35,6 +35,8 @@
 
       this.btnCam.addEventListener("click", (e) => {
         if (document.body.classList.contains("control-layer-open")) return;
+        // State lock IA: ignorar cámara mientras is_ai_active
+        if (window.SalomonAILock && !window.SalomonAILock.canUseSecondary()) return;
         e.preventDefault();
         e.stopPropagation();
         this.toggleCamera();
@@ -43,6 +45,7 @@
       if (this.btnFlip) {
         this.btnFlip.addEventListener("click", (e) => {
           if (document.body.classList.contains("control-layer-open")) return;
+          if (window.SalomonAILock && !window.SalomonAILock.canUseSecondary()) return;
           e.preventDefault();
           e.stopPropagation();
           if (this.isActive()) this.flipCamera();
@@ -54,6 +57,8 @@
           "click",
           (e) => {
             if (document.body.classList.contains("control-layer-open")) return;
+            // IA tiene prioridad: no convertir el centro en gatillo durante lock
+            if (window.SalomonAILock && window.SalomonAILock.isActive()) return;
             if (!this.isActive()) return;
             e.preventDefault();
             e.stopImmediatePropagation();

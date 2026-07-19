@@ -100,6 +100,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/chat",
         "/api/ai-process",
         "/api/process",
+        "/api/ai/lock",
         "/api/motor/estado",
         "/api/chat/nuevo",
         "/api/proveedores",
@@ -1144,12 +1145,59 @@ def api_motor_estado() -> dict:
     }
 
 
+class AiLockRequest(BaseModel):
+    activo: bool = True
+    reason: str = Field(default="smart_button", max_length=80)
+    session_id: str | None = None
+
+
+@app.get("/api/ai/lock")
+def api_ai_lock_estado() -> dict:
+    """Estado del bloqueo de prioridad del botón central (IA)."""
+    from cognicion.ai_lock import estado
+
+    return estado()
+
+
+@app.post("/api/ai/lock")
+def api_ai_lock_set(body: AiLockRequest) -> dict:
+    """Activa/libera is_ai_active en el espejo servidor."""
+    from cognicion.ai_lock import activar, liberar
+
+    if body.activo:
+        return activar(reason=body.reason, session_id=body.session_id)
+    return liberar(reason=body.reason or "release")
+
+
 @app.post("/api/process", response_model=ChatResponse)
 @app.post("/api/ai-process", response_model=ChatResponse)
 @app.post("/api/chat", response_model=ChatResponse)
-def chat(body: ChatRequest) -> ChatResponse:
+def chat(body: ChatRequest, request: Request) -> ChatResponse:
     session_id, salomon = _obtener_o_crear_sesion(body.session_id)
+    ruta_ai_directa = request.url.path.rstrip("/").endswith("/ai-process")
 
+    # Prioridad botón IA: marcar lock en ruta directa /api/ai-process
+    if ruta_ai_directa:
+        try:
+            from cognicion.ai_lock import activar
+
+            activar(reason="ai_process", session_id=session_id)
+        except Exception:
+            pass
+
+    try:
+        return _chat_core(body, session_id, salomon)
+    finally:
+        if ruta_ai_directa:
+            try:
+                from cognicion.ai_lock import liberar
+
+                liberar(reason="ai_process_done")
+            except Exception:
+                pass
+
+
+def _chat_core(body: ChatRequest, session_id: str, salomon) -> ChatResponse:
     if body.fase1:
         from cognicion.autonoma.fase1 import ejecutar_fase1
 
