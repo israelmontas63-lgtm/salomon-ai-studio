@@ -110,7 +110,9 @@
     <button type="button" class="update-toast__btn" id="update-toast-btn">Actualizar</button>
   </div>
 
-  <!-- Performance Overhaul: bootstrap mínimo → lazy load del resto -->
+  <!-- SW eager: instalabilidad PWA no depende del lazy-loader -->
+  <script src="/static/js/pwa-register.js" defer></script>
+  <!-- Performance Overhaul: bootstrap UI → lazy load del resto -->
   <script src="/static/js/main.js" defer></script>
 </body>
 </html>

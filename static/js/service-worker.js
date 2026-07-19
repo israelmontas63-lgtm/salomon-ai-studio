@@ -1,9 +1,9 @@
 /**
- * Salomón AI — Service Worker Premium v17 (ICON_PROTOCOL_FINAL)
+ * Salomón AI — Service Worker Premium v18 (PWA install hardening)
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v17";
+const CACHE = "salomon-premium-v18";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -34,12 +34,15 @@ const PRECACHE = [
   "/static/icons/255542.png",
   "/static/icons/android-chrome-192x192.png",
   "/static/icons/android-chrome-512x512.png",
+  "/static/icons/android-chrome-192x192-maskable.png",
+  "/static/icons/android-chrome-512x512-maskable.png",
   "/static/icons/apple-touch-icon.png",
   "/static/icons/mstile-150x150.png",
   "/static/icons/favicon-32x32.png",
   "/static/icons/favicon-16x16.png",
   "/static/icons/icon-192.png",
   "/static/icons/icon-512.png",
+  "/static/js/pwa-register.js",
   "/static/assets/icon-settings.svg",
   "/static/assets/icon-camera.svg",
   "/static/assets/icon-mic.svg",
@@ -56,7 +59,9 @@ function isStaticLayer(path) {
     path.startsWith("/static/css/") ||
     path.startsWith("/static/js/") ||
     path.startsWith("/static/assets/") ||
-    path === "/static/manifest.json"
+    path.startsWith("/static/icons/") ||
+    path === "/static/manifest.json" ||
+    path === "/manifest.json"
   );
 }
 

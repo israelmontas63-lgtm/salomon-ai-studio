@@ -1,18 +1,22 @@
 /**
- * Salomón AI — Registro inmediato del Service Worker (instalabilidad PWA).
- * Se ejecuta al parsear el script (defer = DOM listo); no espera window.load.
+ * Salomón AI — Registro Service Worker (instalabilidad PWA).
+ * Registro eager en scope '/'. Errores visibles en consola.
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
-  if (!("serviceWorker" in navigator)) return;
+  if (!("serviceWorker" in navigator)) {
+    console.warn("[SalomonPWA] serviceWorker no soportado en este navegador");
+    return;
+  }
 
-  var SW_URL = "/service-worker.js?v=17";
+  // Sin querystring en el path del SW (evita rarezas de scope/caché)
+  var SW_URL = "/service-worker.js";
 
   function registerSw() {
     navigator.serviceWorker
-      .register(SW_URL, { scope: "/" })
+      .register(SW_URL, { scope: "/", updateViaCache: "none" })
       .then(function (reg) {
-        // Chequeo temprano de actualización tras hard-reset
+        console.info("[SalomonPWA] SW registrado", reg.scope);
         if (reg.update) reg.update();
         if (reg.waiting) {
           reg.waiting.postMessage({ type: "SKIP_WAITING" });
@@ -29,11 +33,14 @@
           });
         });
       })
-      .catch(function () {
-        /* silencioso: no romper la UI Premium */
+      .catch(function (err) {
+        console.error("[SalomonPWA] Fallo al registrar SW:", err);
       });
   }
 
-  // Registro instantáneo: defer ya garantiza DOM parseado
-  registerSw();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", registerSw, { once: true });
+  } else {
+    registerSw();
+  }
 })();

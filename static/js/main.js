@@ -67,11 +67,11 @@
   }
 
   function ensureCore() {
+    // pwa-register.js va en index.html (eager) — no duplicar aquí
     return Promise.all([
       loadScript("/static/js/ui_controller.js"),
       loadScript("/static/js/settings_manager.js"),
       loadScript("/static/js/components/SmartButton.js"),
-      loadScript("/static/js/pwa-register.js"),
     ]);
   }
 
