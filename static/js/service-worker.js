@@ -1,9 +1,9 @@
 /**
- * Salomón AI — Service Worker Premium v12 (Halo Blanco contraste)
+ * Salomón AI — Service Worker Premium v13 (Master Definitivo pixel-clone)
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v12";
+const CACHE = "salomon-premium-v13";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -30,6 +30,7 @@ const PRECACHE = [
   "/static/js/pwa-register.js",
   "/static/js/workers/capture_worker.js",
   "/static/manifest.json",
+  "/static/assets/master-definitivo.png",
   "/static/assets/master-255542.png",
   "/static/assets/icon-master.png",
   "/static/assets/icon-192.png",
@@ -37,6 +38,7 @@ const PRECACHE = [
   "/static/assets/icon-1024.png",
   "/static/assets/apple-touch-icon.png",
   "/static/assets/icon-halo-preview.png",
+  "/static/assets/maqueta-icono-definitivo.png",
   "/static/assets/icon-settings.svg",
   "/static/assets/icon-camera.svg",
   "/static/assets/icon-mic.svg",
