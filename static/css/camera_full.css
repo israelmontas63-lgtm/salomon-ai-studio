@@ -1,0 +1,163 @@
+/* Salomón AI — Pantalla de Visión Inmersiva (modo gasolinera) */
+
+/* Stage a pantalla completa */
+body.vision-immersive .camera-stage {
+  position: fixed;
+  inset: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  border: none;
+  transform: none;
+  z-index: 9000;
+  opacity: 1;
+  pointer-events: auto;
+  box-shadow: none;
+  background: #000;
+  transition: opacity 0.18s ease;
+}
+
+body.vision-immersive .camera-stage.is-visible {
+  transform: none;
+  opacity: 1;
+}
+
+body.vision-immersive .camera-stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Ocultar absolutamente todo lo que no sea el trío */
+body.vision-immersive .header,
+body.vision-immersive .chat,
+body.vision-immersive .composer,
+body.vision-immersive .brand,
+body.vision-immersive .profiles,
+body.vision-immersive .header-spacer,
+body.vision-immersive #btn-aa,
+body.vision-immersive #side-aa {
+  display: none !important;
+}
+
+/* HUD flotante transparente sobre el video */
+body.vision-immersive .control-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: none;
+  transform: none;
+  z-index: 9100;
+  background: transparent;
+  border: none;
+  padding: 0 20px calc(28px + env(safe-area-inset-bottom, 0px));
+  min-height: 0;
+  gap: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+body.vision-immersive .control-bar > * {
+  pointer-events: auto;
+}
+
+/* Botón 3 — Cerrar (izq inferior): icono cámara */
+body.vision-immersive .control-side:has(#cam-wrap),
+body.vision-immersive #cam-wrap {
+  display: grid !important;
+  place-items: center;
+}
+
+body.vision-immersive #cam-wrap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+}
+
+body.vision-immersive #btn-cam {
+  width: 52px;
+  height: 52px;
+  border: 2px solid rgba(212, 175, 55, 0.95);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+
+body.vision-immersive #btn-cam img {
+  width: 22px;
+  height: 22px;
+}
+
+/* Botón 1 — Gatillo (centro inferior) */
+body.vision-immersive .smart-button {
+  position: absolute;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  margin: 0;
+  width: 80px;
+  height: 80px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid #d4af37;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25), 0 8px 28px rgba(0, 0, 0, 0.5);
+  z-index: 9120;
+}
+
+/* Botón 2 — Giro (superior derecha) */
+body.vision-immersive .btn-flip {
+  position: fixed !important;
+  top: calc(18px + env(safe-area-inset-top, 0px));
+  right: 18px;
+  left: auto;
+  bottom: auto;
+  transform: none !important;
+  width: 48px;
+  height: 48px;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 9200;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px solid #d4af37;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+body.vision-immersive .btn-flip img {
+  width: 22px;
+  height: 22px;
+}
+
+body.vision-immersive .cam-wrap.is-active .btn-flip {
+  transform: none !important;
+}
+
+/* Badge ojos: más discreto en inmersivo */
+body.vision-immersive .camera-stage.is-visible::before {
+  top: calc(22px + env(safe-area-inset-top, 0px));
+  left: 18px;
+  z-index: 9150;
+}
+
+/* Entrada suave del body immersive */
+body.vision-immersive .phone {
+  background: #000;
+}
+
+body.vision-immersive {
+  background: #000;
+  overflow: hidden;
+}
