@@ -471,11 +471,17 @@ def _build_id() -> str:
         or ""
     ).strip()
     if not raw:
-        # Fallback estable por mtime de overlays (dev local)
+        # Fallback: mtime de plantilla Premium + SW (detecta deploys locales)
         try:
-            marker = STUDIO_DIR / "salomon-update.js"
-            if marker.is_file():
-                raw = f"local-{int(marker.stat().st_mtime)}"
+            markers = [
+                TEMPLATES_DIR / "index.html",
+                BASE_DIR / "static" / "js" / "service-worker.js",
+                BASE_DIR / "static" / "js" / "update_manager.js",
+                STUDIO_DIR / "salomon-update.js",
+            ]
+            mtimes = [int(p.stat().st_mtime) for p in markers if p.is_file()]
+            if mtimes:
+                raw = f"local-{max(mtimes)}"
         except Exception:
             raw = "dev"
     return raw or "dev"

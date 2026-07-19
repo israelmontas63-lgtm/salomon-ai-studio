@@ -1,9 +1,9 @@
 /**
- * Salomón AI — Service Worker Premium (capas static/)
- * Cachea CSS/JS/assets; HTML y /api van a red (hot-reload en móvil).
+ * Salomón AI — Service Worker Premium v7
+ * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v6";
+const CACHE = "salomon-premium-v7";
 const PRECACHE = [
   "/",
   "/static/css/styles.css",
@@ -12,6 +12,7 @@ const PRECACHE = [
   "/static/css/vision.css",
   "/static/css/camera_full.css",
   "/static/css/input_styles.css",
+  "/static/css/update_styles.css",
   "/static/js/app.js",
   "/static/js/ui_controller.js",
   "/static/js/ui_manager.js",
@@ -19,7 +20,9 @@ const PRECACHE = [
   "/static/js/camera_logic.js",
   "/static/js/camera_full.js",
   "/static/js/vision_engine.js",
+  "/static/js/update_manager.js",
   "/static/js/components/SmartButton.js",
+  "/static/js/pwa-register.js",
   "/static/manifest.json",
   "/static/assets/logo-ss.svg",
   "/static/assets/icon-user.svg",
@@ -31,7 +34,7 @@ const PRECACHE = [
 ];
 
 function isApi(path) {
-  return path.startsWith("/api/");
+  return path.startsWith("/api/") || path === "/version.json";
 }
 
 function isStaticLayer(path) {
@@ -71,6 +74,31 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  const data = event.data || {};
+  const reply = (payload) => {
+    if (event.source && event.source.postMessage) {
+      event.source.postMessage(payload);
+    }
+  };
+
+  if (data.type === "SKIP_WAITING" || data.type === "FORCE_UPDATE") {
+    event.waitUntil(self.skipWaiting().then(() => reply({ type: "SW_READY" })));
+    return;
+  }
+
+  if (data.type === "CLEAR_CACHES" || data.type === "PURGE_AND_CLAIM") {
+    event.waitUntil(
+      caches
+        .keys()
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+        .then(() => self.skipWaiting())
+        .then(() => self.clients.claim())
+        .then(() => reply({ type: "CACHES_CLEARED" }))
+    );
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -78,13 +106,13 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   const path = url.pathname;
 
-  // API y chat: siempre red
+  // API + version: siempre red (detección de deploy)
   if (isApi(path)) {
     event.respondWith(fetch(req, { cache: "no-store" }));
     return;
   }
 
-  // Capas estáticas: cache-first + refresh
+  // Capas estáticas: stale-while-revalidate
   if (isStaticLayer(path)) {
     event.respondWith(
       caches.match(req).then((hit) => {
@@ -101,7 +129,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // HTML / navegación: network-first (ver cambios al instante)
+  // HTML / navegación: network-first
   if (req.mode === "navigate" || path === "/" || path.endsWith(".html")) {
     event.respondWith(
       fetch(req, { cache: "no-store" })

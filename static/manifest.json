@@ -1,14 +1,19 @@
 {
+  "id": "/",
   "name": "Salomón AI",
   "short_name": "Salomón",
   "description": "Asistente personal premium — cultura pop, precisión enciclopédica.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait-primary",
   "background_color": "#000000",
   "theme_color": "#000000",
   "lang": "es",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "/static/assets/logo-ss.svg",
@@ -20,13 +25,25 @@
       "src": "/static/assets/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/static/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/static/assets/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/static/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
