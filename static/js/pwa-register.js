@@ -6,7 +6,7 @@
 (function () {
   if (!("serviceWorker" in navigator)) return;
 
-  var SW_URL = "/service-worker.js?v=11";
+  var SW_URL = "/service-worker.js?v=12";
 
   function registerSw() {
     navigator.serviceWorker

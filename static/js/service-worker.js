@@ -1,9 +1,9 @@
 /**
- * Salomón AI — Service Worker Premium v11 (Icono Maestro 255542)
+ * Salomón AI — Service Worker Premium v12 (Halo Blanco contraste)
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v11";
+const CACHE = "salomon-premium-v12";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -36,6 +36,7 @@ const PRECACHE = [
   "/static/assets/icon-512.png",
   "/static/assets/icon-1024.png",
   "/static/assets/apple-touch-icon.png",
+  "/static/assets/icon-halo-preview.png",
   "/static/assets/icon-settings.svg",
   "/static/assets/icon-camera.svg",
   "/static/assets/icon-mic.svg",
