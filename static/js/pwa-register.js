@@ -10,7 +10,7 @@
   }
 
   // Sin querystring en el path del SW (evita rarezas de scope/caché)
-  var SW_URL = "/service-worker.js?v=19";
+  var SW_URL = "/service-worker.js?v=20";
 
   function registerSw() {
     navigator.serviceWorker

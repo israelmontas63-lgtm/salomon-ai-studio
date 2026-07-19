@@ -77,8 +77,10 @@
 
   function ensureInputStack() {
     if (inputReady) return inputReady;
+    // script.js primero: enviarMensaje() → /api/chat
     inputReady = Promise.all([
       loadScript("/static/js/ui_manager.js"),
+      loadScript("/static/js/script.js"),
       loadScript("/static/js/input_engine.js"),
       loadScript("/static/js/update_manager.js"),
     ]);
