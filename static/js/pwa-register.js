@@ -6,7 +6,7 @@
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
-      .register("/service-worker.js?v=7", { scope: "/" })
+      .register("/service-worker.js?v=8", { scope: "/" })
       .then(function (reg) {
         reg.update();
         if (reg.waiting) {

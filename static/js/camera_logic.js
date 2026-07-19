@@ -34,6 +34,7 @@
       if (!this.btnCam || !this.video || !this.stage) return;
 
       this.btnCam.addEventListener("click", (e) => {
+        if (document.body.classList.contains("control-layer-open")) return;
         e.preventDefault();
         e.stopPropagation();
         this.toggleCamera();
@@ -41,6 +42,7 @@
 
       if (this.btnFlip) {
         this.btnFlip.addEventListener("click", (e) => {
+          if (document.body.classList.contains("control-layer-open")) return;
           e.preventDefault();
           e.stopPropagation();
           if (this.isActive()) this.flipCamera();
@@ -51,6 +53,7 @@
         smart.addEventListener(
           "click",
           (e) => {
+            if (document.body.classList.contains("control-layer-open")) return;
             if (!this.isActive()) return;
             e.preventDefault();
             e.stopImmediatePropagation();

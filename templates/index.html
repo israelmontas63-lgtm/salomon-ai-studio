@@ -22,15 +22,14 @@
   <link rel="stylesheet" href="/static/css/camera_full.css" />
   <link rel="stylesheet" href="/static/css/input_styles.css" />
   <link rel="stylesheet" href="/static/css/update_styles.css" />
+  <link rel="stylesheet" href="/static/css/settings_layer.css" />
 </head>
 <body>
   <div class="phone">
     <header class="header">
+      <!-- Única entrada al Control Layer (coordenadas del antiguo icono usuario) -->
       <div class="profiles">
-        <button type="button" class="profile-btn" id="el-1" aria-label="Perfil">
-          <img src="/static/assets/icon-user.svg" alt="" />
-        </button>
-        <button type="button" class="profile-btn" id="btn-settings" aria-label="Ajustes">
+        <button type="button" class="profile-btn" id="btn-settings" aria-label="Herramientas">
           <img src="/static/assets/icon-settings.svg" alt="" />
         </button>
       </div>
@@ -44,18 +43,6 @@
 
       <div class="header-spacer" aria-hidden="true"></div>
     </header>
-
-    <!-- Panel configuración (tuerca) -->
-    <aside class="settings-panel" id="settings-panel" aria-hidden="true">
-      <div class="settings-panel__title">Configuración</div>
-      <div class="settings-panel__meta" id="settings-build-meta">Build: —</div>
-      <div class="settings-actions">
-        <button type="button" class="settings-btn settings-btn--primary" id="btn-force-update">
-          Actualizar
-        </button>
-        <button type="button" class="settings-btn" id="settings-close">Cerrar</button>
-      </div>
-    </aside>
 
     <main class="chat" id="chat" aria-label="Chat">
       <div class="bubble bot">Hola. Soy Salomón AI — precisión enciclopédica con gusto por el cine, la TV y la música.
@@ -110,7 +97,8 @@
     </div>
   </div>
 
-  <!-- Toast nueva versión -->
+  <!-- Control Layer se inyecta en runtime por settings_manager.js (Z-Index máximo) -->
+
   <div class="update-toast" id="update-toast" role="status" aria-live="polite">
     <div class="update-toast__text">Hay una nueva versión disponible.</div>
     <button type="button" class="update-toast__btn" id="update-toast-btn">Actualizar</button>
@@ -123,6 +111,7 @@
   <script src="/static/js/vision_engine.js" defer></script>
   <script src="/static/js/input_engine.js" defer></script>
   <script src="/static/js/update_manager.js" defer></script>
+  <script src="/static/js/settings_manager.js" defer></script>
   <script src="/static/js/app.js" defer></script>
   <script src="/static/js/components/SmartButton.js" defer></script>
   <script src="/static/js/pwa-register.js" defer></script>

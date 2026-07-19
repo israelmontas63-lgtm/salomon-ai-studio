@@ -19,6 +19,8 @@
       this.btnAa.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
+        // Zero-Conflict: menú herramientas abierto
+        if (document.body.classList.contains("control-layer-open")) return;
         // No abrir durante cámara inmersiva
         if (document.body.classList.contains("vision-immersive")) return;
         if (window.SalomonCamera && window.SalomonCamera.isActive()) return;

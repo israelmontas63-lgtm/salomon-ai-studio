@@ -1,0 +1,120 @@
+/* Salomón AI — Control Layer (Zero-Conflict) · Z-Index máximo */
+
+#btn-settings {
+  /* Única entrada al Control Layer — posición del antiguo icono usuario */
+  position: relative;
+  z-index: 100001;
+}
+
+body.control-layer-open .phone {
+  pointer-events: none;
+}
+
+body.control-layer-open #btn-settings {
+  pointer-events: auto;
+}
+
+/* Capa aislada: por encima de cámara, input, toast */
+.control-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out;
+  padding: calc(70px + env(safe-area-inset-top, 0px)) 16px 24px;
+}
+
+.control-layer.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.control-layer__sheet {
+  width: min(100%, 400px);
+  max-height: min(70dvh, 520px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 2px solid #d4af37;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #111 0%, #000 100%);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(212, 175, 55, 0.18);
+  padding: 18px 16px 16px;
+  transform: translateY(-12px);
+  transition: transform 0.2s ease-out;
+}
+
+.control-layer.is-open .control-layer__sheet {
+  transform: translateY(0);
+}
+
+.control-layer__title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  color: #d4af37;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.control-layer__meta {
+  color: rgba(192, 192, 192, 0.65);
+  font-size: 12px;
+  margin-bottom: 16px;
+  word-break: break-all;
+}
+
+.control-layer__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.control-tool {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 14px;
+  border: 2px solid #d4af37;
+  background: #000;
+  color: #c0c0c0;
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  padding: 12px 14px;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.15);
+}
+
+.control-tool--primary {
+  color: #000;
+  background: linear-gradient(160deg, #e0c15a 0%, #d4af37 60%, #b8922a 100%);
+  text-align: center;
+  font-weight: 600;
+}
+
+.control-tool:active {
+  transform: scale(0.98);
+}
+
+.control-tool:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+#btn-settings.is-open {
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.5), 0 4px 14px rgba(212, 175, 55, 0.3);
+}
+
+body.vision-immersive .control-layer {
+  /* En cámara inmersiva el Control Layer sigue por encima si se abre */
+  z-index: 100000;
+}

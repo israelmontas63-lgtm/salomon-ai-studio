@@ -12,6 +12,9 @@
     }
 
     onClick(e) {
+      // Zero-Conflict: Control Layer abierto → silencio total
+      if (document.body.classList.contains("control-layer-open")) return;
+      if (window.SalomonSettings && window.SalomonSettings.isOpen()) return;
       // Aislamiento: cámara activa → no micrófono
       if (window.SalomonUI && window.SalomonUI.isMicBlocked()) {
         return;

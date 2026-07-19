@@ -57,6 +57,8 @@
     },
 
     async submit() {
+      // Zero-Conflict: Control Layer abierto → no chat
+      if (document.body.classList.contains("control-layer-open")) return;
       const msg = (this.input && this.input.value ? this.input.value : "").trim();
       if (!msg || this.busy) return;
 
