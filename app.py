@@ -85,6 +85,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/proveedores",
         "/api/stt",
         "/api/tts",
+        "/api/carcasa-check",
     }
 )
 
@@ -2346,8 +2347,6 @@ _CARCASA_HEADERS = {
     "Cache-Control": "no-cache, no-store, must-revalidate",
     "Pragma": "no-cache",
     "Expires": "0",
-    # Fuerza al navegador/PWA a soltar caché vieja que devolvía 404
-    "Clear-Site-Data": '"cache", "storage"',
 }
 
 
