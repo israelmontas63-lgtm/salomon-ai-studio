@@ -99,20 +99,35 @@ class ServiceRegistry:
 
     def tts(self, texto: str, voice_id: str | None = None) -> bytes:
         """Texto → voz (ElevenLabs; Cartesia no se fuerza aquí)."""
+        from cognicion.servicios.clientes import resolver_elevenlabs_voice_id
+        from settings import ELEVENLABS_API_KEY, ELEVENLABS_MODEL_ID, ELEVENLABS_VOICE_ID
+
         client = self.cliente_para(Servicio.TTS)
+        # Wrapper HTTP ya resuelve Voice ID tipográficos
         if hasattr(client, "tts"):
             return client.tts(texto, voice_id=voice_id)
-        from settings import ELEVENLABS_MODEL_ID, ELEVENLABS_VOICE_ID
 
-        vid = voice_id or ELEVENLABS_VOICE_ID
+        # SDK: corregir Voice ID antes de llamar (Render a veces tipa mal el case)
+        vid = resolver_elevenlabs_voice_id(
+            ELEVENLABS_API_KEY, voice_id or ELEVENLABS_VOICE_ID
+        )
         if not vid:
             raise ClienteNoDisponible("ELEVENLABS_VOICE_ID requerida para TTS")
-        # SDK elevenlabs
-        audio = client.text_to_speech.convert(
-            voice_id=vid,
-            text=texto,
-            model_id=ELEVENLABS_MODEL_ID,
-        )
+        try:
+            audio = client.text_to_speech.convert(
+                voice_id=vid,
+                text=texto,
+                model_id=ELEVENLABS_MODEL_ID,
+            )
+        except Exception:
+            vid = resolver_elevenlabs_voice_id(
+                ELEVENLABS_API_KEY, None, force=True
+            )
+            audio = client.text_to_speech.convert(
+                voice_id=vid,
+                text=texto,
+                model_id=ELEVENLABS_MODEL_ID,
+            )
         if isinstance(audio, (bytes, bytearray)):
             return bytes(audio)
         chunks = []
