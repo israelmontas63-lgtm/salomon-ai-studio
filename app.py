@@ -92,6 +92,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/core/kernel",
         "/api/core/kernel/init",
         "/api/chat",
+        "/api/ai-process",
         "/api/chat/nuevo",
         "/api/proveedores",
         "/api/stt",
@@ -1046,6 +1047,7 @@ def api_hablar(body: HablarRequest) -> dict:
     return hablar(body.texto)
 
 
+@app.post("/api/ai-process", response_model=ChatResponse)
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(body: ChatRequest) -> ChatResponse:
     session_id, salomon = _obtener_o_crear_sesion(body.session_id)

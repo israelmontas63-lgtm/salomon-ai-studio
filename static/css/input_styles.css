@@ -1,0 +1,89 @@
+/* Salomón AI — Input Layer (experiencia tipo WhatsApp) */
+
+.input-layer {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: min(100%, 430px);
+  transform: translate(-50%, 110%);
+  z-index: 80;
+  padding: 0 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+  transition: transform 0.2s ease-out;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.85) 35%, #000 100%);
+}
+
+.input-layer.is-open {
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.input-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  border-radius: 999px;
+  border: 2px solid #d4af37;
+  background: #000000;
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.22);
+  padding: 6px 8px 6px 16px;
+}
+
+.input-pill__field {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #c0c0c0;
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.input-pill__field::placeholder {
+  color: rgba(212, 175, 55, 0.55);
+}
+
+.input-send {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #d4af37;
+  background: #000000;
+  color: #d4af37;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 3px 12px rgba(212, 175, 55, 0.2);
+}
+
+.input-send svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: #d4af37;
+}
+
+.input-send:active {
+  transform: scale(0.95);
+}
+
+/* Aa activo */
+#btn-aa.is-input-open {
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.45), 0 4px 14px rgba(212, 175, 55, 0.28);
+}
+
+/* No interferir con Smart Button / cámara: el sheet queda encima del composer viejo */
+body.vision-immersive .input-layer {
+  display: none !important;
+}
+
+/* Empujar chat un poco cuando el input está abierto */
+body.input-sheet-open .chat {
+  padding-bottom: calc(200px + env(safe-area-inset-bottom, 0px));
+}

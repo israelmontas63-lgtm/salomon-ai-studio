@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="/static/css/camera_overlay.css" />
   <link rel="stylesheet" href="/static/css/vision.css" />
   <link rel="stylesheet" href="/static/css/camera_full.css" />
+  <link rel="stylesheet" href="/static/css/input_styles.css" />
 </head>
 <body>
   <div class="phone">
@@ -47,13 +48,11 @@
 ¿Sobre qué obra quieres que profundice?</div>
     </main>
 
-    <!-- Preview cámara (CÁMARA_ACTIVA) -->
     <div class="camera-stage" id="camera-stage" aria-hidden="true">
       <video id="camera-video" playsinline muted autoplay></video>
     </div>
 
     <footer class="control-bar" id="control-bar">
-      <!-- Trío inmersivo: Cerrar (izq) | Gatillo (centro) | Giro vive en cam-wrap (arriba en full) -->
       <div class="control-side" id="side-close">
         <div class="cam-wrap" id="cam-wrap">
           <button type="button" class="btn-flip" id="btn-flip" aria-label="Girar cámara" tabindex="-1">
@@ -74,18 +73,35 @@
       <div class="control-side" id="side-aa">
         <button type="button" class="circle-btn" id="btn-aa" aria-label="Texto">Aa</button>
       </div>
-
-      <form class="composer composer--smart" id="form-chat" autocomplete="off">
-        <button type="submit" class="btn-play" aria-label="Enviar">►</button>
-        <input id="input-msg" type="text" placeholder="Escribe tu mensaje..." maxlength="4000" />
-      </form>
     </footer>
+
+    <!-- Input Layer: se despliega con Aa -->
+    <div class="input-layer" id="input-layer" aria-hidden="true">
+      <form class="input-pill" id="form-chat" autocomplete="off">
+        <input
+          class="input-pill__field"
+          id="input-msg"
+          type="text"
+          placeholder="Escribe tu mensaje..."
+          maxlength="4000"
+          enterkeyhint="send"
+          autocomplete="off"
+        />
+        <button type="submit" class="input-send" id="input-send" aria-label="Enviar">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5l11 7-11 7V5z" />
+          </svg>
+        </button>
+      </form>
+    </div>
   </div>
 
   <script src="/static/js/ui_controller.js" defer></script>
+  <script src="/static/js/ui_manager.js" defer></script>
   <script src="/static/js/camera_logic.js" defer></script>
   <script src="/static/js/camera_full.js" defer></script>
   <script src="/static/js/vision_engine.js" defer></script>
+  <script src="/static/js/input_engine.js" defer></script>
   <script src="/static/js/app.js" defer></script>
   <script src="/static/js/components/SmartButton.js" defer></script>
   <script src="/static/js/pwa-register.js" defer></script>

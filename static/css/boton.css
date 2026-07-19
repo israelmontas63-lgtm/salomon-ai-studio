@@ -98,17 +98,6 @@
   }
 }
 
-/* Composer compacto bajo el eje del Smart Button */
-.composer--smart {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 10px);
-  transform: translateX(-50%);
-  width: min(280px, 78vw);
-  max-width: 280px;
-  height: 44px;
-}
-
 .control-bar {
   position: relative;
 }

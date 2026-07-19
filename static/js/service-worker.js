@@ -3,7 +3,7 @@
  * Cachea CSS/JS/assets; HTML y /api van a red (hot-reload en móvil).
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v5";
+const CACHE = "salomon-premium-v6";
 const PRECACHE = [
   "/",
   "/static/css/styles.css",
@@ -11,8 +11,11 @@ const PRECACHE = [
   "/static/css/camera_overlay.css",
   "/static/css/vision.css",
   "/static/css/camera_full.css",
+  "/static/css/input_styles.css",
   "/static/js/app.js",
   "/static/js/ui_controller.js",
+  "/static/js/ui_manager.js",
+  "/static/js/input_engine.js",
   "/static/js/camera_logic.js",
   "/static/js/camera_full.js",
   "/static/js/vision_engine.js",
