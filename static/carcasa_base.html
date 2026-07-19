@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Salomón AI — Premium</title>
+  <title>SalomÃ³n AI â€” Premium</title>
   <style>
     :root {
       --negro: #000000;
@@ -35,8 +35,8 @@
 
     /*
       Estructura validada (intocable):
-      A Cámara(+Giro) | B Input(+Mic) | C Envío S
-      display: flex · una fila · centrados
+      A CÃ¡mara(+Giro) | B Input(+Mic) | C EnvÃ­o S
+      display: flex Â· una fila Â· centrados
     */
     .control-bar {
       display: flex;
@@ -61,7 +61,7 @@
       color: var(--plata);
     }
 
-    /* ——— Bloque A: círculo Cámara (padre del Giro) ——— */
+    /* â€”â€”â€” Bloque A: cÃ­rculo CÃ¡mara (padre del Giro) â€”â€”â€” */
     .bloque-a {
       width: 56px;
       height: 56px;
@@ -92,7 +92,7 @@
       stroke-linejoin: round;
     }
 
-    /* Giro [7] — hijo de Cámara, mismo eje, encima */
+    /* Giro [7] â€” hijo de CÃ¡mara, mismo eje, encima */
     .bloque-a .giro {
       position: absolute;
       left: 50%;
@@ -122,7 +122,7 @@
       stroke-linejoin: round;
     }
 
-    /* ——— Bloque B: píldora Input (padre del Micro) ——— */
+    /* â€”â€”â€” Bloque B: pÃ­ldora Input (padre del Micro) â€”â€”â€” */
     .bloque-b {
       width: 240px;
       height: 56px;
@@ -174,7 +174,7 @@
       color: rgba(192, 192, 192, 0.45);
     }
 
-    /* ——— Bloque C: círculo Envío S ——— */
+    /* â€”â€”â€” Bloque C: cÃ­rculo EnvÃ­o S â€”â€”â€” */
     .bloque-c {
       width: 56px;
       height: 56px;
@@ -192,9 +192,9 @@
   <div class="main">zona de chat</div>
 
   <div class="control-bar" id="control-bar">
-    <!-- Bloque A: Cámara + Giro interno -->
+    <!-- Bloque A: CÃ¡mara + Giro interno -->
     <div class="bloque bloque-a" id="el-3" data-bloque="A">
-      <button type="button" class="giro" id="el-7" aria-label="Girar cámara">
+      <button type="button" class="giro" id="el-7" aria-label="Girar cÃ¡mara">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 12a8 8 0 0 1 13.5-5.8" />
           <path d="M17 4v4h-4" />
@@ -202,7 +202,7 @@
           <path d="M7 20v-4h4" />
         </svg>
       </button>
-      <button type="button" class="camara" aria-label="Cámara">
+      <button type="button" class="camara" aria-label="CÃ¡mara">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 8h3l2-2h6l2 2h3v10H4V8z" />
           <circle cx="12" cy="13" r="3.2" />
@@ -212,7 +212,7 @@
 
     <!-- Bloque B: Input + Mic interno -->
     <div class="bloque bloque-b" id="el-5" data-bloque="B">
-      <button type="button" class="micro" id="el-4" aria-label="Micrófono">
+      <button type="button" class="micro" id="el-4" aria-label="MicrÃ³fono">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="9" y="3" width="6" height="11" rx="3" />
           <path d="M6 11a6 6 0 0 0 12 0" />
@@ -220,13 +220,27 @@
           <path d="M9 21h6" />
         </svg>
       </button>
-      <input class="campo" type="text" placeholder="Escribe a Salomón…" aria-label="Mensaje" />
+      <input class="campo" type="text" placeholder="Escribe a SalomÃ³nâ€¦" aria-label="Mensaje" />
     </div>
 
-    <!-- Bloque C: Envío S -->
+    <!-- Bloque C: EnvÃ­o S -->
     <button type="button" class="bloque bloque-c" id="el-6" data-bloque="C" aria-label="Enviar">
       S
     </button>
   </div>
+<script>
+(function () {
+  if (!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.getRegistrations().then(function (regs) {
+    regs.forEach(function (r) { r.unregister(); });
+  });
+  if (window.caches && caches.keys) {
+    caches.keys().then(function (keys) {
+      keys.forEach(function (k) { caches.delete(k); });
+    });
+  }
+})();
+</script>
 </body>
 </html>
+

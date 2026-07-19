@@ -3,7 +3,7 @@
  * Purga caches antiguas. External fetch passthrough. Camera/mic network-first.
  * Created by Israel Monta - Salomon AI Studio
  */
-const CACHE = "salomon-pwa-v105";
+const CACHE = "salomon-pwa-v108";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -141,6 +141,19 @@ self.addEventListener("fetch", (event) => {
   // CRÍTICO v104: no interceptar orígenes externos (gateway web, APIs remotas)
   if (url.origin !== self.location.origin) return;
   const path = url.pathname;
+
+  // Maqueta Premium: NUNCA caché PWA (evita 404 fantasma en móvil)
+  if (
+    path === "/carcasa" ||
+    path === "/carcasa/" ||
+    path === "/carcasa_base.html" ||
+    path === "/vista-carcasa" ||
+    path.startsWith("/static/design/") ||
+    path.startsWith("/static/carcasa")
+  ) {
+    event.respondWith(fetch(req, { cache: "no-store" }));
+    return;
+  }
 
   // Chat / media / mutaciones cognitivas: siempre red
   if (isApiNetworkOnly(path)) {

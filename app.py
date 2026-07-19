@@ -2339,51 +2339,40 @@ def api_backup_import(body: BackupImportRequest) -> dict:
     return herramientas.importar_backup(body.contenido)
 
 
-def _ruta_carcasa_base():
-    """Resuelve carcasa_base.html en rutas públicas conocidas (Render-safe)."""
-    candidatos = (
-        BASE_DIR / "carcasa_base.html",
-        BASE_DIR / "static" / "carcasa_base.html",
-        BASE_DIR / "static" / "design" / "carcasa_base.html",
-        STUDIO_DIR / "carcasa_base.html",
-    )
-    for ruta in candidatos:
-        if ruta.is_file():
-            return ruta
-    return None
+# Ruta exacta exigida: static/design/carcasa_base.html (relativa a la raíz del repo)
+CARCASA_FILE = BASE_DIR / "static" / "design" / "carcasa_base.html"
+
+_CARCASA_HEADERS = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+    # Fuerza al navegador/PWA a soltar caché vieja que devolvía 404
+    "Clear-Site-Data": '"cache", "storage"',
+}
 
 
 def _respuesta_carcasa():
-    ruta = _ruta_carcasa_base()
-    if ruta is None:
+    """Sirve únicamente static/design/carcasa_base.html."""
+    if not CARCASA_FILE.is_file():
         return JSONResponse(
             status_code=404,
             content={
                 "error": "carcasa_base.html no encontrada",
-                "buscado_en": [
-                    "carcasa_base.html",
-                    "static/carcasa_base.html",
-                    "static/design/carcasa_base.html",
-                    "studio/dist/carcasa_base.html",
-                ],
+                "ruta_esperada": str(CARCASA_FILE),
+                "existe": False,
             },
         )
     return FileResponse(
-        ruta,
+        CARCASA_FILE,
         media_type="text/html; charset=utf-8",
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-        },
+        headers=_CARCASA_HEADERS,
     )
 
 
 @app.get("/")
 def index():
-    """Raíz pública — maqueta Premium (carcasa) para móvil / Render."""
-    ruta = _ruta_carcasa_base()
-    if ruta is not None:
+    """Raíz pública — maqueta Premium (carcasa)."""
+    if CARCASA_FILE.is_file():
         return _respuesta_carcasa()
     if STUDIO_DIR.exists() and (STUDIO_DIR / "index.html").exists():
         return FileResponse(
@@ -2406,9 +2395,24 @@ def index():
 @app.get("/carcasa")
 @app.get("/carcasa/")
 @app.get("/carcasa_base.html")
+@app.get("/vista-carcasa")
 def carcasa_premium():
-    """Maqueta Premium dorado/plata — rutas públicas redundantes anti-404."""
+    """
+    Ruta pública explícita:
+    /carcasa → static/design/carcasa_base.html
+    """
     return _respuesta_carcasa()
+
+
+@app.get("/api/carcasa-check")
+def carcasa_check():
+    """Diagnóstico rápido: confirma que el archivo existe en el deploy."""
+    return {
+        "ok": CARCASA_FILE.is_file(),
+        "ruta": "static/design/carcasa_base.html",
+        "absoluta": str(CARCASA_FILE),
+        "endpoints": ["/carcasa", "/vista-carcasa", "/carcasa_base.html", "/static/design/carcasa_base.html"],
+    }
 
 
 @app.get("/asistente")
