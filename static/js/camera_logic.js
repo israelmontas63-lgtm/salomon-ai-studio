@@ -69,6 +69,14 @@
       }
 
       this._emit(States.IDLE);
+
+      // Portero: si la IA toma el control, apagar stream físico al instante
+      window.addEventListener("salomon:ai-lock", (ev) => {
+        var d = (ev && ev.detail) || {};
+        if (d.action === "activate" && this.isActive()) {
+          this.closeCamera();
+        }
+      });
     },
 
     isActive() {
@@ -80,6 +88,10 @@
     },
 
     async toggleCamera() {
+      if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("camera")) {
+        this._notify("Cámara bloqueada: la IA está en uso.");
+        return;
+      }
       if (this.state === States.IDLE || this.state === States.OFF) {
         await this.openCamera();
       } else {
@@ -88,6 +100,10 @@
     },
 
     async openCamera() {
+      if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("camera")) {
+        this._notify("Cámara bloqueada: la IA está en uso.");
+        return;
+      }
       if (this._switching) return;
       this._switching = true;
       this.facingMode = "environment";
@@ -333,6 +349,10 @@
 
     async _startStream(facingMode, opts) {
       opts = opts || {};
+      // Bloqueo físico: no pedir getUserMedia si la IA manda
+      if (window.SalomonAILock && window.SalomonAILock.isActive()) {
+        throw new Error("camera_blocked_by_ai_priority");
+      }
       this._stopStream();
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("getUserMedia no disponible");

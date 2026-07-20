@@ -49,7 +49,7 @@
     is_ai_active = true;
     reason = why || "smart_button";
     setBodyLock(true);
-    // Cerrar capas secundarias si estaban abiertas
+    // Cerrar capas secundarias + cortar hardware de cámara (bloqueo físico)
     try {
       if (window.SalomonUiManager && window.SalomonUiManager.hide) {
         window.SalomonUiManager.hide();
@@ -57,9 +57,14 @@
       if (window.SalomonSettings && window.SalomonSettings.close) {
         window.SalomonSettings.close();
       }
+      if (window.SalomonCamera && window.SalomonCamera.isActive && window.SalomonCamera.isActive()) {
+        if (window.SalomonCamera.closeCamera) {
+          window.SalomonCamera.closeCamera();
+        }
+      }
     } catch (_) {}
     syncServer(true, reason);
-    emit({ action: "activate", reason: reason });
+    emit({ action: "activate", reason: reason, hardware: "camera_forced_off" });
     return true;
   }
 
