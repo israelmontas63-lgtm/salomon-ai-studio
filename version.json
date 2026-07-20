@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-20T12:05:00Z",
-  "timestamp": 1753009500,
-  "version": "108.5.0",
+  "timestamp_iso": "2026-07-20T12:10:00Z",
+  "timestamp": 1753009800,
+  "version": "108.5.1",
   "channel": "main",
-  "label": "camera-toggle-elevate-isolated",
+  "label": "camera-exact-elevation-5mm",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "UI_CAMERA_ELEVATE_ISOLATED",
-  "notes": "v108.5.0 - Cámara se eleva al tocar; Giro encima; retorno al cerrar. UI aislada del cerebro/visión."
+  "protocol": "CAMERA_ELEVATE_5MM",
+  "notes": "v108.5.1 - Cámara +19px (5mm) exactos al activar; Giro encima; UI aislada."
 }
