@@ -4,7 +4,7 @@
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
-  const POLL_MS = 20000;
+  const POLL_MS = 12000;
   const STORAGE_KEY = "salomon_build_id";
   var applying = false;
 
@@ -95,6 +95,12 @@
     /** Entrada pública: actualizar ya (toast opcional + hot patch) */
     applyUpdateNow(build) {
       if (applying) return;
+      // Badge en tuerquita (post_deploy_success)
+      window.dispatchEvent(
+        new CustomEvent("salomon:deploy-notify", {
+          detail: { build: build || "", source: "update_manager" },
+        })
+      );
       this.showUpdateToast(build || "nueva");
       // Pequeño delay para que el toast se vea, luego hot-patch
       setTimeout(() => this.hotPatch(), 600);

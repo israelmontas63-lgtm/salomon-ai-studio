@@ -108,6 +108,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/ai/core-state",
         "/api/deploy/finalize",
         "/api/deploy/channels",
+        "/api/deploy/stream",
         "/api/motor/estado",
         "/api/chat/nuevo",
         "/api/proveedores",
@@ -1276,6 +1277,48 @@ def api_deploy_channels() -> dict:
     from cognicion.core_flow_verification import run_channel_audit
 
     return run_channel_audit()
+
+
+@app.get("/api/deploy/stream")
+async def api_deploy_stream():
+    """
+    SSE post_deploy_success: emite build id cuando cambia el despliegue.
+    El cliente muestra el badge en la tuerquita.
+    """
+    import asyncio
+    import json as _json
+
+    from fastapi.responses import StreamingResponse
+
+    async def _gen():
+        last = None
+        # heartbeat + detección de nuevo commit Render
+        for _ in range(450):  # ~1h a 8s (Free Tier friendly)
+            try:
+                build = _build_id()
+            except Exception:
+                build = ""
+            if build and build != last:
+                payload = {
+                    "event": "post_deploy_success",
+                    "build": build,
+                    "build_short": build[:12] if len(build) > 12 else build,
+                }
+                yield f"data: {_json.dumps(payload, ensure_ascii=False)}\n\n"
+                last = build
+            else:
+                yield ": ping\n\n"
+            await asyncio.sleep(8)
+
+    return StreamingResponse(
+        _gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.post("/api/process", response_model=ChatResponse)

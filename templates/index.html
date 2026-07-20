@@ -35,8 +35,12 @@
     <header class="header">
       <!-- Única entrada al Control Layer (coordenadas del antiguo icono usuario) -->
       <div class="profiles">
-        <button type="button" class="profile-btn" id="btn-settings" aria-label="Herramientas">
+        <button type="button" class="profile-btn profile-btn--badge-host" id="btn-settings" aria-label="Herramientas">
           <img src="/static/assets/icon-settings.svg" alt="" />
+          <span class="deploy-badge" id="deploy-badge" aria-hidden="true">
+            <span class="deploy-badge__dot"></span>
+            <span class="deploy-badge__card">Nueva</span>
+          </span>
         </button>
       </div>
 

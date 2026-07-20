@@ -84,6 +84,7 @@
       loadScript("/static/js/script.js"),
       loadScript("/static/js/input_engine.js"),
       loadScript("/static/js/update_manager.js"),
+      loadScript("/static/js/realtime_notification_badge.js"),
     ]);
     return inputReady;
   }

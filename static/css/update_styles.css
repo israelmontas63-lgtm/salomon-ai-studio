@@ -50,3 +50,76 @@ body.vision-immersive .settings-panel,
 body.vision-immersive .update-toast {
   display: none !important;
 }
+
+/* ——— Badge post-deploy en tuerquita (micro-cartita) ——— */
+.profile-btn--badge-host,
+#btn-settings.profile-btn--badge-host {
+  position: relative;
+  overflow: visible;
+}
+
+.deploy-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.7) translateY(2px);
+  transition:
+    opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.deploy-badge.is-visible,
+#btn-settings.has-deploy-badge .deploy-badge {
+  opacity: 1;
+  pointer-events: none;
+  transform: scale(1) translateY(0);
+}
+
+.deploy-badge__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d4af37;
+  border: 1.5px solid #000;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.35);
+  flex-shrink: 0;
+  animation: deploy-badge-pulse 1.6s ease-in-out infinite;
+}
+
+.deploy-badge__card {
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: #0a0a0a;
+  background: #d4af37;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+  padding: 3px 5px;
+  white-space: nowrap;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+@keyframes deploy-badge-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(212, 175, 55, 0);
+  }
+}
+
+body.vision-immersive .deploy-badge.is-visible {
+  opacity: 1 !important;
+}
