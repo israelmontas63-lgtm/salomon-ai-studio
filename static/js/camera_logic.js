@@ -205,7 +205,14 @@
           var mirror = this.facingMode === "user";
           this.video.style.transform =
             (mirror ? "scaleX(-1) " : "") + "scale(" + f.toFixed(2) + ")";
-          this.video.classList.add(f >= 2 ? "is-zoom-macro" : "is-zoom-micro");
+          // Clase según modo de foco (contrato micro/macro), no solo el factor
+          if (this.focusMode === "macro") {
+            this.video.classList.add("is-zoom-macro");
+          } else if (this.focusMode === "micro") {
+            this.video.classList.add("is-zoom-micro");
+          } else {
+            this.video.classList.add(f >= 2 ? "is-zoom-macro" : "is-zoom-micro");
+          }
         }
       }
 

@@ -8,10 +8,17 @@
   /** Catálogo escalable de herramientas futuras */
   const TOOLS = [
     {
+      id: "chat",
+      label: "Chat",
+      action: "chatDrawer",
+      primary: true,
+      description: "Carpeta de chats recientes y conversaciones guardadas",
+    },
+    {
       id: "update",
       label: "Actualización",
       action: "hotPatch",
-      primary: true,
+      primary: false,
       description: "Hot Patching: descarga el paquete nuevo desde Render",
     },
     {
@@ -211,6 +218,13 @@
       if (!tool) return;
       if (tool.action === "close") {
         this.close();
+        return;
+      }
+      if (tool.action === "chatDrawer") {
+        this.close();
+        if (window.SalomonChatDrawer && window.SalomonChatDrawer.openDrawer) {
+          window.SalomonChatDrawer.openDrawer();
+        }
         return;
       }
       if (tool.action === "hotPatch") {

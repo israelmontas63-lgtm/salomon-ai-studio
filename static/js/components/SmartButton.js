@@ -443,14 +443,33 @@
       if (chat) {
         var typingEl = chat.querySelector(".bubble.typing");
         if (typingEl) typingEl.remove();
-        var bot = document.createElement("div");
-        bot.className = "bubble bot";
-        bot.textContent =
-          (result && result.ok && data.texto) ||
-          data.detail ||
-          "No pude completar la respuesta. ¿Lo intentamos de nuevo?";
-        chat.appendChild(bot);
-        chat.scrollTop = chat.scrollHeight;
+        // vision_local: vision_engine ya escribió la burbuja (sin eco duplicado)
+        if (!(meta && meta.vision_local)) {
+          var bot = document.createElement("div");
+          bot.className = "bubble bot";
+          bot.textContent =
+            (result && result.ok && data.texto) ||
+            data.detail ||
+            "No pude completar la respuesta. ¿Lo intentamos de nuevo?";
+          chat.appendChild(bot);
+          chat.scrollTop = chat.scrollHeight;
+        }
+      }
+
+      if (result && result.ok && data.session_id) {
+        localStorage.setItem("salomon_session_id", data.session_id);
+      }
+      if (result && result.ok) {
+        window.dispatchEvent(
+          new CustomEvent("salomon:chat-turn", {
+            detail: {
+              session_id:
+                data.session_id || localStorage.getItem("salomon_session_id"),
+              preview: text,
+              mensaje: text,
+            },
+          })
+        );
       }
 
       if (result && result.data && result.data.audio_base64) {

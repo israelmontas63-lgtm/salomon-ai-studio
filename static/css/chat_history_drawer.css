@@ -1,0 +1,176 @@
+/* Salomón AI — Chat History Drawer (Herramientas → Chat) */
+
+.chat-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 100020;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: calc(64px + env(safe-area-inset-top, 0px)) 14px 24px;
+}
+
+.chat-drawer.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chat-drawer__sheet {
+  width: min(100%, 400px);
+  max-height: min(78vh, 640px);
+  overflow: auto;
+  background: #0a0a0a;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(212, 175, 55, 0.12);
+  padding: 16px 14px 18px;
+  color: #c0c0c0;
+}
+
+.chat-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.chat-drawer__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #d4af37;
+  letter-spacing: 0.02em;
+}
+
+.chat-drawer__close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: #000;
+  color: #c0c0c0;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chat-drawer__tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.chat-drawer__tab {
+  border: 1px solid rgba(192, 192, 192, 0.25);
+  background: #111;
+  color: #c0c0c0;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.chat-drawer__tab.is-active {
+  border-color: #d4af37;
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.chat-drawer__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.chat-drawer__btn {
+  border: 1px solid rgba(192, 192, 192, 0.3);
+  background: #000;
+  color: #c0c0c0;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.chat-drawer__btn--gold {
+  border-color: #d4af37;
+  color: #d4af37;
+}
+
+.chat-drawer__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-drawer__item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: #111;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+}
+
+.chat-drawer__item.is-current {
+  border-color: #d4af37;
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.25);
+}
+
+.chat-drawer__item-title {
+  color: #f0d78c;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.chat-drawer__item-preview {
+  color: #a8a8a8;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-drawer__item-meta {
+  color: #777;
+  font-size: 0.7rem;
+}
+
+.chat-drawer__empty {
+  text-align: center;
+  padding: 24px 8px;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.chat-drawer__hint {
+  margin: 12px 0 0;
+  font-size: 0.75rem;
+  color: #888;
+  text-align: center;
+}
+
+body.chat-drawer-open .phone {
+  pointer-events: none;
+}
+
+body.chat-drawer-open #btn-settings,
+body.chat-drawer-open #chat-history-drawer {
+  pointer-events: auto;
+}

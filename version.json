@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-20T13:20:00Z",
-  "timestamp": 1753014000,
-  "version": "109.2.0",
+  "timestamp_iso": "2026-07-20T13:40:00Z",
+  "timestamp": 1753015200,
+  "version": "109.4.0",
   "channel": "main",
-  "label": "seamless-smart-button",
+  "label": "chat-history-drawer",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "SEAMLESS_SMART_BUTTON",
-  "notes": "v109.2.0 - Botón seamless: tap<300ms dictado, hold>500ms conversacional, tap activo neutraliza; z-index 100050."
+  "protocol": "CHAT_HISTORY_DRAWER",
+  "notes": "v109.4.0 - Herramientas→Chat: recientes/guardados, persistencia SQLite+local, hidratar historial. Incluye puente voz-visión."
 }

@@ -41,6 +41,8 @@ from persistencia import (
     guardar_mensaje,
     inicializar as init_persistencia,
     limpiar_sesion,
+    listar_sesiones,
+    marcar_sesion_guardada,
     sesion_existe,
 )
 
@@ -99,6 +101,8 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/mente/conexion",
         "/api/core/kernel",
         "/api/core/kernel/init",
+        "/api/historial",
+        "/api/chats",
         "/api/chat",
         "/api/ai-process",
         "/api/process",
@@ -109,6 +113,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/deploy/finalize",
         "/api/deploy/channels",
         "/api/deploy/neural-link",
+        "/api/deploy/continuation",
         "/api/deploy/stream",
         "/api/motor/estado",
         "/api/chat/nuevo",
@@ -1292,6 +1297,19 @@ def api_deploy_neural_link() -> dict:
     return report
 
 
+@app.get("/api/deploy/continuation")
+def api_deploy_continuation() -> dict:
+    """Continuidad de workflow: locked components + siguiente capa."""
+    from cognicion.core_salomon_workflow_continuation import run_workflow_continuation
+
+    report = run_workflow_continuation()
+    report["ok"] = bool(
+        (report.get("locked_verification") or {}).get("ok")
+        and (report.get("next_layer") or {}).get("verification", {}).get("ok")
+    )
+    return report
+
+
 @app.get("/api/deploy/stream")
 async def api_deploy_stream():
     """
@@ -1589,6 +1607,39 @@ def historial(session_id: str) -> HistorialResponse:
 
     raise HTTPException(status_code=404, detail="Sesión no encontrada")
 
+
+class ChatSaveRequest(BaseModel):
+    titulo: str | None = None
+    guardada: bool = True
+
+
+@app.get("/api/chats")
+def api_list_chats(
+    guardadas: bool | None = None,
+    limite: int = 40,
+) -> dict:
+    """Carpeta de chats: recientes (default) o solo guardadas."""
+    items = listar_sesiones(limite=limite, solo_guardadas=guardadas)
+    return {
+        "ok": True,
+        "chats": items,
+        "count": len(items),
+        "filtro": "guardadas" if guardadas else ("recientes" if guardadas is None else "activas"),
+    }
+
+
+@app.post("/api/chats/{session_id}/guardar")
+def api_save_chat(session_id: str, body: ChatSaveRequest) -> dict:
+    """Marca conversación como guardada (carpeta persistente)."""
+    sid = (session_id or "").strip()
+    if not sid:
+        raise HTTPException(status_code=400, detail="session_id requerido")
+    if not sesion_existe(sid):
+        asegurar_sesion(sid)
+    pack = marcar_sesion_guardada(
+        sid, guardada=bool(body.guardada), titulo=body.titulo
+    )
+    return {"ok": True, **pack}
 
 @app.get("/api/cognicion/estado")
 def cognicion_estado(session_id: str | None = None) -> dict:

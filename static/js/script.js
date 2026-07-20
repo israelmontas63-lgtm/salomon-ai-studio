@@ -168,6 +168,15 @@
       if (res.ok && data.exito !== false && data.texto) {
         addBubble(data.texto, "bot");
         reproducirAudioRespuesta(data);
+        window.dispatchEvent(
+          new CustomEvent("salomon:chat-turn", {
+            detail: {
+              session_id: sessionId,
+              preview: msg,
+              mensaje: msg,
+            },
+          })
+        );
       } else {
         addBubble(formatError(data, res.status), "bot");
       }
@@ -239,7 +248,80 @@
   function boot() {
     wireEvents();
     window.enviarMensaje = enviarMensaje;
-    window.SalomonChat = { enviarMensaje: enviarMensaje };
+    window.SalomonChat = {
+      enviarMensaje: enviarMensaje,
+      getSessionId: function () {
+        return sessionId;
+      },
+      setSessionId: function (sid) {
+        sessionId = sid || null;
+        if (sid) localStorage.setItem("salomon_session_id", sid);
+        else localStorage.removeItem("salomon_session_id");
+      },
+      clearBubbles: function () {
+        var chat = chatEl();
+        if (chat) chat.innerHTML = "";
+      },
+      renderHistory: function (mensajes, sid) {
+        if (sid) {
+          sessionId = sid;
+          localStorage.setItem("salomon_session_id", sid);
+        }
+        var chat = chatEl();
+        if (!chat) return;
+        chat.innerHTML = "";
+        (mensajes || []).forEach(function (m) {
+          if (!m || !m.contenido) return;
+          if (m.rol !== "usuario" && m.rol !== "asistente") return;
+          addBubble(m.contenido, m.rol === "usuario" ? "user" : "bot");
+        });
+        if (!mensajes || !mensajes.length) {
+          addBubble("Conversación lista. ¿En qué te ayudo, Israel?", "bot");
+        }
+      },
+      startFresh: function (sid, welcome) {
+        if (sid) {
+          sessionId = sid;
+          localStorage.setItem("salomon_session_id", sid);
+        } else {
+          sessionId = null;
+          localStorage.removeItem("salomon_session_id");
+        }
+        var chat = chatEl();
+        if (chat) chat.innerHTML = "";
+        addBubble(
+          welcome || "Nuevo chat listo. ¿En qué te ayudo?",
+          "bot"
+        );
+      },
+      hydrateFromServer: async function () {
+        if (!sessionId) return;
+        try {
+          var res = await fetch(
+            "/api/historial?session_id=" +
+              encodeURIComponent(sessionId) +
+              "&t=" +
+              Date.now(),
+            { cache: "no-store", credentials: "same-origin" }
+          );
+          if (!res.ok) return;
+          var data = await res.json();
+          var msgs = (data.mensajes || []).filter(function (m) {
+            return m.rol === "usuario" || m.rol === "asistente";
+          });
+          if (msgs.length) {
+            window.SalomonChat.renderHistory(msgs, sessionId);
+          }
+        } catch (_) {}
+      },
+    };
+
+    // Hidratar historial del session_id actual (si existe)
+    setTimeout(function () {
+      if (window.SalomonChat && window.SalomonChat.hydrateFromServer) {
+        window.SalomonChat.hydrateFromServer();
+      }
+    }, 400);
   }
 
   if (document.readyState === "loading") {

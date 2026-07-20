@@ -9,6 +9,8 @@ from persistencia.sesiones import (
     inicializar,
     limpiar_proyecto,
     limpiar_sesion,
+    listar_sesiones,
+    marcar_sesion_guardada,
     sesion_existe,
     ultimos_mensajes,
 )
@@ -24,4 +26,6 @@ __all__ = [
     "guardar_proyecto",
     "limpiar_proyecto",
     "limpiar_sesion",
+    "listar_sesiones",
+    "marcar_sesion_guardada",
 ]

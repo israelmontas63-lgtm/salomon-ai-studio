@@ -172,6 +172,16 @@
         }
         if (res.ok && data.texto) {
           this._bubble("bot", data.texto);
+          // TTS del brain-bridge (misma vía que el botón inteligente)
+          if (data.audio_base64) {
+            try {
+              var mime = data.audio_mime || "audio/mpeg";
+              var audio = new Audio(
+                "data:" + mime + ";base64," + data.audio_base64
+              );
+              audio.play().catch(function () {});
+            } catch (_) {}
+          }
           return data.texto;
         }
         this._bubble(
@@ -213,16 +223,14 @@
       if (/\b(salom[oó]n,?\s*)?mira\b/.test(low) || /\bqu[eé]\s+ves\b/.test(low)) {
         return { handled: true, type: "mira", rest: t };
       }
-      // micro = detalle cercano | macro = objeto lejano
-      if (
-        /\bmicro\b/.test(low) ||
-        /\b(letra|texto|detalle|cerca|ah[ií]\s+mismo|aqu[ií]\s+mismo)\b/.test(low)
-      ) {
+      // micro / macro: solo comandos explícitos (evita secuestrar chat casual)
+      if (/\b(enfoque\s+)?micro\b/.test(low) || /\benfoque\s+cerca\b/.test(low)) {
         return { handled: true, type: "micro", rest: t };
       }
       if (
-        /\bmacro\b/.test(low) ||
-        /\b(lejos|all[aá]|roca|horizonte|objeto\s+lejano|enfoque\s+lejano)\b/.test(low)
+        /\b(enfoque\s+)?macro\b/.test(low) ||
+        /\benfoque\s+lejano\b/.test(low) ||
+        /\bzoom\s+(lejos|lejano|distancia)\b/.test(low)
       ) {
         return { handled: true, type: "macro", rest: t };
       }

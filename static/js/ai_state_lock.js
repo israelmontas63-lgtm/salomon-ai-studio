@@ -126,6 +126,7 @@
 
   /**
    * trigger_ai_core(data_payload) — canal obligatorio del botón central.
+   * Puente visión: comandos mira/macro/micro + adjunto de frame si ojos activos.
    */
   async function trigger_ai_core(dataPayload) {
     var body = dataPayload || {};
@@ -137,6 +138,18 @@
     activate(body.reason || "trigger_ai_core");
 
     try {
+      // Paridad chat↔voz: comandos de visión locales (sin romper gestos del botón)
+      var visionHandled = await tryHandleVisionCommand(mensaje);
+      if (visionHandled) {
+        emit({
+          action: "brain_response",
+          ok: true,
+          data: visionHandled,
+          via: "vision_command_local",
+        });
+        return { ok: true, data: visionHandled, via: "vision_command_local" };
+      }
+
       var dataOut = {
         mensaje: mensaje,
         session_id: body.session_id || sessionId,
@@ -144,6 +157,13 @@
       if (body.imagen_base64) {
         dataOut.imagen_base64 = body.imagen_base64;
         dataOut.imagen_mime = body.imagen_mime || "image/jpeg";
+      } else {
+        // Si los ojos están activos, adjuntar frame + autofocus contextual
+        var visPack = await prepareVisionPayload(mensaje);
+        if (visPack && visPack.imagen_base64) {
+          dataOut.imagen_base64 = visPack.imagen_base64;
+          dataOut.imagen_mime = visPack.imagen_mime || "image/jpeg";
+        }
       }
 
       var res = await fetch(API_BRAIN, {
@@ -188,6 +208,78 @@
         release("trigger_ai_core_done");
       }
     }
+  }
+
+  /** Comandos explícitos de visión (mira / macro / micro / modo visión). */
+  async function tryHandleVisionCommand(mensaje) {
+    var looksVisual =
+      /\b(mira|qu[eé]\s+ves|macro|micro|modo\s+visi[oó]n|ojos\s+activos|enfoque\s+(cerca|lejano))\b/i.test(
+        mensaje || ""
+      );
+    if (
+      looksVisual &&
+      !window.SalomonVision &&
+      window.SalomonMain &&
+      window.SalomonMain.ensureCameraStack
+    ) {
+      try {
+        await window.SalomonMain.ensureCameraStack();
+      } catch (_) {}
+    }
+
+    var V = window.SalomonVision;
+    if (!V || !V.parseCommand) return null;
+    var cmd = V.parseCommand(mensaje);
+    if (!cmd || !cmd.handled) return null;
+    try {
+      if (V.handleChatCommand) {
+        await V.handleChatCommand(mensaje);
+      }
+      return {
+        texto: "",
+        exito: true,
+        metadata: {
+          vision_command: cmd.type || true,
+          vision_local: true,
+        },
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Si cámara/visión activa: autofocus por texto + último frame para el núcleo.
+   */
+  async function prepareVisionPayload(mensaje) {
+    var cam = window.SalomonCamera;
+    var V = window.SalomonVision;
+    var active =
+      (cam && cam.isActive && cam.isActive()) ||
+      (V && V.isActive && V.isActive()) ||
+      document.body.classList.contains("vision-mode-active");
+    if (!active) return null;
+
+    try {
+      if (cam && cam.autoFocusFromText) {
+        await cam.autoFocusFromText(mensaje);
+      }
+    } catch (_) {}
+
+    var dataUrl = null;
+    if (V && V.captureCurrentFrame) {
+      try {
+        dataUrl = V.captureCurrentFrame(0.85);
+      } catch (_) {}
+    }
+    if (!dataUrl && V && V.session && V.session.lastFrameDataUrl) {
+      dataUrl = V.session.lastFrameDataUrl;
+    }
+    if (!dataUrl) return null;
+
+    var raw = String(dataUrl).replace(/^data:image\/\w+;base64,/, "");
+    if (V && V.session) V.session.lastFrameDataUrl = dataUrl;
+    return { imagen_base64: raw, imagen_mime: "image/jpeg" };
   }
 
   /** alias legacy → mismo canal */

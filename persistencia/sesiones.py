@@ -44,7 +44,20 @@ def inicializar() -> None:
                 FOREIGN KEY (session_id) REFERENCES sesiones(id)
             );
         """)
+        _migrate_sesiones_columns(conn)
 
+
+def _migrate_sesiones_columns(conn: sqlite3.Connection) -> None:
+    """Columnas opcionales: guardada / titulo (carpeta de chats)."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(sesiones)").fetchall()}
+    if "guardada" not in cols:
+        conn.execute(
+            "ALTER TABLE sesiones ADD COLUMN guardada INTEGER NOT NULL DEFAULT 0"
+        )
+    if "titulo" not in cols:
+        conn.execute(
+            "ALTER TABLE sesiones ADD COLUMN titulo TEXT NOT NULL DEFAULT ''"
+        )
 
 def sesion_existe(session_id: str) -> bool:
     with _conexion() as conn:
@@ -195,3 +208,119 @@ def limpiar_sesion(session_id: str) -> None:
             "UPDATE sesiones SET actualizada_en = ? WHERE id = ?",
             (datetime.now(timezone.utc).isoformat(), session_id),
         )
+
+
+def listar_sesiones(
+    *,
+    limite: int = 40,
+    solo_guardadas: bool | None = None,
+) -> list[dict]:
+    """Lista chats recientes (más nuevo arriba). solo_guardadas=True → carpeta guardados."""
+    inicializar()
+    lim = max(1, min(int(limite or 40), 100))
+    with _conexion() as conn:
+        where = ""
+        params: list = []
+        if solo_guardadas is True:
+            where = "WHERE COALESCE(s.guardada, 0) = 1"
+        elif solo_guardadas is False:
+            where = "WHERE COALESCE(s.guardada, 0) = 0"
+        rows = conn.execute(
+            f"""
+            SELECT
+                s.id AS session_id,
+                s.creada_en,
+                s.actualizada_en,
+                COALESCE(s.guardada, 0) AS guardada,
+                COALESCE(s.titulo, '') AS titulo,
+                (
+                    SELECT contenido FROM mensajes
+                    WHERE session_id = s.id AND rol IN ('usuario', 'asistente')
+                    ORDER BY id DESC LIMIT 1
+                ) AS preview,
+                (
+                    SELECT COUNT(*) FROM mensajes WHERE session_id = s.id
+                ) AS message_count
+            FROM sesiones s
+            {where}
+            ORDER BY s.actualizada_en DESC
+            LIMIT ?
+            """,
+            (*params, lim),
+        ).fetchall()
+
+    out: list[dict] = []
+    for row in rows:
+        preview = (row["preview"] or "").strip()
+        titulo = (row["titulo"] or "").strip()
+        if not titulo and preview:
+            titulo = preview[:48] + ("…" if len(preview) > 48 else "")
+        if not titulo:
+            titulo = "Chat " + str(row["session_id"])[:8]
+        out.append(
+            {
+                "session_id": row["session_id"],
+                "titulo": titulo,
+                "preview": preview[:120],
+                "actualizada_en": row["actualizada_en"],
+                "creada_en": row["creada_en"],
+                "guardada": bool(row["guardada"]),
+                "message_count": int(row["message_count"] or 0),
+            }
+        )
+    return out
+
+
+def marcar_sesion_guardada(
+    session_id: str,
+    *,
+    guardada: bool = True,
+    titulo: str | None = None,
+) -> dict:
+    """Marca una sesión como conversación guardada (carpeta persistente)."""
+    asegurar_sesion(session_id)
+    ahora = datetime.now(timezone.utc).isoformat()
+    titulo_clean = (titulo or "").strip()[:120]
+    with _conexion() as conn:
+        if titulo_clean:
+            conn.execute(
+                """
+                UPDATE sesiones
+                SET guardada = ?, titulo = ?, actualizada_en = ?
+                WHERE id = ?
+                """,
+                (1 if guardada else 0, titulo_clean, ahora, session_id),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE sesiones
+                SET guardada = ?, actualizada_en = ?
+                WHERE id = ?
+                """,
+                (1 if guardada else 0, ahora, session_id),
+            )
+        # Si no hay título, usar preview del último mensaje
+        if not titulo_clean:
+            row = conn.execute(
+                """
+                SELECT contenido FROM mensajes
+                WHERE session_id = ? AND rol = 'usuario'
+                ORDER BY id DESC LIMIT 1
+                """,
+                (session_id,),
+            ).fetchone()
+            if row and row["contenido"]:
+                auto = str(row["contenido"]).strip()[:48]
+                if auto:
+                    conn.execute(
+                        "UPDATE sesiones SET titulo = ? WHERE id = ?",
+                        (auto, session_id),
+                    )
+                    titulo_clean = auto
+    return {
+        "session_id": session_id,
+        "guardada": bool(guardada),
+        "titulo": titulo_clean,
+        "actualizada_en": ahora,
+    }
