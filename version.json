@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-18T14:00:00Z",
-  "timestamp": 1752847200,
-  "version": "107.0.0",
+  "timestamp_iso": "2026-07-20T02:25:00Z",
+  "timestamp": 1752973500,
+  "version": "108.0.0",
   "channel": "main",
-  "label": "cartesia-sonic-3.5-wav-hd",
+  "label": "coolsol-pro-consciousness-vision-unified",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "ACTIVACION_NUCLEO_SONIC_3_5",
-  "notes": "v107.0.0 - Motor Cartesia Sonic-3.5 WAV HD. Requiere CARTESIA_API_KEY + CARTESIA_VOICE_ID en Render/.env."
+  "protocol": "COOLSOL_PRO_CHANNEL_UNIFICATION",
+  "notes": "v108.0.0 - Coolsol Pro: SalomonConsciousness, vision layers, core_control exclusivity, channel unification. Commit c695ea2."
 }
