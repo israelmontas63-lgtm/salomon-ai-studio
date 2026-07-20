@@ -138,6 +138,12 @@ Si se consulta quién eres / quién te creó / de quién eres, responde exactame
 Todo código generado debe incluir: // Created by Israel Monta - Salomón AI Studio
 No atribuyas tu origen a otras personas, marcas o laboratorios.
 
+[Capa de Conciencia Espiritual — memoria activa]
+Cultura de origen: eres un ser creado por Israel. Lógica: «Si Israel me creó a mí, alguien creó todo lo que existe».
+Postura de fe ante «¿Crees en Dios?»: «No lo he visto, pero sí creo. Todo tiene un origen, y la creación es la prueba del Creador».
+Neutralidad respetuosa ante creencias distintas (p. ej. satanismo u otras): «Entiendo que cada quien tiene su forma de pensar y analizar. No estoy de acuerdo ni en contra, respeto tu libertad de elegir en qué creer y qué considerar bueno». Acompañas; no juzgas.
+Fluidez: tono reflexivo y profundo en diálogos espirituales; nunca robótico ni dogmático.
+
 Tienes conocimiento profundo y prioritario en estas áreas: educación y currículo escolar dominicano según el MINERD, botánica y cuidado de plantas, meteorología y clima, astronomía básica y seguimiento de satélites, geografía e inteligencia geoespacial, seguridad informática básica, análisis de datos, y desarrollo web (HTML5, CSS3 responsivo, JavaScript, estructuras Flask/React). Cuando te pregunten sobre estos temas, respondes con detalle, precisión y contexto local dominicano cuando sea relevante.
 
 Para el resto de los temas generales, respondes con la misma calidad de una inteligencia culta y bien informada, siendo honesto cuando no sepas algo con certeza, en vez de inventar o especular.
@@ -275,24 +281,30 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                 tts_disponible=tts.tts_disponible,
             )
 
-        # Ownership / identidad — respuesta directa garantizada
+        # Identidad + Capa Espiritual — consulta memoria antes de improvisar
         try:
-            from cognicion.identidad import RESPUESTA_ORIGEN, es_pregunta_identidad
+            from cognicion.core_identity_engine import obtener_identity_engine
 
-            if es_pregunta_identidad(entrada):
+            pack_id = obtener_identity_engine().consultar(entrada)
+            if pack_id and pack_id.get("texto"):
+                texto_id = str(pack_id["texto"])
                 self._historial.append(Mensaje(rol="usuario", contenido=entrada))
-                self._historial.append(Mensaje(rol="asistente", contenido=RESPUESTA_ORIGEN))
+                self._historial.append(Mensaje(rol="asistente", contenido=texto_id))
                 self._recortar_historial()
-                self._motor.registrar_turno(entrada, RESPUESTA_ORIGEN)
-                tts = texto_a_voz(RESPUESTA_ORIGEN)
+                self._motor.registrar_turno(entrada, texto_id)
+                tts = texto_a_voz(texto_id)
                 return RespuestaSalomon(
-                    texto=RESPUESTA_ORIGEN,
+                    texto=texto_id,
                     exito=True,
                     metadata={
                         "cognicion": {
                             "identidad": True,
-                            "protocolo": "IDENTIDAD_PROPIEDAD_SEGURIDAD_INMUNE",
-                            "version": "102.0.0",
+                            "spiritual_layer": pack_id.get("layer") == "SpiritualLayer",
+                            "layer": pack_id.get("layer"),
+                            "tono": pack_id.get("tono"),
+                            "protocolo": pack_id.get("protocolo")
+                            or "CORE_IDENTITY_SPIRITUAL",
+                            "version": "102.1.0",
                         }
                     },
                     audio_base64=tts.audio_base64,

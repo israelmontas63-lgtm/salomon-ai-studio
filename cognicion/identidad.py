@@ -80,7 +80,7 @@ def firma_comentario(lenguaje: str = "js") -> str:
 
 
 def bloque_identidad() -> str:
-    return (
+    base = (
         "[Identidad v102 — ADN, Propiedad y Blindaje]\n"
         f"{ADN_IDENTIDAD}\n"
         f"Propiedad: {PROPIEDAD}\n"
@@ -89,12 +89,18 @@ def bloque_identidad() -> str:
         f"Metadatos en código: {FIRMA_COMENTARIO_JS}\n"
         f"Firma ownership: {FIRMA_OWNERSHIP}"
     )
+    try:
+        from cognicion.core_identity_engine import spiritual_system_block
+
+        return base + "\n\n" + spiritual_system_block()
+    except Exception:
+        return base
 
 
 def estado_identidad() -> dict[str, Any]:
-    return {
+    out: dict[str, Any] = {
         "protocol": "IDENTIDAD_PROPIEDAD_SEGURIDAD_INMUNE",
-        "version": "102.0.0",
+        "version": "102.1.0",
         "creador": CREADOR,
         "estudio": ESTUDIO,
         "dueno_absoluto": CREADOR,
@@ -106,4 +112,14 @@ def estado_identidad() -> dict[str, Any]:
         "firma_comentario": FIRMA_COMENTARIO_JS,
         "active": True,
         "vinculante": True,
+        "spiritual_layer": True,
     }
+    try:
+        from cognicion.core_identity_engine import obtener_identity_engine
+
+        eng = obtener_identity_engine()
+        out["spiritual_stance"] = dict(eng.spiritual.philosophical_stance)
+        out["engine"] = "core_identity_engine"
+    except Exception:
+        pass
+    return out
