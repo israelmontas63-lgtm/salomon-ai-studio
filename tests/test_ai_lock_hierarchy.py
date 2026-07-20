@@ -59,7 +59,7 @@ def test_finally_restaura_aunque_falle_el_cerebro(monkeypatch):
     def _boom(*_a, **_k):
         raise RuntimeError("fallo_simulado")
 
-    monkeypatch.setattr(ai_lock, "call_salomon_brain", _boom)
+    monkeypatch.setattr(ai_lock, "execute_salomon_brain_process", _boom)
     pack = ai_lock.handle_central_button_click(
         "hola",
         obtener_sesion=lambda _sid: ("s1", object()),
