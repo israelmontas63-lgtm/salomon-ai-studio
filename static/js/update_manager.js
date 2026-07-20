@@ -1,12 +1,12 @@
 /**
- * Salomón AI — Update Manager (Hot Patching)
- * Monitorea /api/version. Dispara ServiceWorker.registration.update().
- * No controla UI del menú (eso es settings_manager.js).
+ * Salomón AI — Update Manager (Hot Patching automático)
+ * Poll /api/version → si hay build nuevo, aplica la actualización sin pedir confirmación.
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
-  const POLL_MS = 45000;
+  const POLL_MS = 20000;
   const STORAGE_KEY = "salomon_build_id";
+  var applying = false;
 
   const UpdateManager = {
     currentBuild: null,
@@ -25,7 +25,9 @@
           if (!local) {
             localStorage.setItem(STORAGE_KEY, remote);
           } else if (local !== remote) {
-            this.showUpdateToast(remote);
+            // Actualización pendiente al abrir: aplicar ya
+            this.applyUpdateNow(remote);
+            return;
           }
           window.dispatchEvent(
             new CustomEvent("salomon:build-meta", { detail: { build: remote } })
@@ -37,6 +39,8 @@
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") this.checkForUpdate();
       });
+      // Chequeo extra al volver online
+      window.addEventListener("online", () => this.checkForUpdate());
 
       const toastBtn = document.getElementById("update-toast-btn");
       if (toastBtn) {
@@ -80,18 +84,20 @@
         const local = localStorage.getItem(STORAGE_KEY) || this.currentBuild;
         if (local && remote && local !== remote) {
           this.currentBuild = remote;
-          this.showUpdateToast(remote);
-          if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
-            const reg = await navigator.serviceWorker.getRegistration();
-            if (reg) {
-              await reg.update();
-              if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
-            }
-          }
+          // Auto-aplicar: la app se modifica sola al llegar el deploy
+          this.applyUpdateNow(remote);
         } else if (remote) {
           this.currentBuild = remote;
         }
       } catch (_) {}
+    },
+
+    /** Entrada pública: actualizar ya (toast opcional + hot patch) */
+    applyUpdateNow(build) {
+      if (applying) return;
+      this.showUpdateToast(build || "nueva");
+      // Pequeño delay para que el toast se vea, luego hot-patch
+      setTimeout(() => this.hotPatch(), 600);
     },
 
     showUpdateToast(build) {
@@ -99,9 +105,7 @@
       const text = this.toast.querySelector(".update-toast__text");
       if (text) {
         text.textContent =
-          "Nueva versión disponible (" +
-          String(build).slice(0, 10) +
-          "). Toca Actualizar.";
+          "Actualizando Salomón (" + String(build).slice(0, 10) + ")…";
       }
       this.toast.classList.add("is-visible");
     },
@@ -110,16 +114,13 @@
       if (this.toast) this.toast.classList.remove("is-visible");
     },
 
-    /** Alias usado por settings_manager */
     forceUpdate() {
       return this.hotPatch();
     },
 
-    /**
-     * Hot Patching: registration.update() + purge de caché + reload.
-     * Sin tocar cámara, micrófono ni chat.
-     */
     async hotPatch() {
+      if (applying) return;
+      applying = true;
       this.hideToast();
       try {
         const remote = await this.fetchBuild();
@@ -133,7 +134,6 @@
         if (navigator.serviceWorker) {
           const registration = await navigator.serviceWorker.getRegistration();
           if (registration) {
-            // Disparador estricto: forzar chequeo de nuevo SW en Render
             await registration.update();
             if (registration.waiting) {
               registration.waiting.postMessage({ type: "SKIP_WAITING" });
@@ -151,18 +151,18 @@
           "/",
           "/static/css/styles.css",
           "/static/css/global.css",
+          "/static/css/boton.css",
           "/static/css/settings_layer.css",
           "/static/js/main.js",
+          "/static/js/ai_state_lock.js",
+          "/static/js/components/SmartButton.js",
           "/static/js/settings_manager.js",
           "/static/js/update_manager.js",
+          "/static/js/pwa-register.js",
+          "/static/js/script.js",
           "/static/js/input_engine.js",
           "/static/js/camera_logic.js",
           "/static/manifest.json",
-          "/static/icons/android-chrome-192x192.png",
-          "/static/icons/android-chrome-512x512.png",
-          "/static/icons/apple-touch-icon.png",
-          "/static/icons/favicon-32x32.png",
-          "/static/icons/design_tokens.json",
           "/manifest.json",
           "/service-worker.js?v=" + Date.now(),
         ];
