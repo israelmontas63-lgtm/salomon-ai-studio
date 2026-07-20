@@ -94,6 +94,7 @@
     if (cameraReady) return cameraReady;
     cameraReady = Promise.all([
       loadScript("/static/js/camera_logic.js"),
+      loadScript("/static/js/camera_toggle_ui.js"),
       loadScript("/static/js/camera_full.js"),
       loadScript("/static/js/vision_engine.js"),
     ]);

@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-20T12:00:00Z",
-  "timestamp": 1753009200,
-  "version": "108.4.0",
+  "timestamp_iso": "2026-07-20T12:05:00Z",
+  "timestamp": 1753009500,
+  "version": "108.5.0",
   "channel": "main",
-  "label": "realtime-deploy-badge-gear",
+  "label": "camera-toggle-elevate-isolated",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "POST_DEPLOY_BADGE",
-  "notes": "v108.4.0 - Badge micro-cartita en tuerquita + SSE /api/deploy/stream post_deploy_success."
+  "protocol": "UI_CAMERA_ELEVATE_ISOLATED",
+  "notes": "v108.5.0 - Cámara se eleva al tocar; Giro encima; retorno al cerrar. UI aislada del cerebro/visión."
 }

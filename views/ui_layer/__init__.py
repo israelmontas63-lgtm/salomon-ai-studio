@@ -38,5 +38,7 @@ def ui_layer_status() -> dict[str, Any]:
         "path": "views/ui_layer/",
         "role": "botones_contenedores_barras",
         "mixes_with_analysis": False,
+        "mixes_with_brain": False,
+        "camera_toggle": "static/js/camera_toggle_ui.js + camera_toggle_ui.css",
         "app_state": get_system_state(),
     }

@@ -1,0 +1,52 @@
+/**
+ * Salomón AI — Elevación dinámica cámara + Giro (UI layer only)
+ * Aislado del cerebro y del motor de visión.
+ */
+
+.cam-wrap {
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* Elevación segura: despega de la barra del sistema / home indicator */
+.cam-wrap.is-active,
+.cam-wrap.is-elevated,
+body.camera-ui-elevated #cam-wrap.is-active {
+  transform: translateY(calc(-56px - env(safe-area-inset-bottom, 0px) * 0.25));
+}
+
+.cam-wrap:not(.is-active):not(.is-elevated) {
+  transform: translateY(0);
+}
+
+/*
+  Giro: aparece justo encima del wrap elevado (mismo eje).
+  bottom: 100% + 18px relativo al cam-wrap.
+*/
+body.camera-ui-elevated .cam-wrap.is-active .btn-flip,
+.cam-wrap.is-active .btn-flip,
+.cam-wrap.is-elevated .btn-flip {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 15;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* Retorno: Giro se oculta al cerrar (sin is-active) */
+.cam-wrap:not(.is-active) .btn-flip {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(8px) scale(0.75);
+}
+
+#side-close,
+#nav_bar_container,
+.control-bar {
+  overflow: visible;
+}
+
+body.vision-immersive .cam-wrap.is-active,
+body.vision-immersive .cam-wrap.is-elevated,
+body.vision-immersive.camera-ui-elevated #cam-wrap.is-active {
+  transform: translateY(calc(-64px - env(safe-area-inset-bottom, 0px) * 0.2));
+}
