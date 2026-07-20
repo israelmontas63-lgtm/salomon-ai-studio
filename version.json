@@ -1,10 +1,10 @@
 {
   "timestamp_iso": "2026-07-20T02:25:00Z",
   "timestamp": 1752973500,
-  "version": "108.1.0",
+  "version": "108.2.0",
   "channel": "main",
-  "label": "central-button-geometric-center",
+  "label": "jilo-camera-absolute-overlap",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "UI_FORCE_ABSOLUTE_CENTER",
-  "notes": "v108.1.0 - Botón S centrado geométrico (grid 1fr auto 1fr) equidistante cámara/Aa."
+  "protocol": "JILO_TOP_RIGHT_OVERLAY",
+  "notes": "v108.2.0 - Jilo/flip absolute overlay top:-12px right:-8px z-index:10 sobre botón cámara."
 }

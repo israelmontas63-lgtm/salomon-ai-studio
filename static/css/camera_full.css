@@ -82,19 +82,16 @@ body.vision-immersive #side-aa {
   pointer-events: none !important;
 }
 
-/* Cluster cámara + flip dentro de la nav (no sobre el video) */
+/* Cluster cámara: wrap relativo; Jilo se superpone (no flex lateral) */
 body.vision-immersive .control-side:has(#cam-wrap),
 body.vision-immersive #cam-wrap {
-  display: flex !important;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  place-items: unset;
+  display: grid !important;
+  place-items: center;
+  position: relative;
 }
 
 body.vision-immersive #cam-wrap {
-  position: relative;
-  width: auto;
+  width: 52px;
   height: 52px;
 }
 
@@ -106,6 +103,8 @@ body.vision-immersive #btn-cam {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  position: relative;
+  z-index: 1;
 }
 
 body.vision-immersive #btn-cam img {
@@ -144,20 +143,22 @@ body.vision-immersive #side-aa {
   justify-self: end;
 }
 
-/* Flip anclado al nav_bar_container (junto a cámara) */
-body.vision-immersive .btn-flip {
-  position: static !important;
-  top: auto;
-  right: auto;
-  left: auto;
-  bottom: auto;
+/* Jilo: overlay absoluto sobre esquina superior derecha de la cámara */
+body.vision-immersive .btn-flip,
+body.vision-immersive #btn-flip {
+  position: absolute !important;
+  top: -12px !important;
+  right: -8px !important;
+  left: auto !important;
+  bottom: auto !important;
   transform: none !important;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   opacity: 1 !important;
   pointer-events: auto !important;
-  z-index: 9120;
-  background: rgba(0, 0, 0, 0.35);
+  z-index: 10;
+  margin: 0 !important;
+  background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 2px solid #d4af37;
@@ -165,8 +166,8 @@ body.vision-immersive .btn-flip {
 }
 
 body.vision-immersive .btn-flip img {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 
 body.vision-immersive .cam-wrap.is-active .btn-flip {
