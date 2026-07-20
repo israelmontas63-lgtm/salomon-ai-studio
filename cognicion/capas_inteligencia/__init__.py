@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Registro formal de las 6 Capas de Inteligencia de Salomón AI.
+Registro formal de las 7 Capas de Inteligencia de Salomón AI.
 Conecta módulos existentes sin duplicar lógica.
+Capa 7 sella la metacognición (evaluación pre-emisión) sin interferir con L3/L6.
 Created by Israel Monta - Salomón AI Studio
 """
 
@@ -90,6 +91,26 @@ LAYER_CATALOG: list[dict[str, Any]] = [
             "cognicion/orquestador.py",
         ],
         "apis": ["/api/intelligence/layers", "/api/neural/master"],
+    },
+    {
+        "id": 7,
+        "name": "metacognition_supervision",
+        "title": "Layer 7: Metacognition & Pre-Emit Supervision",
+        "assets": [
+            "cognicion/capas_inteligencia/layer_07_metacognition/__init__.py",
+            "cognicion/core_salomon_metacognition_layer_seven.py",
+            "cerebro.py",
+            "cognicion/salida_limpia.py",
+        ],
+        "apis": ["/api/intelligence/layers"],
+        "boundaries": {
+            "owns": "post_llm_draft_scoring_and_emit_gate",
+            "must_not": [
+                "deploy_agent_swarm",
+                "schedule_background_verification",
+                "enrich_turn",
+            ],
+        },
     },
 ]
 

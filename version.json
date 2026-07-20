@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-20T13:30:00Z",
-  "timestamp": 1753027800,
-  "version": "110.3.0",
+  "timestamp_iso": "2026-07-20T13:40:00Z",
+  "timestamp": 1753028400,
+  "version": "110.4.0",
   "channel": "main",
-  "label": "six-layers-ultimate",
+  "label": "seven-layers-metacognition",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "SIX_INTELLIGENCE_LAYERS",
-  "notes": "v110.3.0 - Capa 6 autonomia + enjambre de verificacion; consolidacion 6 capas; badge PWA."
+  "protocol": "SEVEN_INTELLIGENCE_LAYERS",
+  "notes": "v110.4.0 - Capa 7 metacognicion pre-emision; fronteras L3/L6 selladas; badge PWA."
 }

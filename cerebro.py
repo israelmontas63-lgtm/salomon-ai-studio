@@ -390,6 +390,26 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             if _vision_evento and not imagen_base64:
                 meta_extra["cognicion"]["vision_requerida"] = True
                 meta_extra["vision_requerida"] = True
+
+        # Capa 7: metacognición — evaluar borrador antes de emitir (anti-alucinación)
+        try:
+            from cognicion.capas_inteligencia.layer_07_metacognition import (
+                apply_supervision,
+            )
+
+            respuesta_texto, _l7 = apply_supervision(
+                respuesta_texto or "",
+                user_message=entrada,
+                meta=meta_extra if isinstance(meta_extra, dict) else None,
+            )
+            if isinstance(meta_extra, dict):
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["layer_07"] = _l7
+        except Exception as exc:
+            if isinstance(meta_extra, dict):
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["layer_07_error"] = type(exc).__name__
+
         respuesta_texto = sanitizar_salida_chat(respuesta_texto or "")
         if not respuesta_texto.strip():
             respuesta_texto = (
