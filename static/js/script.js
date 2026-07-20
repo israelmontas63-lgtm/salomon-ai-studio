@@ -197,6 +197,10 @@
       }
       return;
     }
+    if (window.SalomonVoiceLayer && window.SalomonVoiceLayer.playFromResponse) {
+      window.SalomonVoiceLayer.playFromResponse(data);
+      return;
+    }
     try {
       var mime = data.audio_mime || "audio/mpeg";
       var src = "data:" + mime + ";base64," + data.audio_base64;

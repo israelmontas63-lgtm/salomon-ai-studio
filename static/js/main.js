@@ -74,6 +74,7 @@
       loadScript("/static/js/chat_history_drawer.js"),
       loadScript("/static/js/back_button.js"),
       loadScript("/static/js/vision_mode_trigger.js"),
+      loadScript("/static/js/voice_layer.js"),
       loadScript("/static/js/ai_state_lock.js"),
       loadScript("/static/js/components/SmartButton.js"),
     ]);

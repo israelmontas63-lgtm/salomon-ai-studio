@@ -116,6 +116,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/deploy/continuation",
         "/api/neural/master",
         "/api/deploy/strict-audit",
+        "/api/intelligence/layers",
         "/api/deploy/stream",
         "/api/motor/estado",
         "/api/chat/nuevo",
@@ -1327,6 +1328,15 @@ def api_deploy_strict_audit() -> dict:
 
     return run_strict_master_audit()
 
+
+@app.get("/api/intelligence/layers")
+def api_intelligence_layers() -> dict:
+    """Verifica y reporta las 5 capas de inteligencia (construye faltantes)."""
+    from cognicion.core_salomon_verify_and_build_five_layers import (
+        run_five_layers_verify_and_build,
+    )
+
+    return run_five_layers_verify_and_build()
 @app.get("/api/deploy/stream")
 async def api_deploy_stream():
     """

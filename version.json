@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-20T14:15:00Z",
-  "timestamp": 1753017300,
-  "version": "110.1.0",
+  "timestamp_iso": "2026-07-20T14:25:00Z",
+  "timestamp": 1753017900,
+  "version": "110.2.0",
   "channel": "main",
-  "label": "strict-audit-approved",
+  "label": "five-layers-complete",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "STRICT_MASTER_AUDIT",
-  "notes": "v110.1.0 - Auditoria estricta APPROVED_ZERO_ERRORS; UI/vision/seamless/PWA verificados punto a punto."
+  "protocol": "FIVE_INTELLIGENCE_LAYERS",
+  "notes": "v110.2.0 - 5 capas verificadas y registradas; voice_layer unificado; /api/intelligence/layers."
 }
