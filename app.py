@@ -1331,12 +1331,12 @@ def api_deploy_strict_audit() -> dict:
 
 @app.get("/api/intelligence/layers")
 def api_intelligence_layers() -> dict:
-    """Verifica y reporta las 5 capas de inteligencia (construye faltantes)."""
-    from cognicion.core_salomon_verify_and_build_five_layers import (
-        run_five_layers_verify_and_build,
-    )
+    """Verifica y reporta las 6 capas de inteligencia (consolidación + Capa 6)."""
+    from cognicion.core_salomon_ultimate_layer_six import run_ultimate_architecture
 
-    return run_five_layers_verify_and_build()
+    return run_ultimate_architecture()
+
+
 @app.get("/api/deploy/stream")
 async def api_deploy_stream():
     """

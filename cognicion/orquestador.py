@@ -262,6 +262,39 @@ class MotorCognicion:
         except Exception as exc:
             meta["cognicion"]["master_neural_error"] = type(exc).__name__
 
+        # Capa 6: verificacion autonoma en segundo plano (sin bloquear respuesta)
+        try:
+            from cognicion.capas_inteligencia.layer_06_autonomy import (
+                consume_background_block,
+                schedule_background_verification,
+            )
+
+            cached_block = consume_background_block(
+                entrada, session_id=self.session_id
+            )
+            swarm_sync = bool(
+                ((meta.get("cognicion") or {}).get("master_neural") or {}).get("swarm")
+            )
+            if cached_block and not swarm_sync:
+                bloques.append(cached_block)
+                meta["cognicion"]["layer_06"] = {
+                    "cached": True,
+                    "via": "verification_swarm_cache",
+                }
+            elif not swarm_sync:
+                bg = schedule_background_verification(
+                    entrada, session_id=self.session_id
+                )
+                meta["cognicion"]["layer_06"] = bg
+            else:
+                meta["cognicion"]["layer_06"] = {
+                    "scheduled": False,
+                    "reason": "sync_swarm_already",
+                    "via": "layer_06_autonomy",
+                }
+        except Exception as exc:
+            meta["cognicion"]["layer_06_error"] = type(exc).__name__
+
         _, resultados = consultar_conectores(entrada, lat=lat, lon=lon)
         for resultado in resultados:
             bloques.append(resultado.contexto)

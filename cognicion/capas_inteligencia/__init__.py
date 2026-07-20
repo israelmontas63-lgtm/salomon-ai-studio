@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Registro formal de las 5 Capas de Inteligencia de Salomón AI.
+Registro formal de las 6 Capas de Inteligencia de Salomón AI.
 Conecta módulos existentes sin duplicar lógica.
 Created by Israel Monta - Salomón AI Studio
 """
@@ -58,6 +58,7 @@ LAYER_CATALOG: list[dict[str, Any]] = [
             "cerebro.py",
             "cognicion/llm.py",
             "cognicion/voz/cartesia_tts.py",
+            "static/js/voice_layer.js",
             "static/js/components/SmartButton.js",
             "static/js/script.js",
         ],
@@ -76,6 +77,19 @@ LAYER_CATALOG: list[dict[str, Any]] = [
             "static/css/boton.css",
         ],
         "apis": ["/api/version", "/api/deploy/stream"],
+    },
+    {
+        "id": 6,
+        "name": "autonomy_verification_swarm",
+        "title": "Layer 6: Autonomous Background Tasks & Parallel Verification Swarm",
+        "assets": [
+            "cognicion/capas_inteligencia/layer_06_autonomy/__init__.py",
+            "cognicion/cola.py",
+            "cognicion/core_salomon_master_neural_engine.py",
+            "cognicion/orquesta/agentes_paralelos.py",
+            "cognicion/orquestador.py",
+        ],
+        "apis": ["/api/intelligence/layers", "/api/neural/master"],
     },
 ]
 
