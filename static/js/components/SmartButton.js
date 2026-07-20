@@ -177,16 +177,17 @@
 
     async _fallbackFetch(text) {
       try {
-        var res = await fetch("/api/ai-process", {
+        var res = await fetch("/api/ai/central-button", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mensaje: text }),
           credentials: "same-origin",
         });
-        var data = await res.json().catch(function () {
+        var pack = await res.json().catch(function () {
           return {};
         });
-        return { ok: res.ok, data: data };
+        var data = pack.brain || pack;
+        return { ok: res.ok && !!(data && data.texto), data: data, pack: pack };
       } catch (_) {
         return { ok: false, data: {} };
       } finally {

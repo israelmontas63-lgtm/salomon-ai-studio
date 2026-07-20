@@ -101,6 +101,8 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/ai-process",
         "/api/process",
         "/api/ai/lock",
+        "/api/ai/central-button",
+        "/api/ai/secondary",
         "/api/motor/estado",
         "/api/chat/nuevo",
         "/api/proveedores",
@@ -1151,6 +1153,22 @@ class AiLockRequest(BaseModel):
     session_id: str | None = None
 
 
+class CentralButtonRequest(BaseModel):
+    """Botón central IA → handle_central_button_click / call_salomon_brain."""
+
+    mensaje: str = Field(default="", max_length=4000)
+    session_id: str | None = None
+    imagen_base64: str | None = Field(default=None, max_length=8_000_000)
+    imagen_mime: str = "image/png"
+    lat: float | None = None
+    lon: float | None = None
+    only_activate: bool = False
+
+
+class SecondaryActionRequest(BaseModel):
+    accion: str = Field(default="camera", max_length=40)
+
+
 @app.get("/api/ai/lock")
 def api_ai_lock_estado() -> dict:
     """Estado del bloqueo de prioridad del botón central (IA)."""
@@ -1169,6 +1187,42 @@ def api_ai_lock_set(body: AiLockRequest) -> dict:
     return liberar(reason=body.reason or "release")
 
 
+@app.post("/api/ai/central-button")
+def api_ai_central_button(body: CentralButtonRequest) -> dict:
+    """
+    Jerarquía del botón central (pseudocódigo → producción):
+    app_state.is_ai_active=True → call_salomon_brain() → restore.
+    """
+    from cognicion.ai_lock import handle_central_button_click
+
+    pack = handle_central_button_click(
+        body.mensaje,
+        session_id=body.session_id,
+        imagen_base64=body.imagen_base64,
+        imagen_mime=body.imagen_mime,
+        lat=body.lat,
+        lon=body.lon,
+        obtener_sesion=_obtener_o_crear_sesion,
+        only_activate=body.only_activate,
+    )
+    brain = pack.get("brain") or {}
+    if body.mensaje.strip() and brain.get("session_id") and brain.get("texto"):
+        _persistir_turno(
+            brain["session_id"],
+            body.mensaje.strip(),
+            brain.get("texto") or "",
+        )
+    return pack
+
+
+@app.post("/api/ai/secondary")
+def api_ai_secondary(body: SecondaryActionRequest) -> dict:
+    """Capa de control: cámara/menús bloqueados si is_ai_active."""
+    from cognicion.ai_lock import handle_camera_or_other_functions
+
+    return handle_camera_or_other_functions(body.accion or "camera")
+
+
 @app.post("/api/process", response_model=ChatResponse)
 @app.post("/api/ai-process", response_model=ChatResponse)
 @app.post("/api/chat", response_model=ChatResponse)
@@ -1176,7 +1230,7 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
     session_id, salomon = _obtener_o_crear_sesion(body.session_id)
     ruta_ai_directa = request.url.path.rstrip("/").endswith("/ai-process")
 
-    # Prioridad botón IA: marcar lock en ruta directa /api/ai-process
+    # Prioridad botón IA: misma jerarquía app_state → cerebro → restore
     if ruta_ai_directa:
         try:
             from cognicion.ai_lock import activar

@@ -6,7 +6,8 @@
 (function () {
   "use strict";
 
-  var API_BRAIN = "/api/ai-process";
+  // Jerarquía Python: handle_central_button_click → call_salomon_brain
+  var API_BRAIN = "/api/ai/central-button";
   var is_ai_active = false;
   var reason = "";
   var sessionId = localStorage.getItem("salomon_session_id") || null;
@@ -113,9 +114,14 @@
         body: JSON.stringify(dataOut),
         credentials: "same-origin",
       });
-      var data = await res.json().catch(function () {
+      var pack = await res.json().catch(function () {
         return {};
       });
+      // Respuesta jerárquica: { brain: { texto, session_id, ... } }
+      var data = pack.brain || pack;
+      if (!data.texto && pack.mensaje && !pack.brain) {
+        data = pack;
+      }
 
       if (data.session_id) {
         sessionId = data.session_id;
@@ -127,12 +133,14 @@
         ok: res.ok,
         status: res.status,
         data: data,
+        pack: pack,
       });
 
       return {
-        ok: res.ok && data.exito !== false,
+        ok: res.ok && (data.exito !== false) && !!data.texto,
         status: res.status,
         data: data,
+        pack: pack,
       };
     } catch (err) {
       emit({ action: "brain_error", error: String(err && err.message ? err.message : err) });
