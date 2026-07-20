@@ -1,4 +1,4 @@
-/* Salomón AI — Botón Back estándar (esquina superior izquierda) */
+/* Salomón AI — Neutralizador Universal (Back) · z-index máximo */
 
 .header-nav {
   display: flex;
@@ -14,10 +14,22 @@
   justify-content: flex-end;
 }
 
+/*
+  Capa maestra: siempre por encima de cámara (9xxx), control layer (100000)
+  y cualquier HUD flotante.
+*/
+#header-nav-start {
+  position: relative;
+  z-index: 100010;
+}
+
 .back-btn,
 #btn-back {
-  width: 36px;
-  height: 36px;
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 14px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 2px solid #d4af37;
   background: rgba(0, 0, 0, 0.92);
@@ -26,23 +38,27 @@
   place-items: center;
   padding: 0;
   cursor: pointer;
+  z-index: 100010;
   box-shadow: 0 3px 12px rgba(212, 175, 55, 0.22);
-  opacity: 0.42;
+  opacity: 0.4;
   pointer-events: none;
   transition:
     opacity 0.12s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.12s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.12s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    border-color 0.12s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.12s cubic-bezier(0.4, 0, 0.2, 1);
   -webkit-tap-highlight-color: transparent;
 }
 
 .back-btn.is-active,
 #btn-back.is-active,
-body.has-back-context #btn-back {
+body.has-back-context #btn-back,
+body.neutralizer-armed #btn-back {
   opacity: 1;
-  pointer-events: auto;
-  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35);
+  pointer-events: auto !important;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.4);
+  background: rgba(0, 0, 0, 0.95);
 }
 
 .back-btn:active.is-active,
@@ -57,25 +73,31 @@ body.has-back-context #btn-back {
   pointer-events: none;
 }
 
-body.ai-active #btn-back {
-  pointer-events: none !important;
-  opacity: 0.35;
-}
-
-/* En inmersivo: Back visible si hace falta cerrar (sobre el video) */
-body.vision-immersive #header-nav-start,
-body.vision-immersive #btn-back.is-active {
-  visibility: visible !important;
+/* Por encima del control layer abierto */
+body.control-layer-open #btn-back,
+body.control-layer-open #header-nav-start {
   pointer-events: auto !important;
-  display: flex !important;
-  position: fixed;
-  top: calc(14px + env(safe-area-inset-top, 0px));
-  left: 14px;
-  z-index: 9200;
+  z-index: 100010;
 }
 
-body.vision-immersive #btn-back.is-active {
-  background: rgba(0, 0, 0, 0.55);
+/* Sobre cámara inmersiva / HUD */
+body.vision-immersive #btn-back,
+body.vision-immersive #btn-back.is-active,
+body.vision-immersive #header-nav-start {
+  visibility: visible !important;
+  display: grid !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 100010 !important;
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* Neutralizador también puede cancelar modo IA (no destruye el núcleo) */
+body.ai-active #btn-back.is-active,
+body.ai-active.neutralizer-armed #btn-back {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  z-index: 100010 !important;
 }
