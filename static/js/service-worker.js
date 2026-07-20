@@ -1,9 +1,9 @@
 /**
- * Salomón AI — Service Worker Premium v27 (nav_bar + core_control)
+ * Salomón AI — Service Worker Premium v30 (botón S centrado geométrico)
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v29";
+const CACHE = "salomon-premium-v30";
 const PRECACHE = [
   "/",
   "/manifest.json",

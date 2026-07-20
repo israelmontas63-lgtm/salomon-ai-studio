@@ -1,4 +1,4 @@
-/* Salomón AI — Smart Button (geometría forzada: 80px) */
+/* Salomón AI — Smart Button (geometría forzada: 80px) + centro absoluto */
 
 .control-bar,
 #nav_bar_container,
@@ -7,7 +7,12 @@
   padding-top: 18px;
   padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   min-height: calc(80px + 36px + env(safe-area-inset-bottom, 0px));
-  gap: 16px;
+  /* Centro geométrico: columnas simétricas (izq = der) */
+  display: grid !important;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  gap: 0 8px;
 }
 
 .control-side,
@@ -21,13 +26,28 @@
   justify-content: center;
 }
 
+#nav_bar_container #side-close,
+.control-bar #side-close {
+  grid-column: 1;
+  justify-self: start;
+  justify-content: flex-start;
+}
+
+#nav_bar_container #side-aa,
+.control-bar #side-aa {
+  grid-column: 3;
+  justify-self: end;
+  justify-content: flex-end;
+}
+
 .control-side .circle-btn {
   width: 44px;
   height: 44px;
 }
 
-/* ——— SMART BUTTON: círculo perfecto 80×80 ——— */
-.smart-button {
+/* ——— SMART BUTTON: círculo perfecto 80×80 · centro exacto ——— */
+.smart-button,
+#nav_bar_container #smart-button {
   --smart-size: 80px;
   width: var(--smart-size);
   height: var(--smart-size);
@@ -42,11 +62,18 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  margin: 0 auto;
+  grid-column: 2;
+  justify-self: center;
+  margin: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
   padding: 0;
   cursor: pointer;
   box-shadow: 0 6px 20px rgba(212, 175, 55, 0.28);
   position: relative;
+  left: auto;
+  right: auto;
+  transform: none;
   z-index: 60;
   transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.1s cubic-bezier(0.4, 0, 0.2, 1);
   -webkit-tap-highlight-color: transparent;

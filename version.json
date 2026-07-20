@@ -1,10 +1,10 @@
 {
   "timestamp_iso": "2026-07-20T02:25:00Z",
   "timestamp": 1752973500,
-  "version": "108.0.0",
+  "version": "108.1.0",
   "channel": "main",
-  "label": "coolsol-pro-consciousness-vision-unified",
+  "label": "central-button-geometric-center",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "COOLSOL_PRO_CHANNEL_UNIFICATION",
-  "notes": "v108.0.0 - Coolsol Pro: SalomonConsciousness, vision layers, core_control exclusivity, channel unification. Commit c695ea2."
+  "protocol": "UI_FORCE_ABSOLUTE_CENTER",
+  "notes": "v108.1.0 - Botón S centrado geométrico (grid 1fr auto 1fr) equidistante cámara/Aa."
 }
