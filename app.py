@@ -1331,12 +1331,12 @@ def api_deploy_strict_audit() -> dict:
 
 @app.get("/api/intelligence/layers")
 def api_intelligence_layers() -> dict:
-    """Verifica y reporta las 7 capas (incluye metacognición / supervisión)."""
-    from cognicion.core_salomon_metacognition_layer_seven import (
-        run_metacognition_architecture,
+    """Soporte final: 7 capas calibradas + puente neuronal al núcleo."""
+    from cognicion.core_salomon_final_layer_seven_support_and_sync import (
+        run_final_layer_seven_sync,
     )
 
-    return run_metacognition_architecture()
+    return run_final_layer_seven_sync()
 
 
 @app.get("/api/deploy/stream")

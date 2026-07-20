@@ -98,7 +98,9 @@ LAYER_CATALOG: list[dict[str, Any]] = [
         "title": "Layer 7: Metacognition & Pre-Emit Supervision",
         "assets": [
             "cognicion/capas_inteligencia/layer_07_metacognition/__init__.py",
+            "cognicion/capas_inteligencia/neural_core_bridge.py",
             "cognicion/core_salomon_metacognition_layer_seven.py",
+            "cognicion/core_salomon_final_layer_seven_support_and_sync.py",
             "cerebro.py",
             "cognicion/salida_limpia.py",
         ],
