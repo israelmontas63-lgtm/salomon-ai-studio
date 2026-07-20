@@ -118,8 +118,11 @@ def estado_identidad() -> dict[str, Any]:
         from cognicion.core_identity_engine import obtener_identity_engine
 
         eng = obtener_identity_engine()
-        out["spiritual_stance"] = dict(eng.spiritual.philosophical_stance)
-        out["engine"] = "core_identity_engine"
+        c = eng.consciousness
+        out["spiritual_stance"] = dict(c.spiritual_layer)
+        out["wisdom_db"] = dict(c.wisdom_db)
+        out["consciousness"] = dict(c.identity)
+        out["engine"] = "SalomonConsciousness"
     except Exception:
         pass
     return out
