@@ -48,7 +48,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  justify-content: flex-start;
+  justify-content: flex-end;
 }
 
 .profile-btn {
@@ -110,6 +110,14 @@ body {
 
 .header-spacer {
   min-width: 1px;
+}
+
+.header-nav--end {
+  justify-self: end;
+}
+
+.header-nav--start {
+  justify-self: start;
 }
 
 /* ——— CHAT ——— */

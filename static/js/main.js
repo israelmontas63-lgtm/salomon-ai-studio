@@ -71,6 +71,7 @@
     return Promise.all([
       loadScript("/static/js/ui_controller.js"),
       loadScript("/static/js/settings_manager.js"),
+      loadScript("/static/js/back_button.js"),
       loadScript("/static/js/ai_state_lock.js"),
       loadScript("/static/js/components/SmartButton.js"),
     ]);

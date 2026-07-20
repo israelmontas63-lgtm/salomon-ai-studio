@@ -30,18 +30,17 @@
   <link rel="stylesheet" href="/static/css/input_styles.css" />
   <link rel="stylesheet" href="/static/css/update_styles.css" />
   <link rel="stylesheet" href="/static/css/settings_layer.css" />
+  <link rel="stylesheet" href="/static/css/back_button.css" />
 </head>
 <body>
   <div class="phone">
     <header class="header">
-      <!-- Única entrada al Control Layer (coordenadas del antiguo icono usuario) -->
-      <div class="profiles">
-        <button type="button" class="profile-btn profile-btn--badge-host" id="btn-settings" aria-label="Herramientas">
-          <img src="/static/assets/icon-settings.svg" alt="" />
-          <span class="deploy-badge" id="deploy-badge" aria-hidden="true">
-            <span class="deploy-badge__dot"></span>
-            <span class="deploy-badge__card">Nueva</span>
-          </span>
+      <!-- Estándar móvil: Back arriba-izquierda -->
+      <div class="header-nav header-nav--start" id="header-nav-start">
+        <button type="button" class="back-btn" id="btn-back" aria-label="Volver" data-ui-action="back">
+          <svg class="back-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15.5 5.5L9 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
       </div>
 
@@ -52,7 +51,16 @@
         <h1 class="brand-name">Salomón AI</h1>
       </div>
 
-      <div class="header-spacer" aria-hidden="true"></div>
+      <!-- Estándar móvil: Ajustes (tuerquita) arriba-derecha -->
+      <div class="header-nav header-nav--end profiles" id="header-nav-end">
+        <button type="button" class="profile-btn profile-btn--badge-host" id="btn-settings" aria-label="Herramientas">
+          <img src="/static/assets/icon-settings.svg" alt="" />
+          <span class="deploy-badge" id="deploy-badge" aria-hidden="true">
+            <span class="deploy-badge__dot"></span>
+            <span class="deploy-badge__card">Nueva</span>
+          </span>
+        </button>
+      </div>
     </header>
 
     <main class="chat" id="chat" aria-label="Chat">

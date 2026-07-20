@@ -1,0 +1,81 @@
+/* Salomón AI — Botón Back estándar (esquina superior izquierda) */
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+.header-nav--start {
+  justify-content: flex-start;
+}
+
+.header-nav--end {
+  justify-content: flex-end;
+}
+
+.back-btn,
+#btn-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #d4af37;
+  background: rgba(0, 0, 0, 0.92);
+  color: #c0c0c0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(212, 175, 55, 0.22);
+  opacity: 0.42;
+  pointer-events: none;
+  transition:
+    opacity 0.12s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.12s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.12s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.back-btn.is-active,
+#btn-back.is-active,
+body.has-back-context #btn-back {
+  opacity: 1;
+  pointer-events: auto;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35);
+}
+
+.back-btn:active.is-active,
+#btn-back.is-active:active {
+  transform: scale(0.94);
+}
+
+.back-btn__icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  pointer-events: none;
+}
+
+body.ai-active #btn-back {
+  pointer-events: none !important;
+  opacity: 0.35;
+}
+
+/* En inmersivo: Back visible si hace falta cerrar (sobre el video) */
+body.vision-immersive #header-nav-start,
+body.vision-immersive #btn-back.is-active {
+  visibility: visible !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 14px;
+  z-index: 9200;
+}
+
+body.vision-immersive #btn-back.is-active {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}

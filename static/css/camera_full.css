@@ -41,12 +41,11 @@ body.vision-immersive .composer,
 body.vision-immersive .brand,
 body.vision-immersive .profiles,
 body.vision-immersive .header-spacer,
+body.vision-immersive #header-nav-end,
 body.vision-immersive #btn-aa,
 body.vision-immersive #side-aa {
-  /* Mantener celda derecha del grid (centro 50%); solo ocultar visualmente */
   visibility: hidden !important;
   pointer-events: none !important;
-  display: flex !important;
 }
 
 /* nav_bar_container: HUD inferior único (sin flotantes sobre el video) */
