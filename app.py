@@ -106,6 +106,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/ai/central-button",
         "/api/ai/secondary",
         "/api/ai/core-state",
+        "/api/deploy/finalize",
         "/api/motor/estado",
         "/api/chat/nuevo",
         "/api/proveedores",
@@ -1258,6 +1259,14 @@ def api_ai_core_state() -> dict:
     from cognicion.core_control import get_system_state
 
     return get_system_state()
+
+
+@app.get("/api/deploy/finalize")
+def api_deploy_finalize() -> dict:
+    """Cierre Coolsol Pro / Salomón AI — validación de capas en producción."""
+    from cognicion.core_deployment_finalizer import run_finalizer
+
+    return run_finalizer()
 
 
 @app.post("/api/process", response_model=ChatResponse)
