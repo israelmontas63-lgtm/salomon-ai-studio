@@ -1,13 +1,15 @@
 /**
- * Salomón AI — Smart Button + Motor de Gestos Futurista (Hold & Stream)
- * Tap < 600ms → Dictado | Hold ≥ 600ms → IA Conversacional | Tap activo → Neutralizar
- * Máquina de estados finitos; sin debounce de doble toque.
+ * Salomón AI — Motor Definitivo del Botón Inteligente (Seamless)
+ * Tap rápido (<300ms típico / suelta antes de 500ms) → Dictado
+ * Long press (≥500ms) → Conversacional IA
+ * Tap con modo activo → Neutralizador Maestro (baseline)
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
   "use strict";
 
-  var HOLD_MS = 600;
+  var TAP_MAX_MS = 300;
+  var HOLD_MS = 500;
   var States = Object.freeze({
     IDLE: "IDLE",
     PRESSING: "PRESSING",
@@ -37,7 +39,6 @@
       this._pointerId = null;
       this._ignoreClickUntil = 0;
 
-      // Gestos: pointer (zero-collision); click solo como fallback teclado
       this.root.addEventListener("pointerdown", (e) => this._onPointerDown(e));
       this.root.addEventListener("pointerup", (e) => this._onPointerUp(e));
       this.root.addEventListener("pointercancel", (e) => this._onPointerCancel(e));
@@ -52,8 +53,17 @@
       window.addEventListener("salomon:ai-lock", (ev) => {
         var d = (ev && ev.detail) || {};
         if (d.action === "release") {
-          this.root.classList.remove("is-ai-locked", "is-holographic", "is-conversational");
-          if (this.state === States.CONVERSATIONAL || this.state === States.DICTATION) {
+          this.root.classList.remove(
+            "is-ai-locked",
+            "is-holographic",
+            "is-conversational",
+            "is-dictation"
+          );
+          if (
+            this.state === States.CONVERSATIONAL ||
+            this.state === States.DICTATION ||
+            this.state === States.PROCESSING
+          ) {
             this._setState(States.IDLE);
           }
         }
@@ -62,38 +72,40 @@
         }
       });
 
-      this.root.setAttribute("data-gesture-engine", "futuristic-hold-stream");
+      this.root.classList.add("is-seamless");
+      this.root.setAttribute("data-gesture-engine", "seamless-smart-button");
       this.root.setAttribute("data-hold-ms", String(HOLD_MS));
+      this.root.setAttribute("data-tap-max-ms", String(TAP_MAX_MS));
+      this.root.setAttribute(
+        "aria-label",
+        "Salomón: toque = dictado · mantén = conversar · toque otra vez = salir"
+      );
+
       window.SalomonGestureEngine = {
         HOLD_MS: HOLD_MS,
+        TAP_MAX_MS: TAP_MAX_MS,
         states: States,
         getState: () => this.state,
+        engine: "seamless",
       };
+      window.SalomonSeamlessButton = this;
+      this._setState(States.IDLE);
     }
 
     _setState(next) {
       this.state = next;
       this.root.setAttribute("data-gesture-state", next);
       this.root.classList.toggle("is-pressing", next === States.PRESSING);
-      this.root.classList.toggle(
-        "is-dictation",
-        next === States.DICTATION
-      );
-      this.root.classList.toggle(
-        "is-conversational",
-        next === States.CONVERSATIONAL
-      );
+      this.root.classList.toggle("is-dictation", next === States.DICTATION);
+      this.root.classList.toggle("is-conversational", next === States.CONVERSATIONAL);
       this.root.classList.toggle(
         "is-holographic",
         next === States.CONVERSATIONAL || next === States.PRESSING
       );
-      this.root.classList.toggle(
-        "is-processing",
-        next === States.PROCESSING
-      );
+      this.root.classList.toggle("is-processing", next === States.PROCESSING);
       window.dispatchEvent(
         new CustomEvent("salomon:gesture-state", {
-          detail: { state: next, holdMs: HOLD_MS },
+          detail: { state: next, holdMs: HOLD_MS, tapMaxMs: TAP_MAX_MS },
         })
       );
     }
@@ -102,7 +114,6 @@
       if (document.body.classList.contains("control-layer-open")) return true;
       if (window.SalomonSettings && window.SalomonSettings.isOpen()) return true;
       if (window.SalomonUI && window.SalomonUI.isMicBlocked()) return true;
-      // Cámara activa: el centro es shutter (camera_logic capture phase)
       if (window.SalomonCamera && window.SalomonCamera.isActive()) return true;
       return false;
     }
@@ -111,12 +122,14 @@
       if (this._blockedByUi()) return;
       if (e.button != null && e.button !== 0) return;
 
-      // Tap durante modo activo → Neutralizador Maestro
       if (
         this.state === States.DICTATION ||
         this.state === States.CONVERSATIONAL ||
         this.state === States.PROCESSING ||
-        (lock() && lock().isActive() && this.state !== States.IDLE && this.state !== States.PRESSING)
+        (lock() &&
+          lock().isActive() &&
+          this.state !== States.IDLE &&
+          this.state !== States.PRESSING)
       ) {
         e.preventDefault();
         e.stopPropagation();
@@ -143,7 +156,7 @@
         this._holdTimer = null;
         if (this.state !== States.PRESSING) return;
         this._holdFired = true;
-        haptic([18, 40, 18]);
+        haptic([16, 30, 16]);
         this._enterConversational();
       }, HOLD_MS);
     }
@@ -159,14 +172,12 @@
       this._holdTimer = null;
 
       if (this.state === States.PRESSING && !this._holdFired) {
-        // Toque rápido → Dictado
         e.preventDefault();
         this._ignoreClickUntil = Date.now() + 400;
         this._enterDictation();
         return;
       }
 
-      // Hold ya disparó conversacional: soltar no cancela (stream sigue)
       if (this.state === States.CONVERSATIONAL) {
         this._ignoreClickUntil = Date.now() + 400;
       }
@@ -184,7 +195,6 @@
     }
 
     _onClickFallback(e) {
-      // Evita doble disparo tras pointer; permite Enter/Space accesible
       if (Date.now() < this._ignoreClickUntil) {
         e.preventDefault();
         e.stopPropagation();
@@ -192,7 +202,6 @@
       }
       if (this._blockedByUi()) return;
       if (e.detail === 0) {
-        // Activación por teclado
         e.preventDefault();
         if (
           this.state === States.DICTATION ||
@@ -206,7 +215,6 @@
       }
     }
 
-    /** Neutralizador: cierra dictado / conversacional / lock → baseline */
     neutralize(reason) {
       haptic(10);
       this._stopMic(false);
@@ -236,7 +244,7 @@
       this._setState(States.DICTATION);
       this.root.classList.add("is-ai-locked", "is-active", "is-listening");
       this.root.classList.remove("is-holographic", "is-conversational");
-      this._notify("Dictado: habla ahora (toque rápido para cancelar)…");
+      this._notify("Te escucho — dicta tu nota o búsqueda. Un toque para salir.");
       this._startMic({ continuous: false, mode: "dictation" });
     }
 
@@ -252,7 +260,7 @@
         "is-conversational"
       );
       this._notify(
-        "Modo IA Conversacional activo. Habla con fluidez — un toque para salir."
+        "Conversación con Salomón abierta. Habla con calma — un toque para cerrar."
       );
       this._startMic({ continuous: true, mode: "conversational" });
     }
@@ -297,7 +305,6 @@
             this._stopMic(true);
             this._callBrain(text, { mode: "dictation" });
           } else {
-            // Conversacional: cada frase final va al cerebro; mic sigue
             this._callBrain(text, { mode: "conversational", keepMic: true });
           }
         };
@@ -310,7 +317,6 @@
             this._setState(States.IDLE);
             this.root.classList.remove("is-active", "is-ai-locked", "is-listening");
           }
-          // En conversacional, intentar reiniciar
           if (mode === "conversational" && this.state === States.CONVERSATIONAL) {
             setTimeout(() => {
               if (this.state === States.CONVERSATIONAL) {
@@ -322,7 +328,6 @@
 
         this.recognition.onend = () => {
           if (mode === "conversational" && this.state === States.CONVERSATIONAL) {
-            // Reabrir stream si el motor cortó solo
             try {
               if (this.recognition) this.recognition.start();
             } catch (_) {
@@ -336,7 +341,7 @@
 
         this.recognition.start();
       } catch (_) {
-        this._notify("No se pudo iniciar el micrófono.");
+        this._notify("No pude abrir el micrófono. Prueba con Aa o otro navegador.");
         this._stopMic(true);
         var L2 = lock();
         if (L2) L2.release("mic_exception");
@@ -406,9 +411,7 @@
           chat.appendChild(botVis);
           chat.scrollTop = chat.scrollHeight;
         }
-        if (!keepMic) {
-          this.neutralize("vision_mode_trigger");
-        }
+        if (!keepMic) this.neutralize("vision_mode_trigger");
         return;
       }
 
@@ -420,7 +423,10 @@
               null,
               {
                 mensaje: text,
-                reason: opts.mode === "conversational" ? "gesture_hold_ai" : "gesture_tap_dictation",
+                reason:
+                  opts.mode === "conversational"
+                    ? "seamless_hold_ai"
+                    : "seamless_tap_dictation",
                 keep_lock: keepMic,
               }
             )
@@ -467,7 +473,6 @@
         return;
       }
 
-      // Dictado: vuelve a baseline
       this.root.classList.remove(
         "is-active",
         "is-listening",
@@ -510,7 +515,7 @@
         this._callBrain(text, { mode: "dictation" });
         return;
       }
-      this._notify("Micrófono no disponible. Escribe con Aa o usa un navegador con voz.");
+      this._notify("Micrófono no disponible. Escribe con Aa cuando quieras.");
       this.neutralize("no_speech_api");
     }
 
@@ -524,7 +529,6 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // Compat: APIs previas
     onClick(e) {
       this._onClickFallback(e);
     }

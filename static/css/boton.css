@@ -75,9 +75,43 @@
   left: auto;
   right: auto;
   transform: none;
-  z-index: 60;
-  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100050;
+  transition: transform 0.14s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   -webkit-tap-highlight-color: transparent;
+}
+
+.smart-button.is-seamless::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Anillo de progreso durante long-press (500ms) */
+.smart-button.is-pressing.is-seamless::before {
+  opacity: 1;
+  border-color: rgba(212, 175, 55, 0.55);
+  animation: smart-hold-ring 500ms linear forwards;
+}
+
+@keyframes smart-hold-ring {
+  from {
+    transform: scale(0.92);
+    opacity: 0.35;
+    border-color: rgba(192, 192, 192, 0.35);
+  }
+  to {
+    transform: scale(1.08);
+    opacity: 1;
+    border-color: rgba(240, 215, 140, 0.95);
+  }
 }
 
 .smart-button:focus-visible {
@@ -98,61 +132,60 @@
   animation: smart-pulse 1.4s ease-in-out infinite;
 }
 
-/* Hold en curso — umbral 600ms */
+/* Hold en curso — umbral 500ms (motor seamless) */
 .smart-button.is-pressing {
-  transform: scale(0.94);
+  transform: scale(0.95);
   border-color: #e8c547;
-  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.25), 0 8px 28px rgba(212, 175, 55, 0.45);
-  transition: transform 0.12s ease, box-shadow 0.35s ease, border-color 0.35s ease,
-    background 0.45s ease;
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.22), 0 8px 26px rgba(212, 175, 55, 0.4);
 }
 
-/* Transición holográfica / dorada — Modo IA Conversacional */
+/* Modo Conversacional — dorado acogedor, sin ruido visual */
 .smart-button.is-holographic,
 .smart-button.is-conversational {
   border-color: #f0d78c;
-  background: radial-gradient(circle at 35% 30%, rgba(212, 175, 55, 0.55), #000 68%);
+  background: radial-gradient(circle at 38% 32%, rgba(212, 175, 55, 0.42), #000 70%);
   box-shadow:
-    0 0 0 3px rgba(212, 175, 55, 0.4),
-    0 0 28px rgba(212, 175, 55, 0.55),
-    inset 0 0 18px rgba(240, 215, 140, 0.25);
-  animation: smart-holographic 1.8s ease-in-out infinite;
-  z-index: 130;
+    0 0 0 3px rgba(212, 175, 55, 0.35),
+    0 0 24px rgba(212, 175, 55, 0.45),
+    inset 0 0 14px rgba(240, 215, 140, 0.18);
+  animation: smart-holographic 2s ease-in-out infinite;
+  z-index: 100050;
 }
 
 .smart-button.is-dictation {
-  border-color: #c0c0c0;
-  box-shadow: 0 0 0 3px rgba(192, 192, 192, 0.35), 0 8px 22px rgba(212, 175, 55, 0.3);
+  border-color: #d4af37;
+  background: #000;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.28), 0 8px 20px rgba(212, 175, 55, 0.28);
 }
 
 .smart-button.is-processing {
-  opacity: 0.92;
+  opacity: 0.9;
 }
 
 @keyframes smart-holographic {
   0%,
   100% {
     box-shadow:
-      0 0 0 3px rgba(212, 175, 55, 0.35),
-      0 0 18px rgba(212, 175, 55, 0.4),
-      inset 0 0 12px rgba(240, 215, 140, 0.15);
-    filter: brightness(1);
+      0 0 0 3px rgba(212, 175, 55, 0.3),
+      0 0 16px rgba(212, 175, 55, 0.35),
+      inset 0 0 10px rgba(240, 215, 140, 0.12);
   }
   50% {
     box-shadow:
-      0 0 0 6px rgba(212, 175, 55, 0.2),
-      0 0 36px rgba(232, 197, 71, 0.65),
-      inset 0 0 22px rgba(240, 215, 140, 0.35);
-    filter: brightness(1.08);
+      0 0 0 5px rgba(212, 175, 55, 0.18),
+      0 0 28px rgba(232, 197, 71, 0.5),
+      inset 0 0 16px rgba(240, 215, 140, 0.22);
   }
 }
 
-/* Capa UI superior sobre cámara / vistas */
+/* Capa UI absoluta: por encima de cámara / vistas / HUDs */
 #nav_bar_container #smart-button,
-.smart-button {
+.smart-button,
+.smart-button.is-seamless {
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+  z-index: 100050;
 }
 
 /* State lock: IA activa → exclusividad del botón central */
@@ -168,7 +201,7 @@ body.ai-active #input-layer {
 
 body.ai-active #smart-button {
   pointer-events: auto !important;
-  z-index: 120;
+  z-index: 100050;
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.45), 0 10px 28px rgba(212, 175, 55, 0.45);
 }
 
