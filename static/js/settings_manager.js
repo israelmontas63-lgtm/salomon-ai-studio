@@ -69,7 +69,10 @@
     openLayer() {
       if (this.open) return;
       // ui_layer_manager: menús bloqueados mientras IA activa
-      if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("settings")) return;
+      var gateSettings =
+        window.request_ui_action ||
+        (window.SalomonAILock && window.SalomonAILock.request_ui_action);
+      if (gateSettings && !gateSettings("settings")) return;
       this.open = true;
       document.body.classList.add("control-layer-open");
       // Aislamiento neuronal: cerrar input sheet si estuviera abierto (solo UI flag)

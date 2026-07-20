@@ -35,8 +35,9 @@
 
       this.btnCam.addEventListener("click", (e) => {
         if (document.body.classList.contains("control-layer-open")) return;
-        // ui_layer_manager: prioridad IA bloquea hardware de cámara
-        if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("camera")) return;
+        // request_ui_action: AI_PROCESSING → cámara no recibe encendido
+        var gate = window.request_ui_action || (window.SalomonAILock && window.SalomonAILock.request_ui_action);
+        if (gate && !gate("camera")) return;
         e.preventDefault();
         e.stopPropagation();
         this.toggleCamera();
@@ -45,7 +46,10 @@
       if (this.btnFlip) {
         this.btnFlip.addEventListener("click", (e) => {
           if (document.body.classList.contains("control-layer-open")) return;
-          if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("flip")) return;
+          var gateFlip =
+            window.request_ui_action ||
+            (window.SalomonAILock && window.SalomonAILock.request_ui_action);
+          if (gateFlip && !gateFlip("flip")) return;
           e.preventDefault();
           e.stopPropagation();
           if (this.isActive()) this.flipCamera();
@@ -88,7 +92,10 @@
     },
 
     async toggleCamera() {
-      if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("camera")) {
+      var gate =
+        window.request_ui_action ||
+        (window.SalomonAILock && window.SalomonAILock.request_ui_action);
+      if (gate && !gate("camera")) {
         this._notify("Cámara bloqueada: la IA está en uso.");
         return;
       }
@@ -100,7 +107,10 @@
     },
 
     async openCamera() {
-      if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("camera")) {
+      var gate =
+        window.request_ui_action ||
+        (window.SalomonAILock && window.SalomonAILock.request_ui_action);
+      if (gate && !gate("camera")) {
         this._notify("Cámara bloqueada: la IA está en uso.");
         return;
       }

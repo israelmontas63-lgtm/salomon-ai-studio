@@ -53,3 +53,20 @@ services:
         value: "sonic-3.5"
       - key: TTS_ASYNC
         value: "false"
+      # Adam Voice ID — case-sensitive ('n' minúscula en NInz; F en GcF)
+      - key: ELEVENLABS_VOICE_ID
+        value: "pNInz6obpgDQGcFmaJgB"
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: COHERE_API_KEY
+        sync: false
+      - key: FAL_KEY
+        sync: false
+      - key: REPLICATE_API_TOKEN
+        sync: false
+      - key: REPLICATE_API_KEY
+        sync: false

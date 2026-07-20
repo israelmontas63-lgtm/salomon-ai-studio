@@ -50,6 +50,12 @@ def activar(*, reason: str = "smart_button", session_id: str | None = None) -> d
     app_state["reason"] = reason or "smart_button"
     app_state["session_id"] = session_id
     app_state["updated_at"] = _utc()
+    try:
+        from cognicion.core_control import AppState, _system_state
+
+        _system_state["status"] = AppState.AI_PROCESSING
+    except Exception:
+        pass
     return estado()
 
 
@@ -57,6 +63,12 @@ def liberar(*, reason: str = "done") -> dict[str, Any]:
     app_state["is_ai_active"] = False
     app_state["reason"] = reason or "done"
     app_state["updated_at"] = _utc()
+    try:
+        from cognicion.core_control import AppState, _system_state
+
+        _system_state["status"] = AppState.IDLE
+    except Exception:
+        pass
     return estado()
 
 

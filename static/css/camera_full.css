@@ -46,7 +46,8 @@ body.vision-immersive #side-aa {
   display: none !important;
 }
 
-/* HUD flotante transparente sobre el video */
+/* nav_bar_container: HUD inferior único (sin flotantes sobre el video) */
+body.vision-immersive #nav_bar_container,
 body.vision-immersive .control-bar {
   position: fixed;
   left: 0;
@@ -56,31 +57,35 @@ body.vision-immersive .control-bar {
   max-width: none;
   transform: none;
   z-index: 9100;
-  background: transparent;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.55) 55%);
   border: none;
   padding: 0 20px calc(28px + env(safe-area-inset-bottom, 0px));
   min-height: 0;
-  gap: 0;
+  gap: 12px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   pointer-events: none;
 }
 
+body.vision-immersive #nav_bar_container > *,
 body.vision-immersive .control-bar > * {
   pointer-events: auto;
 }
 
-/* Botón 3 — Cerrar (izq inferior): icono cámara */
+/* Cluster cámara + flip dentro de la nav (no sobre el video) */
 body.vision-immersive .control-side:has(#cam-wrap),
 body.vision-immersive #cam-wrap {
-  display: grid !important;
-  place-items: center;
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  place-items: unset;
 }
 
 body.vision-immersive #cam-wrap {
   position: relative;
-  width: 52px;
+  width: auto;
   height: 52px;
 }
 
@@ -99,13 +104,13 @@ body.vision-immersive #btn-cam img {
   height: 22px;
 }
 
-/* Botón 1 — Gatillo (centro inferior) */
+/* Botón central en la nav inferior */
 body.vision-immersive .smart-button {
-  position: absolute;
-  left: 50%;
-  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
-  margin: 0;
+  position: relative;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  margin: 0 auto;
   width: 80px;
   height: 80px;
   background: rgba(0, 0, 0, 0.4);
@@ -116,19 +121,19 @@ body.vision-immersive .smart-button {
   z-index: 9120;
 }
 
-/* Botón 2 — Giro (superior derecha) */
+/* Flip anclado al nav_bar_container (junto a cámara) */
 body.vision-immersive .btn-flip {
-  position: fixed !important;
-  top: calc(18px + env(safe-area-inset-top, 0px));
-  right: 18px;
+  position: static !important;
+  top: auto;
+  right: auto;
   left: auto;
   bottom: auto;
   transform: none !important;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   opacity: 1 !important;
   pointer-events: auto !important;
-  z-index: 9200;
+  z-index: 9120;
   background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -137,8 +142,8 @@ body.vision-immersive .btn-flip {
 }
 
 body.vision-immersive .btn-flip img {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 body.vision-immersive .cam-wrap.is-active .btn-flip {

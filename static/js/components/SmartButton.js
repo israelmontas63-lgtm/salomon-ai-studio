@@ -144,8 +144,11 @@
       document.body.classList.add("salomon-processing");
 
       var result =
-        L && L.callBrainDirect
-          ? await L.callBrainDirect({ mensaje: text, reason: "smart_button_voice" })
+        (window.trigger_ai_core || (L && L.trigger_ai_core) || (L && L.callBrainDirect))
+          ? await (window.trigger_ai_core || L.trigger_ai_core || L.callBrainDirect).call(
+              null,
+              { mensaje: text, reason: "smart_button_voice" }
+            )
           : await this._fallbackFetch(text);
 
       document.body.classList.remove("salomon-processing");

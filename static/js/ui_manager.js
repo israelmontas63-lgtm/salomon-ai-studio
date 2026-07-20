@@ -22,7 +22,10 @@
         // Zero-Conflict: menú herramientas abierto
         if (document.body.classList.contains("control-layer-open")) return;
         // ui_layer_manager: exclusividad del botón central
-        if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("aa_input")) return;
+        var gateAa =
+          window.request_ui_action ||
+          (window.SalomonAILock && window.SalomonAILock.request_ui_action);
+        if (gateAa && !gateAa("aa_input")) return;
         // No abrir durante cámara inmersiva
         if (document.body.classList.contains("vision-immersive")) return;
         if (window.SalomonCamera && window.SalomonCamera.isActive()) return;

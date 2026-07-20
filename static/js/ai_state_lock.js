@@ -1,13 +1,14 @@
 /**
- * Salomón AI — State Lock del Botón Central (IA)
- * is_ai_active: exclusividad sobre cámara/menús; llamada directa a /api/ai-process.
+ * Salomón AI — Capas de control (core_control)
+ * trigger_ai_core()     → botón central → /api/ai/central-button
+ * request_ui_action()   → cámara/menús; BLOCKED si AI_PROCESSING
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
   "use strict";
 
-  // Jerarquía Python: handle_central_button_click → call_salomon_brain
   var API_BRAIN = "/api/ai/central-button";
+  var API_UI = "/api/ai/secondary";
   var is_ai_active = false;
   var reason = "";
   var sessionId = localStorage.getItem("salomon_session_id") || null;
@@ -25,9 +26,6 @@
     document.body.setAttribute("data-ai-active", on ? "true" : "false");
   }
 
-  /**
-   * Prioridad del botón central: activa el bloqueo de estado.
-   */
   function syncServer(activo, why) {
     try {
       fetch("/api/ai/lock", {
@@ -49,7 +47,6 @@
     is_ai_active = true;
     reason = why || "smart_button";
     setBodyLock(true);
-    // Cerrar capas secundarias + cortar hardware de cámara (bloqueo físico)
     try {
       if (window.SalomonUiManager && window.SalomonUiManager.hide) {
         window.SalomonUiManager.hide();
@@ -68,9 +65,6 @@
     return true;
   }
 
-  /**
-   * Restaura cámara/menús cuando termina la IA o se cierra.
-   */
   function release(why) {
     if (!is_ai_active) return false;
     is_ai_active = false;
@@ -86,45 +80,61 @@
     return !!is_ai_active;
   }
 
-  /** true = se puede usar cámara/menús secundarios */
   function canUseSecondary() {
     return !is_ai_active;
   }
 
   /**
-   * ui_layer_manager(function_name) — capa de control de hardware/menús.
-   * return false si la IA tiene prioridad (bloquea la acción).
+   * request_ui_action(action_id) — portero de hardware/menús.
+   * return false si AI_PROCESSING (la cámara no recibe encendido).
    */
-  function uiLayerManager(functionName) {
+  function request_ui_action(actionId) {
     if (is_ai_active) {
       try {
         console.info(
-          "[SalomonAILock] Acción " +
-            (functionName || "secondary") +
-            " bloqueada por prioridad de IA."
+          "[SalomonAILock] request_ui_action BLOCKED:",
+          actionId || "secondary",
+          "AI_PRIORITY_ACTIVE"
         );
       } catch (_) {}
       emit({
         action: "blocked",
-        function_name: functionName || "secondary",
+        function_name: actionId || "secondary",
+        status: "BLOCKED",
+        reason: "AI_PRIORITY_ACTIVE",
         is_ai_active: true,
       });
+      // Espejo servidor (auditoría)
+      try {
+        fetch(API_UI, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accion: actionId || "secondary" }),
+          credentials: "same-origin",
+          keepalive: true,
+        }).catch(function () {});
+      } catch (_) {}
       return false;
     }
     return true;
   }
 
+  /** alias legacy */
+  function uiLayerManager(functionName) {
+    return request_ui_action(functionName);
+  }
+
   /**
-   * Conexión directa al cerebro — sin middleware de cámara/settings/Aa.
+   * trigger_ai_core(data_payload) — canal obligatorio del botón central.
    */
-  async function callBrainDirect(payload) {
-    var body = payload || {};
+  async function trigger_ai_core(dataPayload) {
+    var body = dataPayload || {};
     var mensaje = (body.mensaje || "").trim();
     if (!mensaje) {
       return { ok: false, error: "mensaje_vacio" };
     }
 
-    activate(body.reason || "call_brain_direct");
+    activate(body.reason || "trigger_ai_core");
 
     try {
       var dataOut = {
@@ -145,7 +155,6 @@
       var pack = await res.json().catch(function () {
         return {};
       });
-      // Respuesta jerárquica: { brain: { texto, session_id, ... } }
       var data = pack.brain || pack;
       if (!data.texto && pack.mensaje && !pack.brain) {
         data = pack;
@@ -162,10 +171,11 @@
         status: res.status,
         data: data,
         pack: pack,
+        via: "trigger_ai_core",
       });
 
       return {
-        ok: res.ok && (data.exito !== false) && !!data.texto,
+        ok: res.ok && data.exito !== false && !!data.texto,
         status: res.status,
         data: data,
         pack: pack,
@@ -174,12 +184,14 @@
       emit({ action: "brain_error", error: String(err && err.message ? err.message : err) });
       return { ok: false, error: "network", detail: String(err) };
     } finally {
-      // Solo liberar si no pedimos mantener el lock (p.ej. mic aún escuchando)
       if (!body.keep_lock) {
-        release("brain_done");
+        release("trigger_ai_core_done");
       }
     }
   }
+
+  /** alias legacy → mismo canal */
+  var callBrainDirect = trigger_ai_core;
 
   window.SalomonAILock = {
     get is_ai_active() {
@@ -189,11 +201,18 @@
     release: release,
     isActive: isActive,
     canUseSecondary: canUseSecondary,
+    request_ui_action: request_ui_action,
+    requestUiAction: request_ui_action,
     uiLayerManager: uiLayerManager,
+    trigger_ai_core: trigger_ai_core,
+    triggerAiCore: trigger_ai_core,
     callBrainDirect: callBrainDirect,
-    /** aliases de la especificación */
     isAiActive: isActive,
-    handleCentralButtonClick: callBrainDirect,
-    executeSalomonBrainProcess: callBrainDirect,
+    handleCentralButtonClick: trigger_ai_core,
+    executeSalomonBrainProcess: trigger_ai_core,
   };
+
+  // API global explícita (especificación de capas)
+  window.trigger_ai_core = trigger_ai_core;
+  window.request_ui_action = request_ui_action;
 })();

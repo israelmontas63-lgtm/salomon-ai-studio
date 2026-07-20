@@ -73,7 +73,10 @@
   async function enviarMensaje() {
     if (document.body.classList.contains("control-layer-open")) return;
     // ui_layer_manager: chat Aa bloqueado mientras IA central procesa
-    if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("chat_form")) return;
+    var gateChat =
+      window.request_ui_action ||
+      (window.SalomonAILock && window.SalomonAILock.request_ui_action);
+    if (gateChat && !gateChat("chat_form")) return;
     if (busy) return;
 
     var input = inputEl();

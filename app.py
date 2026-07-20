@@ -13,6 +13,7 @@ from __future__ import annotations
 import hmac
 import os
 import uuid
+from contextlib import asynccontextmanager
 
 from settings import ROOT_DIR
 from dotenv import load_dotenv
@@ -54,7 +55,6 @@ _UI_NO_CACHE = {
     "Expires": "0",
 }
 
-app = FastAPI(title="Salomón AI", version="1.0.0")
 _log = obtener_logger("api")
 RUTAS_API_PUBLICAS = frozenset(
     {
@@ -103,6 +103,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/ai/lock",
         "/api/ai/central-button",
         "/api/ai/secondary",
+        "/api/ai/core-state",
         "/api/motor/estado",
         "/api/chat/nuevo",
         "/api/proveedores",
@@ -114,8 +115,7 @@ RUTAS_API_PUBLICAS = frozenset(
 )
 
 
-@app.on_event("startup")
-def _iniciar_nucleo_os() -> None:
+def _iniciar_nucleo_os(app_ref: FastAPI) -> None:
     """Boot Ultra-Light (Render Free): deferir orquesta/snapshots pesados."""
     try:
         from settings import BOOT_LIGHT, RENDER_FREE_TIER
@@ -156,7 +156,7 @@ def _iniciar_nucleo_os() -> None:
             except Exception as exc:
                 _log.warning("snapshot_inicio_omitido: %s", exc)
 
-        inicializar_capas(app)
+        inicializar_capas(app_ref)
 
         # Orquestador de carga: NO arrancar hilo en Free Tier hasta primer uso
         if not light:
@@ -194,6 +194,16 @@ def _iniciar_nucleo_os() -> None:
     except Exception as exc:
         _log.exception("startup_parcial_fallo: %s", exc)
         evento(_log, "nucleo_inicio_degradado", error=str(exc))
+
+
+@asynccontextmanager
+async def _app_lifespan(app_ref: FastAPI):
+    """Lifespan moderno (reemplaza on_event startup — sin DeprecationWarning)."""
+    _iniciar_nucleo_os(app_ref)
+    yield
+
+
+app = FastAPI(title="Salomón AI", version="1.0.0", lifespan=_app_lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -1204,18 +1214,19 @@ def api_ai_lock_set(body: AiLockRequest) -> dict:
 @app.post("/api/ai/central-button")
 def api_ai_central_button(body: CentralButtonRequest) -> dict:
     """
-    Jerarquía del botón central (pseudocódigo → producción):
-    app_state.is_ai_active=True → call_salomon_brain() → restore.
+    trigger_ai_core — canal obligatorio del botón central al cerebro.
     """
-    from cognicion.ai_lock import handle_central_button_click
+    from cognicion.core_control import trigger_ai_core
 
-    pack = handle_central_button_click(
-        body.mensaje,
-        session_id=body.session_id,
-        imagen_base64=body.imagen_base64,
-        imagen_mime=body.imagen_mime,
-        lat=body.lat,
-        lon=body.lon,
+    pack = trigger_ai_core(
+        {
+            "mensaje": body.mensaje,
+            "session_id": body.session_id,
+            "imagen_base64": body.imagen_base64,
+            "imagen_mime": body.imagen_mime,
+            "lat": body.lat,
+            "lon": body.lon,
+        },
         obtener_sesion=_obtener_o_crear_sesion,
         only_activate=body.only_activate,
     )
@@ -1231,10 +1242,18 @@ def api_ai_central_button(body: CentralButtonRequest) -> dict:
 
 @app.post("/api/ai/secondary")
 def api_ai_secondary(body: SecondaryActionRequest) -> dict:
-    """ui_layer_manager: cámara/menús bloqueados si is_ai_active."""
-    from cognicion.ai_lock import ui_layer_manager
+    """request_ui_action — portero; BLOCKED si AI_PROCESSING."""
+    from cognicion.core_control import request_ui_action
 
-    return ui_layer_manager(body.accion or "camera")
+    return request_ui_action(body.accion or "camera")
+
+
+@app.get("/api/ai/core-state")
+def api_ai_core_state() -> dict:
+    """Estado AppState (IDLE / AI_PROCESSING / UI_LOCKED)."""
+    from cognicion.core_control import get_system_state
+
+    return get_system_state()
 
 
 @app.post("/api/process", response_model=ChatResponse)

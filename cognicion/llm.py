@@ -547,22 +547,30 @@ def gemini_disponible() -> bool:
 
 def _modelo_para_proveedor(proveedor: ModelProvider, model_name: str | None) -> str | None:
     """
-    Evita pasar un model_name de Gemini (p.ej. gemini-2.0-flash) a Groq/OpenAI
-    en el fallback — eso provoca NotFoundError y tumba toda la cadena.
+    Enruta el model_name correcto por proveedor:
+    - Gemini: siempre un id gemini-* (p.ej. gemini-2.0-flash)
+    - Groq/OpenAI: NUNCA reenviar nombres Gemini (evita NotFoundError en fallback)
     """
-    if not model_name:
-        return None
-    m = model_name.strip().lower()
     nombre = proveedor.nombre
+    raw = (model_name or "").strip()
+    m = raw.lower()
+
     if nombre == "gemini":
-        return model_name if ("gemini" in m or m.startswith("models/")) else None
+        # UI → motor: garantizar nombre Gemini válido hacia la API
+        if raw and ("gemini" in m or m.startswith("models/")):
+            return raw
+        return GEMINI_MODEL
+
+    if not raw:
+        return None
+
     if nombre == "openai":
         if m.startswith(("gpt-", "o1", "o3", "o4", "chatgpt")):
-            return model_name
+            return raw
         return None
     if nombre == "groq":
         if any(x in m for x in ("llama", "mixtral", "gemma", "qwen", "deepseek")):
-            return model_name
+            return raw
         return None
     return None
 
@@ -599,6 +607,9 @@ def analizar_imagen_gemini(
 ) -> str:
     return _ejecutar_con_respaldo(
         lambda proveedor: proveedor.analizar_imagen(
-            prompt, imagen_bytes, mime_type, model_name
+            prompt,
+            imagen_bytes,
+            mime_type,
+            _modelo_para_proveedor(proveedor, model_name),
         )
     )

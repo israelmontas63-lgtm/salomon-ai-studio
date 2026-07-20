@@ -60,26 +60,27 @@
       <video id="camera-video" playsinline muted></video>
     </div>
 
-    <footer class="control-bar" id="control-bar">
-      <div class="control-side" id="side-close">
+    <!-- nav_bar_container: único HUD de controles (sin flotantes sobre el video) -->
+    <footer class="control-bar nav-bar-container" id="nav_bar_container" data-role="nav">
+      <div class="control-side nav-bar__cluster" id="side-close">
         <div class="cam-wrap" id="cam-wrap">
-          <button type="button" class="btn-flip" id="btn-flip" aria-label="Girar cámara" tabindex="-1">
-            <img src="/static/assets/icon-flip.svg" alt="" />
-          </button>
-          <button type="button" class="circle-btn" id="btn-cam" aria-label="Cámara">
+          <button type="button" class="circle-btn" id="btn-cam" aria-label="Cámara" data-ui-action="camera">
             <img src="/static/assets/icon-camera.svg" alt="" />
+          </button>
+          <button type="button" class="btn-flip" id="btn-flip" aria-label="Girar cámara" tabindex="-1" data-ui-action="flip">
+            <img src="/static/assets/icon-flip.svg" alt="" />
           </button>
         </div>
       </div>
 
-      <button type="button" class="smart-button" id="smart-button" aria-label="Salomón AI" data-role="ai">
+      <button type="button" class="smart-button" id="smart-button" aria-label="Salomón AI" data-role="ai" data-trigger="trigger_ai_core">
         <span class="smart-button__glyph">S</span>
         <img class="smart-button__icon" src="/static/assets/icon-shutter.svg" alt="" hidden />
         <span class="smart-button__label">Salomón AI</span>
       </button>
 
-      <div class="control-side" id="side-aa">
-        <button type="button" class="circle-btn" id="btn-aa" aria-label="Texto">Aa</button>
+      <div class="control-side nav-bar__cluster" id="side-aa">
+        <button type="button" class="circle-btn" id="btn-aa" aria-label="Texto" data-ui-action="aa_input">Aa</button>
       </div>
     </footer>
 

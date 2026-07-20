@@ -158,8 +158,10 @@ body {
   font-style: italic;
 }
 
-/* ——— BARRA INFERIOR ——— */
-.control-bar {
+/* ——— BARRA INFERIOR (nav_bar_container) ——— */
+.control-bar,
+#nav_bar_container,
+.nav-bar-container {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);

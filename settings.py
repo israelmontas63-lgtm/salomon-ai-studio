@@ -70,8 +70,16 @@ DEEPGRAM_MODEL = os.getenv("DEEPGRAM_MODEL", "nova-2").strip() or "nova-2"
 DEEPGRAM_LANGUAGE = os.getenv("DEEPGRAM_LANGUAGE", "es").strip() or "es"
 
 # ── ElevenLabs (TTS — texto a voz) ────────────────────────────────────────
+# Adam (case-sensitive). 'n' minúscula en NInz; F mayúscula en GcF.
+# Exacto: pNInz6obpgDQGcFmaJgB  — NO pNINz6... / NO ...Gcf...
+ELEVENLABS_VOICE_ADAM = "pNInz6obpgDQGcFmaJgB"
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "").strip()
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
+_raw_voice = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
+# Normaliza typos de casing del Voice ID Adam (Render suele pegar N/F mal)
+if _raw_voice and _raw_voice.lower() == ELEVENLABS_VOICE_ADAM.lower():
+    ELEVENLABS_VOICE_ID = ELEVENLABS_VOICE_ADAM
+else:
+    ELEVENLABS_VOICE_ID = _raw_voice
 ELEVENLABS_MODEL_ID = os.getenv(
     "ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"
 ).strip() or "eleven_multilingual_v2"

@@ -1,9 +1,9 @@
 /**
- * Salomón AI — Service Worker Premium v18 (PWA install hardening)
+ * Salomón AI — Service Worker Premium v27 (nav_bar + core_control)
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v26";
+const CACHE = "salomon-premium-v27";
 const PRECACHE = [
   "/",
   "/manifest.json",
