@@ -15,9 +15,10 @@ def analyze_frame_modes(focus_mode: str, frame: dict[str, Any]) -> dict[str, Any
     El razonamiento pesado lo hace el cerebro vía brain_bridge + cognicion.vision.
     """
     mode = (focus_mode or "continuous").lower()
+    # Contrato: micro = cerca/detalle | macro = lejos/zoom distancia
     scale = {
-        "macro": {"zoom_hint": 2.4, "detail": "high", "scene": "near"},
-        "micro": {"zoom_hint": 0.85, "detail": "context", "scene": "wide"},
+        "micro": {"zoom_hint": 1.85, "detail": "high", "scene": "near"},
+        "macro": {"zoom_hint": 2.45, "detail": "distant", "scene": "far"},
         "continuous": {"zoom_hint": 1.0, "detail": "balanced", "scene": "adaptive"},
     }.get(mode, {"zoom_hint": 1.0, "detail": "balanced", "scene": "adaptive"})
 

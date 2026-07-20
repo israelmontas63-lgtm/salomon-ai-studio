@@ -81,27 +81,51 @@ class SalomonVisionArchitecture:
         }
 
     def resolve_focus_mode(self, requested: str | None = None) -> FocusMode:
-        """Alterna macro (detalle cercano) / micro (escena / lejano) / continuous."""
+        """
+        Contrato unificado JS ↔ Python:
+          micro = detalle cercano (letra, texto)
+          macro = objeto lejano (roca allá) / distant_object_zoom
+        """
         m = (requested or "continuous").strip().lower()
-        if m in ("macro", "cerca", "close"):
-            return "macro"
-        if m in ("micro", "lejos", "far", "panorama", "panoramica", "panorámica"):
+        if m in (
+            "micro",
+            "cerca",
+            "close",
+            "detalle",
+            "letra",
+            "texto",
+            "close_detail",
+        ):
             return "micro"
+        if m in (
+            "macro",
+            "lejos",
+            "far",
+            "distant",
+            "roca",
+            "distant_object_zoom",
+            "horizonte",
+        ):
+            return "macro"
         return "continuous"
 
     def analysis_prompt(self, focus_mode: str | None, user_context: str | None = None) -> str:
-        """Prompt dinámico macro ↔ micro según lo que el sensor está mirando."""
+        """Prompt dinámico micro (cerca) ↔ macro (lejos) anclado a la imagen."""
         mode = self.resolve_focus_mode(focus_mode)
         base = (user_context or "").strip()
-        if mode == "macro":
+        ground = (
+            "Responde SOLO sobre lo visible en esta imagen; no inventes objetos, "
+            "textos ni contextos que no aparezcan en el fotograma."
+        )
+        if mode == "micro":
             hint = (
-                "[Modo MACRO — precisión de detalle] Describe texturas, bordes, texto "
-                "legible, defectos y objetos cercanos con alta fidelidad."
+                "[Modo MICRO — detalle cercano] Describe texturas, bordes, texto "
+                "legible, letras pequeñas y objetos próximos con alta fidelidad."
             )
-        elif mode == "micro":
+        elif mode == "macro":
             hint = (
-                "[Modo MICRO / panorámico] Describe la escena general, relaciones "
-                "espaciales, contexto del entorno y elementos lejanos relevantes."
+                "[Modo MACRO — objeto lejano] Describe el sujeto distante, "
+                "relaciones espaciales del entorno y elementos alejados relevantes."
             )
         else:
             hint = (
@@ -109,9 +133,10 @@ class SalomonVisionArchitecture:
                 "en el fotograma."
             )
         if base:
-            return f"{hint}\n\nPedido de Israel: {base}"
+            return f"{hint}\n{ground}\n\nPedido de Israel: {base}"
         return (
-            f"{hint}\n\nAnaliza esta captura de la cámara de Salomón con claridad y calma."
+            f"{hint}\n{ground}\n\n"
+            "Analiza esta captura de la cámara de Salomón con claridad y precisión."
         )
 
     def process_frame_to_brain(

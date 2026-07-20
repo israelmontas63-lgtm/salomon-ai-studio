@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-20T12:50:00Z",
-  "timestamp": 1753012200,
-  "version": "108.9.0",
+  "timestamp_iso": "2026-07-20T13:00:00Z",
+  "timestamp": 1753012800,
+  "version": "109.0.0",
   "channel": "main",
-  "label": "autofocus-pwa-hotloader",
+  "label": "neural-link-auditor",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "VISION_AUTOFOCUS_PWA_HOTLOADER",
-  "notes": "v108.9.0 - Zoom macro/micro inteligente + PWA hot-loader 4s con badge instantáneo en tuerquita. Incluye Vision Mode Trigger."
+  "protocol": "NEURAL_LINK_AUDIT",
+  "notes": "v109.0.0 - Auditor enlace neuronal UI-Vision-Brain; contrato macro/micro alineado; prompts anti-divagacion; /api/deploy/neural-link."
 }

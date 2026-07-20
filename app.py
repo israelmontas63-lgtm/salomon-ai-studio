@@ -108,6 +108,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/ai/core-state",
         "/api/deploy/finalize",
         "/api/deploy/channels",
+        "/api/deploy/neural-link",
         "/api/deploy/stream",
         "/api/motor/estado",
         "/api/chat/nuevo",
@@ -1277,6 +1278,18 @@ def api_deploy_channels() -> dict:
     from cognicion.core_flow_verification import run_channel_audit
 
     return run_channel_audit()
+
+
+@app.get("/api/deploy/neural-link")
+def api_deploy_neural_link() -> dict:
+    """Auditoría de enlace neuronal UI → Visión → SalomonBrain."""
+    from cognicion.core_neural_link_auditor import run_neural_link_audit, run_unit_tests
+
+    report = run_neural_link_audit()
+    tests = run_unit_tests()
+    report["unit_tests"] = tests
+    report["ok"] = report.get("status") == "SECURE" and bool(tests.get("ok"))
+    return report
 
 
 @app.get("/api/deploy/stream")
