@@ -100,11 +100,9 @@ class ServiceManager(ServiceRegistry):
             try:
                 from settings import ELEVENLABS_VOICE_ID
 
+                # Si falta Voice ID, tts() resuelve Adam vía catálogo ElevenLabs.
                 if not (ELEVENLABS_VOICE_ID or "").strip():
-                    raise ClienteNoDisponible(
-                        "ELEVENLABS_VOICE_ID requerida para TTS "
-                        "(la API key está, pero falta el Voice ID en Render/.env)"
-                    )
+                    evento(_log, "tts_voice_id_ausente_usando_resolver")
                 audio = self.tts(t)
                 self._ultimo["tts"] = "elevenlabs"
                 evento(_log, "tts_ok", motor="elevenlabs", bytes=len(audio))

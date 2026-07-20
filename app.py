@@ -1049,22 +1049,44 @@ def api_voice_test() -> dict:
     Diagnóstico de salida de voz (ElevenLabs).
     Genera un audio corto y reporta si el stream llega listo para la UI.
     """
+    from cognicion.servicios.clientes import ELEVENLABS_VOICE_ADAM
     from settings import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
     from cognicion.servicios import obtener_manager
 
     key_ok = bool((ELEVENLABS_API_KEY or "").strip())
-    voice_ok = bool((ELEVENLABS_VOICE_ID or "").strip())
-    resultado = obtener_manager().hablar(
-        "Prueba de voz Salomón. Voice test ElevenLabs."
-    )
+    voice_raw = (ELEVENLABS_VOICE_ID or "").strip()
+    voice_ok = bool(voice_raw)
+    voice_canonico = ELEVENLABS_VOICE_ADAM  # Adam: pNInz6obpgDQGcFmaJgB
+    resultado = obtener_manager().hablar("Prueba breve de voz Salomon.")
     audio = resultado.audio_base64 or ""
+    err = str(resultado.error or "")
+    err_l = err.lower()
+    if "quota_exceeded" in err_l or "credits remaining" in err_l:
+        mensaje = (
+            "ElevenLabs sin créditos (quota_exceeded). "
+            "El chat puede seguir por Groq; la voz volverá al recargar cuota."
+        )
+    elif "voice_not_found" in err_l:
+        mensaje = (
+            f"Voice ID inválido en Render. Usa exactamente: "
+            f"ELEVENLABS_VOICE_ID={voice_canonico}"
+        )
+    elif audio:
+        mensaje = "Audio generado — la UI debe reproducir audio_base64."
+    elif key_ok and not voice_ok:
+        mensaje = f"Falta ELEVENLABS_VOICE_ID. Valor canónico: {voice_canonico}"
+    else:
+        mensaje = err or "No se generó audio"
+
     return {
         "ok": bool(resultado.tts_disponible and audio),
         "test": "voice_test",
         "conexion_elevenlabs": {
             "api_key": key_ok,
             "voice_id": voice_ok,
-            "voice_id_len": len((ELEVENLABS_VOICE_ID or "").strip()),
+            "voice_id_len": len(voice_raw),
+            "voice_id_canonico": voice_canonico,
+            "voice_id_coincide_canonico": voice_raw == voice_canonico,
         },
         "tts_disponible": bool(resultado.tts_disponible),
         "motor": getattr(resultado, "motor", None),
@@ -1072,18 +1094,10 @@ def api_voice_test() -> dict:
         "audio_base64_len": len(audio),
         "stream_listo_para_ui": bool(audio),
         "error": resultado.error,
-        "mensaje": (
-            "Audio generado — la UI debe reproducir audio_base64."
-            if audio
-            else (
-                "Falta ELEVENLABS_VOICE_ID en Render Environment / .env"
-                if key_ok and not voice_ok
-                else (resultado.error or "No se generó audio")
-            )
-        ),
+        "mensaje": mensaje,
         "ui_hint": (
-            "Si hay audio_base64 pero no oyes nada: permiso de autoplay del navegador "
-            "o la UI no está llamando a Audio.play()."
+            "Chat/texto puede usar Groq aunque ElevenLabs esté en cuota. "
+            "Corrige Voice ID en Render Dashboard → Environment."
         ),
     }
 
