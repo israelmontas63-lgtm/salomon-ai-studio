@@ -141,6 +141,28 @@
         chat.scrollTop = chat.scrollHeight;
       }
 
+      // Gatillo verbal Modo Visión — abre cámara + elevación sin tocar Back
+      var VT = window.SalomonVisionModeTrigger;
+      if (VT && VT.matches && VT.matches(text)) {
+        document.body.classList.add("salomon-processing");
+        var engaged = await VT.engage({ source: "smart_button_voice" });
+        document.body.classList.remove("salomon-processing");
+        this.root.classList.remove("is-active", "is-listening", "is-ai-locked");
+        if (L && L.release) L.release("vision_mode_trigger");
+        if (chat) {
+          var typingVis = chat.querySelector(".bubble.typing");
+          if (typingVis) typingVis.remove();
+          var botVis = document.createElement("div");
+          botVis.className = "bubble bot";
+          botVis.textContent =
+            (engaged && engaged.texto) ||
+            "Modo visión activo. Mis ojos están encendidos.";
+          chat.appendChild(botVis);
+          chat.scrollTop = chat.scrollHeight;
+        }
+        return;
+      }
+
       document.body.classList.add("salomon-processing");
 
       var result =
@@ -154,12 +176,17 @@
       document.body.classList.remove("salomon-processing");
       this.root.classList.remove("is-active", "is-listening", "is-ai-locked");
 
+      var data = (result && result.data) || {};
+      var meta = data.metadata || {};
+      if (meta.activar_modo_vision && VT && VT.engage) {
+        await VT.engage({ source: "brain_meta" });
+      }
+
       if (chat) {
         var typingEl = chat.querySelector(".bubble.typing");
         if (typingEl) typingEl.remove();
         var bot = document.createElement("div");
         bot.className = "bubble bot";
-        var data = (result && result.data) || {};
         bot.textContent =
           (result && result.ok && data.texto) ||
           data.detail ||

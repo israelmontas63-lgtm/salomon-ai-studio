@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-20T12:30:00Z",
-  "timestamp": 1753011000,
-  "version": "108.7.0",
+  "timestamp_iso": "2026-07-20T12:50:00Z",
+  "timestamp": 1753012200,
+  "version": "108.9.0",
   "channel": "main",
-  "label": "universal-neutralizer-back",
+  "label": "autofocus-pwa-hotloader",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "MASTER_LAYER_NEUTRALIZER",
-  "notes": "v108.7.0 - Back neutralizador maestro z-index 100010; cierra tools/cámara/Aa/AI lock sin resetear el núcleo."
+  "protocol": "VISION_AUTOFOCUS_PWA_HOTLOADER",
+  "notes": "v108.9.0 - Zoom macro/micro inteligente + PWA hot-loader 4s con badge instantáneo en tuerquita. Incluye Vision Mode Trigger."
 }

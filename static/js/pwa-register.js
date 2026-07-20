@@ -10,7 +10,7 @@
   }
 
   // Bump con cada release de CACHE en service-worker.js
-  var SW_URL = "/service-worker.js?v=37";
+  var SW_URL = "/service-worker.js?v=39";
 
   function registerSw() {
     navigator.serviceWorker
@@ -21,15 +21,23 @@
         if (reg.waiting) {
           reg.waiting.postMessage({ type: "SKIP_WAITING" });
         }
+        // Hot-loader: revisar SW cada 4s (sin frenos)
+        setInterval(function () {
+          if (reg.update) reg.update().catch(function () {});
+        }, 4000);
         reg.addEventListener("updatefound", function () {
           var nw = reg.installing;
           if (!nw) return;
           nw.addEventListener("statechange", function () {
             if (nw.state === "installed") {
-              // Activar nuevo SW al instante (sin esperar cierre de pestañas)
               if (reg.waiting) {
                 reg.waiting.postMessage({ type: "SKIP_WAITING" });
               }
+              window.dispatchEvent(
+                new CustomEvent("salomon:deploy-notify", {
+                  detail: { build: "sw", source: "pwa_register", instant: true },
+                })
+              );
               if (window.SalomonUpdate && window.SalomonUpdate.applyUpdateNow) {
                 window.SalomonUpdate.applyUpdateNow("sw");
               } else if (window.SalomonUpdate && window.SalomonUpdate.showUpdateToast) {
@@ -43,7 +51,6 @@
         console.error("[SalomonPWA] Fallo al registrar SW:", err);
       });
 
-    // Cuando el nuevo SW toma control → recarga la app
     var refreshing = false;
     navigator.serviceWorker.addEventListener("controllerchange", function () {
       if (refreshing) return;

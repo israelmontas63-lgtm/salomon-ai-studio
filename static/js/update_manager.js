@@ -1,10 +1,10 @@
 /**
- * Salomón AI — Update Manager (Hot Patching automático)
- * Poll /api/version → si hay build nuevo, aplica la actualización sin pedir confirmación.
+ * Salomón AI — Update Manager (Hot-Loader PWA sin frenos)
+ * Poll /api/version + /version.json → badge en tuerquita → hot-patch inmediato.
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
-  const POLL_MS = 12000;
+  const POLL_MS = 4000;
   const STORAGE_KEY = "salomon_build_id";
   var applying = false;
 
@@ -25,7 +25,6 @@
           if (!local) {
             localStorage.setItem(STORAGE_KEY, remote);
           } else if (local !== remote) {
-            // Actualización pendiente al abrir: aplicar ya
             this.applyUpdateNow(remote);
             return;
           }
@@ -39,8 +38,9 @@
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") this.checkForUpdate();
       });
-      // Chequeo extra al volver online
       window.addEventListener("online", () => this.checkForUpdate());
+      // Chequeo agresivo al recuperar foco
+      window.addEventListener("focus", () => this.checkForUpdate());
 
       const toastBtn = document.getElementById("update-toast-btn");
       if (toastBtn) {
@@ -52,12 +52,18 @@
       }
 
       window.SalomonUpdate = this;
+      window.SalomonPWAHotLoader = this;
     },
 
     _wireSwMessages() {
       if (!("serviceWorker" in navigator)) return;
       navigator.serviceWorker.addEventListener("message", (event) => {
         const data = event.data || {};
+        if (data.type === "UPDATE_AVAILABLE" || data.type === "SW_ACTIVATED") {
+          // Badge instantáneo + hot-load
+          this.applyUpdateNow(data.cache || data.build || "sw");
+          return;
+        }
         if (data.type === "CACHES_CLEARED" || data.type === "SW_READY") {
           this._hardReload();
         }
@@ -65,13 +71,30 @@
     },
 
     async fetchBuild() {
-      const res = await fetch("/api/version?t=" + Date.now(), {
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.build_full || data.build || null;
+      // Paquete de despliegue: /api/version (prioridad) + /version.json (fallback)
+      var build = null;
+      try {
+        const res = await fetch("/api/version?t=" + Date.now(), {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          build = data.build_full || data.build || data.version || null;
+        }
+      } catch (_) {}
+      if (build) return build;
+      try {
+        const res2 = await fetch("/version.json?t=" + Date.now(), {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (res2.ok) {
+          const pack = await res2.json();
+          build = pack.build || pack.version || pack.label || null;
+        }
+      } catch (_) {}
+      return build;
     },
 
     async checkForUpdate() {
@@ -84,26 +107,35 @@
         const local = localStorage.getItem(STORAGE_KEY) || this.currentBuild;
         if (local && remote && local !== remote) {
           this.currentBuild = remote;
-          // Auto-aplicar: la app se modifica sola al llegar el deploy
           this.applyUpdateNow(remote);
         } else if (remote) {
           this.currentBuild = remote;
         }
+        // Forzar SW update en paralelo (paquete nuevo en Render)
+        if (navigator.serviceWorker) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg && reg.update) reg.update().catch(function () {});
+        }
       } catch (_) {}
     },
 
-    /** Entrada pública: actualizar ya (toast opcional + hot patch) */
+    /** Badge inmediato en tuerquita + toast + hot-patch (cero fricción) */
     applyUpdateNow(build) {
       if (applying) return;
-      // Badge en tuerquita (post_deploy_success)
       window.dispatchEvent(
         new CustomEvent("salomon:deploy-notify", {
-          detail: { build: build || "", source: "update_manager" },
+          detail: {
+            build: build || "",
+            source: "pwa_hot_loader",
+            instant: true,
+          },
         })
       );
+      if (window.SalomonDeployBadge && window.SalomonDeployBadge.show) {
+        window.SalomonDeployBadge.show(build || "Nueva");
+      }
       this.showUpdateToast(build || "nueva");
-      // Pequeño delay para que el toast se vea, luego hot-patch
-      setTimeout(() => this.hotPatch(), 600);
+      setTimeout(() => this.hotPatch(), 220);
     },
 
     showUpdateToast(build) {
@@ -155,19 +187,25 @@
 
         const assets = [
           "/",
+          "/version.json",
+          "/api/version",
           "/static/css/styles.css",
           "/static/css/global.css",
           "/static/css/boton.css",
           "/static/css/settings_layer.css",
+          "/static/css/update_styles.css",
           "/static/js/main.js",
           "/static/js/ai_state_lock.js",
           "/static/js/components/SmartButton.js",
           "/static/js/settings_manager.js",
           "/static/js/update_manager.js",
+          "/static/js/realtime_notification_badge.js",
           "/static/js/pwa-register.js",
           "/static/js/script.js",
           "/static/js/input_engine.js",
           "/static/js/camera_logic.js",
+          "/static/js/vision_engine.js",
+          "/static/js/vision_mode_trigger.js",
           "/static/manifest.json",
           "/manifest.json",
           "/service-worker.js?v=" + Date.now(),

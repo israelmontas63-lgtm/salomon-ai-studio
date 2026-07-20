@@ -83,6 +83,28 @@
     var msg = (input && input.value ? input.value : "").trim();
     if (!msg) return;
 
+    // Gatillo Modo Visión (voz/texto) — independiente del neutralizador Back
+    if (
+      window.SalomonVisionModeTrigger &&
+      window.SalomonVisionModeTrigger.matches(msg)
+    ) {
+      addBubble(msg, "user");
+      if (input) input.value = "";
+      setLoading(true);
+      try {
+        var eng = await window.SalomonVisionModeTrigger.handleCommand(msg, {
+          source: "chat_aa",
+        });
+        addBubble((eng && eng.texto) || "Modo visión activo.", "bot");
+      } catch (_) {
+        addBubble("No pude activar el modo visión.", "bot");
+      } finally {
+        setLoading(false);
+        if (window.SalomonUiManager) window.SalomonUiManager.hide();
+      }
+      return;
+    }
+
     // Comandos de visión (si el módulo está cargado)
     if (window.SalomonVision && window.SalomonVision.parseCommand(msg).handled) {
       addBubble(msg, "user");

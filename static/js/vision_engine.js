@@ -116,6 +116,15 @@
         );
         return null;
       }
+      // Autofocus inteligente según el contexto verbal (letra cerca / roca lejos)
+      const cam = window.SalomonCamera;
+      if (cam && cam.autoFocusFromText) {
+        await cam.autoFocusFromText(prompt || "");
+      }
+      // Breve estabilización del zoom antes de capturar
+      await new Promise(function (r) {
+        setTimeout(r, 180);
+      });
       const frame = this.captureCurrentFrame(0.9) || this.session.lastFrameDataUrl;
       if (!frame) {
         this._bubble("bot", "Aún no tengo un frame claro. Espera un instante e inténtalo de nuevo.");
@@ -188,14 +197,34 @@
       const low = t.toLowerCase();
       if (!low) return { handled: false };
 
+      if (
+        window.SalomonVisionModeTrigger &&
+        window.SalomonVisionModeTrigger.matches(t)
+      ) {
+        return { handled: true, type: "modo_vision", rest: t };
+      }
+      if (
+        /\b(activa(r)?\s+(el\s+)?modo\s+visi[oó]n|modo\s+visi[oó]n|ojos\s+activos)\b/.test(
+          low
+        )
+      ) {
+        return { handled: true, type: "modo_vision", rest: t };
+      }
       if (/\b(salom[oó]n,?\s*)?mira\b/.test(low) || /\bqu[eé]\s+ves\b/.test(low)) {
         return { handled: true, type: "mira", rest: t };
       }
-      if (/\bmacro\b/.test(low)) {
-        return { handled: true, type: "macro", rest: t };
-      }
-      if (/\bmicro\b/.test(low) || /\benfoque\s+lejano\b/.test(low)) {
+      // micro = detalle cercano | macro = objeto lejano
+      if (
+        /\bmicro\b/.test(low) ||
+        /\b(letra|texto|detalle|cerca|ah[ií]\s+mismo|aqu[ií]\s+mismo)\b/.test(low)
+      ) {
         return { handled: true, type: "micro", rest: t };
+      }
+      if (
+        /\bmacro\b/.test(low) ||
+        /\b(lejos|all[aá]|roca|horizonte|objeto\s+lejano|enfoque\s+lejano)\b/.test(low)
+      ) {
+        return { handled: true, type: "macro", rest: t };
       }
       return { handled: false };
     },
@@ -204,6 +233,20 @@
       const cmd = this.parseCommand(mensaje);
       if (!cmd.handled) return false;
 
+      if (cmd.type === "modo_vision") {
+        if (window.SalomonVisionModeTrigger) {
+          const r = await window.SalomonVisionModeTrigger.handleCommand(mensaje, {
+            source: "vision_engine",
+          });
+          this._bubble("bot", (r && r.texto) || "Modo visión activo.");
+          return true;
+        }
+        const cam = window.SalomonCamera;
+        if (cam && cam.openCamera) await cam.openCamera();
+        this._bubble("bot", "Modo visión activo.");
+        return true;
+      }
+
       if (cmd.type === "mira") {
         await this.lookNow(cmd.rest);
         return true;
@@ -211,15 +254,25 @@
       if (cmd.type === "macro" || cmd.type === "micro") {
         const cam = window.SalomonCamera;
         if (!cam || !cam.isActive()) {
-          this._bubble("bot", "Activa la cámara para ajustar el foco (" + cmd.type + ").");
+          this._bubble(
+            "bot",
+            "Activa la cámara para ajustar el zoom " +
+              (cmd.type === "micro" ? "de detalle (micro)" : "a distancia (macro)") +
+              "."
+          );
           return true;
         }
         const ok = await cam.setFocusMode(cmd.type);
+        const zoom = cam.zoomLevel ? cam.zoomLevel.toFixed(1) + "x" : "";
         this._bubble(
           "bot",
           ok
-            ? "Foco " + cmd.type + " aplicado. ¿Quieres que mire ahora?"
-            : "Este dispositivo no expone control de foco; mantengo el enfoque automático."
+            ? (cmd.type === "micro"
+                ? "Enfoque micro (detalle cercano) "
+                : "Enfoque macro (objeto lejano) ") +
+                zoom +
+                ". ¿Quieres que mire ahora?"
+            : "Apliqué zoom digital; este dispositivo no expone control óptico de foco."
         );
         return true;
       }

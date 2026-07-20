@@ -77,12 +77,20 @@
             var data = JSON.parse(evt.data || "{}");
             if (data.event === "post_deploy_success" && data.build) {
               var local = localStorage.getItem("salomon_build_id");
-              if (local && data.build !== local) {
+              // Badge + hot-load al instante ante cualquier deploy nuevo
+              if (!local || data.build !== local) {
                 window.dispatchEvent(
                   new CustomEvent("salomon:deploy-notify", {
-                    detail: { build: data.build, source: "sse" },
+                    detail: {
+                      build: data.build,
+                      source: "sse",
+                      instant: true,
+                    },
                   })
                 );
+                if (window.SalomonUpdate && window.SalomonUpdate.applyUpdateNow) {
+                  window.SalomonUpdate.applyUpdateNow(data.build);
+                }
               }
             }
           } catch (_) {}

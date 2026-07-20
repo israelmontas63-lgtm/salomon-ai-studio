@@ -317,6 +317,37 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
         except Exception:
             pass
 
+        # Gatillo Modo Visión — enciende pipeline visual (cliente abre cámara + elevación)
+        try:
+            from cognicion.core_vision_mode_trigger import (
+                es_gatillo_modo_vision,
+                respuesta_activacion_vision,
+            )
+
+            if es_gatillo_modo_vision(entrada) and not imagen_base64:
+                pack = respuesta_activacion_vision(entrada)
+                texto_vis = str(pack.get("texto") or "")
+                self._historial.append(Mensaje(rol="usuario", contenido=entrada))
+                self._historial.append(Mensaje(rol="asistente", contenido=texto_vis))
+                self._recortar_historial()
+                self._motor.registrar_turno(entrada, texto_vis)
+                tts = texto_a_voz(texto_vis)
+                meta_vis = {
+                    k: v
+                    for k, v in pack.items()
+                    if k != "texto"
+                }
+                return RespuestaSalomon(
+                    texto=texto_vis,
+                    exito=True,
+                    metadata=meta_vis,
+                    audio_base64=tts.audio_base64,
+                    audio_mime=tts.audio_mime,
+                    tts_disponible=tts.tts_disponible,
+                )
+        except Exception:
+            pass
+
         self._historial.append(Mensaje(rol="usuario", contenido=entrada))
 
         # Visión en flujo de entrada (config/vision_integration)

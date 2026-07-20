@@ -72,6 +72,7 @@
       loadScript("/static/js/ui_controller.js"),
       loadScript("/static/js/settings_manager.js"),
       loadScript("/static/js/back_button.js"),
+      loadScript("/static/js/vision_mode_trigger.js"),
       loadScript("/static/js/ai_state_lock.js"),
       loadScript("/static/js/components/SmartButton.js"),
     ]);

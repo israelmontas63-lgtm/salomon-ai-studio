@@ -3,7 +3,7 @@
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v37";
+const CACHE = "salomon-premium-v39";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -28,6 +28,7 @@ const PRECACHE = [
   "/static/js/camera_toggle_ui.js",
   "/static/js/camera_full.js",
   "/static/js/vision_engine.js",
+  "/static/js/vision_mode_trigger.js",
   "/static/js/update_manager.js",
   "/static/js/realtime_notification_badge.js",
   "/static/js/settings_manager.js",
@@ -97,6 +98,16 @@ self.addEventListener("activate", (event) => {
         Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
       )
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then((clients) => {
+        clients.forEach(function (client) {
+          client.postMessage({
+            type: "UPDATE_AVAILABLE",
+            cache: CACHE,
+            event: "SW_ACTIVATED",
+          });
+        });
+      })
   );
 });
 

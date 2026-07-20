@@ -15,7 +15,8 @@
     state: States.IDLE,
     stream: null,
     facingMode: "environment",
-    focusMode: "continuous", // continuous | macro | micro
+    focusMode: "continuous", // continuous | macro (lejos) | micro (cerca)
+    zoomLevel: 1,
     video: null,
     stage: null,
     camWrap: null,
@@ -143,6 +144,11 @@
       this._stopStream();
       this.facingMode = "environment";
       this.focusMode = "continuous";
+      this.zoomLevel = 1;
+      if (this.video) {
+        this.video.style.transform = "";
+        this.video.classList.remove("is-zoom-micro", "is-zoom-macro", "is-zoom-reset");
+      }
       this.state = States.IDLE;
       this._emit(States.IDLE);
     },
@@ -181,10 +187,58 @@
     },
 
     /**
-     * Ajusta foco vía constraints getUserMedia / applyConstraints.
-     * macro = cerca | micro = lejos / continuous
+     * Zoom digital (+ óptico si el dispositivo expone zoom).
+     * factor 1 = normal; >1 acerca el sujeto en el encuadre.
+     */
+    async setZoom(factor) {
+      var f = Number(factor);
+      if (!isFinite(f) || f < 1) f = 1;
+      if (f > 4) f = 4;
+      this.zoomLevel = f;
+
+      if (this.video) {
+        this.video.classList.remove("is-zoom-micro", "is-zoom-macro", "is-zoom-reset");
+        if (f <= 1.05) {
+          this.video.style.transform = "";
+          this.video.classList.add("is-zoom-reset");
+        } else {
+          var mirror = this.facingMode === "user";
+          this.video.style.transform =
+            (mirror ? "scaleX(-1) " : "") + "scale(" + f.toFixed(2) + ")";
+          this.video.classList.add(f >= 2 ? "is-zoom-macro" : "is-zoom-micro");
+        }
+      }
+
+      if (!this.stream) return f > 1;
+      var track = this.stream.getVideoTracks()[0];
+      if (!track || typeof track.getCapabilities !== "function") return f > 1;
+      var caps = track.getCapabilities() || {};
+      if (!caps.zoom) return f > 1;
+      var zMin = caps.zoom.min != null ? caps.zoom.min : 1;
+      var zMax = caps.zoom.max != null ? caps.zoom.max : zMin;
+      var target = zMin + (zMax - zMin) * Math.min(1, (f - 1) / 3);
+      try {
+        await track.applyConstraints({ advanced: [{ zoom: target }] });
+        return true;
+      } catch (_) {
+        try {
+          await track.applyConstraints({ zoom: target });
+          return true;
+        } catch (__) {
+          return f > 1;
+        }
+      }
+    },
+
+    /**
+     * Ajusta foco + zoom.
+     * micro = detalle cercano (letra) | macro = objeto lejano (roca allá)
      */
     async setFocusMode(mode) {
+      if (!this.stream && mode !== "continuous") {
+        // Permite marcar modo aunque el stream aún arranca
+        this.focusMode = mode || "continuous";
+      }
       if (!this.stream) return false;
       const track = this.stream.getVideoTracks()[0];
       if (!track) return false;
@@ -192,8 +246,9 @@
       const caps = typeof track.getCapabilities === "function" ? track.getCapabilities() : {};
       const advanced = [];
 
-      if (mode === "macro") {
-        this.focusMode = "macro";
+      if (mode === "micro") {
+        // Detalle cercano: foco cerca + zoom moderado
+        this.focusMode = "micro";
         if (caps.focusMode && caps.focusMode.includes("manual")) {
           advanced.push({ focusMode: "manual" });
         } else if (caps.focusMode && caps.focusMode.includes("continuous")) {
@@ -202,12 +257,13 @@
         if (caps.focusDistance) {
           const min = caps.focusDistance.min != null ? caps.focusDistance.min : 0;
           const max = caps.focusDistance.max != null ? caps.focusDistance.max : 1;
-          // Cerca del mínimo = macro
-          const near = min + (max - min) * 0.08;
+          const near = min + (max - min) * 0.06;
           advanced.push({ focusDistance: near });
         }
-      } else if (mode === "micro") {
-        this.focusMode = "micro";
+        await this.setZoom(1.85);
+      } else if (mode === "macro" || mode === "distant_object_zoom") {
+        // Objeto lejano: foco lejos + zoom digital fuerte
+        this.focusMode = "macro";
         if (caps.focusMode && caps.focusMode.includes("continuous")) {
           advanced.push({ focusMode: "continuous" });
         } else if (caps.focusMode && caps.focusMode.includes("manual")) {
@@ -216,24 +272,31 @@
         if (caps.focusDistance) {
           const min = caps.focusDistance.min != null ? caps.focusDistance.min : 0;
           const max = caps.focusDistance.max != null ? caps.focusDistance.max : 1;
-          const far = min + (max - min) * 0.85;
+          const far = min + (max - min) * 0.9;
           advanced.push({ focusDistance: far });
         }
+        await this.setZoom(2.45);
       } else {
         this.focusMode = "continuous";
         if (caps.focusMode && caps.focusMode.includes("continuous")) {
           advanced.push({ focusMode: "continuous" });
         }
+        await this.setZoom(1);
       }
 
-      if (!advanced.length) return false;
+      window.dispatchEvent(
+        new CustomEvent("salomon:focus-mode", {
+          detail: { mode: this.focusMode, zoom: this.zoomLevel },
+        })
+      );
+
+      if (!advanced.length) return this.zoomLevel > 1;
 
       try {
         await track.applyConstraints({ advanced: advanced });
         return true;
       } catch (_) {
         try {
-          // Fallback sin advanced
           const flat = {};
           advanced.forEach(function (obj) {
             Object.keys(obj).forEach(function (k) {
@@ -243,9 +306,40 @@
           await track.applyConstraints(flat);
           return true;
         } catch (__) {
-          return false;
+          return this.zoomLevel > 1;
         }
       }
+    },
+
+    /**
+     * Inferencia verbal → micro/macro/continuous.
+     * "esa letra ahí mismo" → micro | "esa roca allá" → macro
+     */
+    inferFocusFromText(mensaje) {
+      var low = (mensaje || "").toLowerCase();
+      if (!low) return null;
+      var micro =
+        /\b(micro|letra|texto|detalle|peque[nñ]o|cerca|aqu[ií]\s+mismo|ah[ií]\s+mismo|zoom\s+cerca)\b/.test(
+          low
+        );
+      var macro =
+        /\b(macro|lejos|all[aá]|aquella|aquel|roca|monta[nñ]a|horizonte|objeto\s+lejano|enfoque\s+lejano|zoom\s+lejos|distant)\b/.test(
+          low
+        );
+      if (micro && !macro) return "micro";
+      if (macro && !micro) return "macro";
+      if (micro && macro) {
+        if (/\b(letra|texto|cerca|ah[ií]\s+mismo)\b/.test(low)) return "micro";
+        return "macro";
+      }
+      return null;
+    },
+
+    async autoFocusFromText(mensaje) {
+      var mode = this.inferFocusFromText(mensaje);
+      if (!mode) return { applied: false, mode: null };
+      var ok = await this.setFocusMode(mode);
+      return { applied: !!ok || this.zoomLevel > 1, mode: mode, zoom: this.zoomLevel };
     },
 
     disparar() {

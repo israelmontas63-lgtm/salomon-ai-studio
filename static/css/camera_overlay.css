@@ -95,10 +95,18 @@
   object-fit: cover;
   display: block;
   background: #000;
+  transform-origin: center center;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.camera-stage.is-mirror video {
+.camera-stage.is-mirror video:not(.is-zoom-micro):not(.is-zoom-macro) {
   transform: scaleX(-1);
+}
+
+/* Zoom digital macro/micro (JS aplica scale; aquí solo suaviza) */
+.camera-stage video.is-zoom-micro,
+.camera-stage video.is-zoom-macro {
+  will-change: transform;
 }
 
 /* Flash de disparo */
