@@ -138,7 +138,10 @@
       if (typing) typing.classList.add("typing");
 
       try {
-        const res = await fetch("/api/cognicion/vision", {
+        var focusMode =
+          (window.SalomonCamera && window.SalomonCamera.focusMode) || "continuous";
+        // brain_bridge: canal rápido al núcleo (macro/micro + exclusividad AI)
+        const res = await fetch("/api/vision/brain-bridge", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -146,6 +149,8 @@
             imagen_mime: "image/jpeg",
             contexto: contexto,
             session_id: this.session.sessionId,
+            focus_mode: focusMode,
+            via_brain_bridge: true,
           }),
         });
         const data = await res.json().catch(function () {

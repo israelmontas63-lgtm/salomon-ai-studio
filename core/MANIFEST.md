@@ -5,6 +5,16 @@
 | `core/cortex/` | MainController, LogicEngine | `mente/conexion`, `config/memory_cortex`, `cerebro` |
 | `core/peripherals/` | VoiceCore, VisionAgent, HomeGateway | `config/voice_parameters`, `config/vision_integration`, `studio` voz/cámara |
 | `core/memory/` | HistoryBuffer, SemanticThreads | `mente/hilos`, `cognicion/memoria` |
+| `core/brain_connector/` | Puente visual rápido al núcleo | `cognicion/core_control.trigger_ai_core` |
+
+## Visión por capas (`views/` + `cognicion/core_vision_engine.py`)
+
+| Capa | Path | Rol |
+|------|------|-----|
+| UI | `views/ui_layer/` | Botones/contenedores — **no** análisis |
+| Captura | `views/capture/` | Sensor / normalización de frame |
+| Análisis | `views/analysis/` | Macro ↔ micro dinámico |
+| Cerebro | `core/brain_connector/` | Canal exclusivo al núcleo |
 
 Los paths históricos (`cerebro.py`, `mente/`, `cognicion/`) **siguen vivos** como implementación; `/core` es el hard-link de kernel que Israel ordenó. No se rompe SystemGuard moviendo `app.py` ni `camera-engine.js`.
 

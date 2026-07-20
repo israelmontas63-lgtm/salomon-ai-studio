@@ -67,6 +67,8 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/cognicion/cognitive-core",
         "/api/cognicion/multimodal",
         "/api/cognicion/vision",
+        "/api/vision/architecture",
+        "/api/vision/brain-bridge",
         "/api/agentes/estado",
         "/api/esencia",
         "/api/sbi/estado",
@@ -462,6 +464,8 @@ class VisionRequest(BaseModel):
     imagen_mime: str = "image/png"
     contexto: str = Field(default="", max_length=4000)
     session_id: str | None = None
+    focus_mode: str | None = Field(default="continuous", max_length=32)
+    via_brain_bridge: bool = True
 
 
 class VdcpRequest(BaseModel):
@@ -2002,21 +2006,75 @@ def seguridad_recuperar(servicio: str, request: Request) -> dict:
     return intentar_recuperar(servicio)
 
 
+@app.get("/api/vision/architecture")
+def api_vision_architecture() -> dict:
+    """Estado de SalomonVisionArchitecture (aislamiento de capas)."""
+    from cognicion.core_vision_engine import obtener_vision_architecture
+
+    return obtener_vision_architecture().estado()
+
+
+@app.post("/api/vision/brain-bridge", response_model=ChatResponse)
 @app.post("/api/cognicion/vision", response_model=ChatResponse)
 def cognicion_vision(body: VisionRequest) -> ChatResponse:
+    """
+    Captura → views/capture → views/analysis (macro/micro) → core/brain_connector → núcleo.
+    """
+    from cognicion.core_vision_engine import obtener_vision_architecture
+
+    arch = obtener_vision_architecture()
+    entrada = (body.contexto or "Analiza esta captura y dime qué ves.").strip()
+
+    if body.via_brain_bridge:
+        pack = arch.process_frame_to_brain(
+            body.imagen_base64,
+            contexto=entrada,
+            focus_mode=body.focus_mode,
+            imagen_mime=body.imagen_mime,
+            session_id=body.session_id,
+            obtener_sesion=_obtener_o_crear_sesion,
+            via_central_button=True,
+        )
+        brain = pack.get("brain") or {}
+        texto = brain.get("texto") or ""
+        session_id = brain.get("session_id") or body.session_id
+        if not session_id:
+            session_id, _ = _obtener_o_crear_sesion(body.session_id)
+        if texto:
+            _persistir_turno(session_id, entrada, texto)
+        meta = dict(brain.get("metadata") or {})
+        meta["vision_architecture"] = {
+            "focus_mode": pack.get("focus_mode"),
+            "via": pack.get("via"),
+            "analysis": pack.get("analysis"),
+            "ok": pack.get("ok"),
+        }
+        return ChatResponse(
+            texto=texto or "No pude interpretar la imagen. ¿Reintentamos?",
+            exito=bool(pack.get("ok") and texto),
+            session_id=session_id,
+            metadata=meta,
+            audio_base64=brain.get("audio_base64"),
+            audio_mime=brain.get("audio_mime"),
+            tts_disponible=bool(brain.get("tts_disponible")),
+        )
+
+    # Fallback legacy (sin puente exclusivo)
     session_id, salomon = _obtener_o_crear_sesion(body.session_id)
+    prompt = arch.analysis_prompt(body.focus_mode, entrada)
     respuesta = salomon.procesar_entrada(
-        body.contexto or "Analiza esta captura y dime qué ves.",
+        prompt,
         imagen_base64=body.imagen_base64,
         imagen_mime=body.imagen_mime,
     )
-    entrada = (body.contexto or "Analiza esta captura y dime qué ves.").strip()
     _persistir_turno(session_id, entrada, respuesta.texto)
+    meta = dict(respuesta.metadata or {})
+    meta["vision_architecture"] = {"via": "legacy_procesar_entrada", "focus_mode": body.focus_mode}
     return ChatResponse(
         texto=respuesta.texto,
         exito=respuesta.exito,
         session_id=session_id,
-        metadata=respuesta.metadata,
+        metadata=meta,
         audio_base64=respuesta.audio_base64,
         audio_mime=respuesta.audio_mime,
         tts_disponible=respuesta.tts_disponible,
