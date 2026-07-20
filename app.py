@@ -115,6 +115,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/deploy/neural-link",
         "/api/deploy/continuation",
         "/api/neural/master",
+        "/api/deploy/strict-audit",
         "/api/deploy/stream",
         "/api/motor/estado",
         "/api/chat/nuevo",
@@ -1317,6 +1318,14 @@ def api_neural_master(session_id: str | None = None) -> dict:
     from cognicion.core_salomon_master_neural_engine import run_master_neural_audit
 
     return run_master_neural_audit(session_id)
+
+
+@app.get("/api/deploy/strict-audit")
+def api_deploy_strict_audit() -> dict:
+    """Auditoría estricta paso a paso — visto bueno de producción."""
+    from cognicion.core_master_strict_audit_and_deploy import run_strict_master_audit
+
+    return run_strict_master_audit()
 
 @app.get("/api/deploy/stream")
 async def api_deploy_stream():
