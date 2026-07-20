@@ -10,12 +10,14 @@ def test_app_state_y_bloqueo_secundario():
     ai_lock.liberar(reason="test_reset")
     assert ai_lock.app_state["is_ai_active"] is False
 
-    bloqueado = ai_lock.handle_camera_or_other_functions("camera")
-    assert bloqueado["blocked"] is False
+    assert ai_lock.ui_layer_manager("camera")["allowed"] is True
 
     ai_lock.activar(reason="test")
     assert ai_lock.app_state["is_ai_active"] is True
-    assert ai_lock.handle_camera_or_other_functions("camera")["blocked"] is True
+    gate = ai_lock.ui_layer_manager("camera")
+    assert gate["blocked"] is True
+    assert gate["allowed"] is False
+    assert "prioridad de IA" in gate["mensaje"]
     ai_lock.liberar(reason="test_done")
     assert ai_lock.is_ai_active() is False
 

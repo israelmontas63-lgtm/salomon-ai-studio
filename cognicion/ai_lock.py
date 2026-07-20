@@ -1,15 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-State lock del Botón Central (IA) — jerarquía pedida por Israel.
+Estado global de exclusividad del botón central (IA).
 
-Patrón canónico (espejo del pseudocódigo de control):
+Patrón canónico (Israel):
 
     app_state = {"is_ai_active": False}
-    handle_central_button_click()  → activa lock → call_salomon_brain() → libera
-    handle_camera_or_other_functions() → bloquea si is_ai_active
 
-La exclusividad de UI también vive en static/js/ai_state_lock.js.
-Backend: FastAPI (no Flask).
+    handle_central_button_click():
+        app_state["is_ai_active"] = True
+        try:
+            return execute_salomon_brain_process(...)
+        finally:
+            app_state["is_ai_active"] = False
+
+    ui_layer_manager(function_name):
+        if app_state["is_ai_active"]: return False  # bloquea cámara/menús
+        execute_standard_feature(...)
+        return True
+
+Backend: FastAPI. UI espejo: static/js/ai_state_lock.js
 """
 
 from __future__ import annotations
@@ -17,13 +26,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-# Definición del estado global de la aplicación
+# Estado global para manejar la exclusividad
 app_state: dict[str, Any] = {
     "is_ai_active": False,
     "reason": "",
     "updated_at": None,
     "session_id": None,
     "last_result": None,
+    "last_blocked": None,
 }
 
 
@@ -36,7 +46,6 @@ def is_ai_active() -> bool:
 
 
 def activar(*, reason: str = "smart_button", session_id: str | None = None) -> dict[str, Any]:
-    """Activa exclusividad: bloquea otras funciones."""
     app_state["is_ai_active"] = True
     app_state["reason"] = reason or "smart_button"
     app_state["session_id"] = session_id
@@ -45,7 +54,6 @@ def activar(*, reason: str = "smart_button", session_id: str | None = None) -> d
 
 
 def liberar(*, reason: str = "done") -> dict[str, Any]:
-    """Restaura funciones secundarias."""
     app_state["is_ai_active"] = False
     app_state["reason"] = reason or "done"
     app_state["updated_at"] = _utc()
@@ -59,6 +67,7 @@ def estado() -> dict[str, Any]:
         "reason": app_state.get("reason") or "",
         "session_id": app_state.get("session_id"),
         "updated_at": app_state.get("updated_at"),
+        "last_blocked": app_state.get("last_blocked"),
         "prioridad": "smart_button",
         "mensaje": (
             "Modo IA activado. Otras funciones desactivadas."
@@ -66,15 +75,15 @@ def estado() -> dict[str, Any]:
             else "Modo IA desactivado. Funciones restauradas."
         ),
         "endpoints": {
-            "cerebro_directo": "/api/ai-process",
             "central_button": "/api/ai/central-button",
-            "chat": "/api/chat",
+            "secondary": "/api/ai/secondary",
             "lock": "/api/ai/lock",
+            "cerebro_directo": "/api/ai-process",
         },
     }
 
 
-def call_salomon_brain(
+def execute_salomon_brain_process(
     mensaje: str,
     *,
     session_id: str | None = None,
@@ -85,12 +94,13 @@ def call_salomon_brain(
     obtener_sesion: Callable[[str | None], tuple[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
-    Conexión directa al cerebro de Salomón (sin middleware de cámara/menús).
+    Conexión directa al núcleo (Cerebro de Salomón).
+    Omite middleware secundario (cámara/menús) para respuesta directa.
     """
     from mente.conexion import procesar_unificado
 
     if obtener_sesion is None:
-        raise RuntimeError("obtener_sesion requerida para call_salomon_brain")
+        raise RuntimeError("obtener_sesion requerida para execute_salomon_brain_process")
 
     sid, salomon = obtener_sesion(session_id)
     respuesta = procesar_unificado(
@@ -111,7 +121,7 @@ def call_salomon_brain(
         "audio_base64": getattr(respuesta, "audio_base64", None),
         "audio_mime": getattr(respuesta, "audio_mime", None) or "audio/mpeg",
         "tts_disponible": bool(getattr(respuesta, "tts_disponible", False)),
-        "via": "call_salomon_brain",
+        "via": "execute_salomon_brain_process",
     }
     app_state["last_result"] = {
         "exito": pack["exito"],
@@ -120,6 +130,10 @@ def call_salomon_brain(
         "at": _utc(),
     }
     return pack
+
+
+# Alias histórico
+call_salomon_brain = execute_salomon_brain_process
 
 
 def handle_central_button_click(
@@ -134,14 +148,17 @@ def handle_central_button_click(
     only_activate: bool = False,
 ) -> dict[str, Any]:
     """
-    Lógica para el botón central (IA).
+    Manejo prioritario del botón central hacia el cerebro de Salomón.
 
-    1) is_ai_active = True (bloquea otras funciones)
-    2) call_salomon_brain() si hay mensaje
-    3) finally → is_ai_active = False
+    Prioridad absoluta: is_ai_active=True → ui_layer_manager bloquea el resto.
+    Seguridad: finally siempre libera el bloqueo (salvo only_activate).
     """
-    # Prioridad: cualquier cámara/menú secundario queda rechazado por la capa de control.
-    activar(reason="central_button", session_id=session_id)
+    # Activar bloqueo de capas: ninguna otra función podrá ejecutarse
+    app_state["is_ai_active"] = True
+    app_state["reason"] = "central_button"
+    app_state["session_id"] = session_id
+    app_state["updated_at"] = _utc()
+
     result: dict[str, Any] = {
         "ok": True,
         "modo": "ia_activa",
@@ -150,10 +167,10 @@ def handle_central_button_click(
     }
     try:
         if only_activate or not (mensaje or "").strip():
-            # Solo señal de activación (el cliente mantiene el lock hasta el cierre)
             return {**result, **estado(), "brain": None}
-        # Conexión directa al motor — sin middleware de cámara/menús.
-        brain = call_salomon_brain(
+
+        # Conexión directa al núcleo — sin middleware secundario
+        brain = execute_salomon_brain_process(
             mensaje.strip(),
             session_id=session_id,
             imagen_base64=imagen_base64,
@@ -166,42 +183,71 @@ def handle_central_button_click(
         result["ok"] = bool(brain.get("exito"))
         return result
     except Exception as exc:
-        # Seguridad: el error no deja el sistema trabado en IA
         result["ok"] = False
         result["error"] = f"{type(exc).__name__}:{exc}"
         result["brain"] = None
         result["mensaje"] = "Error en el cerebro; restaurando funciones."
         return result
     finally:
-        # try...finally fundamental: desbloquea aunque falle el procesamiento.
+        # Liberar el bloqueo una vez completada la tarea (aunque falle)
         if not only_activate:
-            liberar(reason="central_button_done")
+            app_state["is_ai_active"] = False
+            app_state["reason"] = "central_button_done"
+            app_state["updated_at"] = _utc()
             result["is_ai_active"] = False
             result["restaurado"] = True
             result["mensaje_cierre"] = "Modo IA desactivado. Funciones restauradas."
 
 
-def handle_camera_or_other_functions(accion: str = "camera") -> dict[str, Any]:
+def ui_layer_manager(function_name: str = "camera") -> dict[str, Any]:
     """
-    Ejemplo para cualquier otra función de la UI.
-    Capa de control: impide activación si la IA está trabajando.
+    Capa de control para funciones secundarias (Cámara, Menús, etc.).
+
+    Si la IA está activa → bloquea cualquier otra entrada (return False semántico).
     """
+    name = (function_name or "secondary").strip() or "secondary"
     if app_state["is_ai_active"]:
+        app_state["last_blocked"] = {"function": name, "at": _utc()}
         return {
             "ok": False,
+            "allowed": False,
             "blocked": True,
-            "accion": accion,
-            "mensaje": "Acción bloqueada: la IA está en uso.",
+            "accion": name,
+            "function_name": name,
+            "mensaje": f"Acción {name} bloqueada por prioridad de IA.",
             "is_ai_active": True,
         }
+
+    # Ejecución normal si el botón central no está en uso
     return {
         "ok": True,
+        "allowed": True,
         "blocked": False,
-        "accion": accion,
-        "mensaje": "Ejecutando función secundaria...",
+        "accion": name,
+        "function_name": name,
+        "mensaje": f"Ejecutando función secundaria: {name}",
         "is_ai_active": False,
     }
 
 
-# Alias legacy usados por app.py / JS sync
+def execute_standard_feature(function_name: str) -> dict[str, Any]:
+    """Hook de feature secundaria (la UI real ejecuta el hardware en el cliente)."""
+    return {
+        "ok": True,
+        "executed": True,
+        "function_name": function_name,
+        "mensaje": f"Feature lista: {function_name}",
+    }
+
+
+def handle_camera_or_other_functions(accion: str = "camera") -> dict[str, Any]:
+    """Alias → ui_layer_manager (compatibilidad)."""
+    gate = ui_layer_manager(accion)
+    if gate.get("allowed"):
+        feat = execute_standard_feature(accion)
+        return {**gate, **feat}
+    return gate
+
+
+# Alias legacy
 _STATE = app_state

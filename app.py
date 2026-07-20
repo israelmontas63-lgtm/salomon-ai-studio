@@ -1217,10 +1217,10 @@ def api_ai_central_button(body: CentralButtonRequest) -> dict:
 
 @app.post("/api/ai/secondary")
 def api_ai_secondary(body: SecondaryActionRequest) -> dict:
-    """Capa de control: cámara/menús bloqueados si is_ai_active."""
-    from cognicion.ai_lock import handle_camera_or_other_functions
+    """ui_layer_manager: cámara/menús bloqueados si is_ai_active."""
+    from cognicion.ai_lock import ui_layer_manager
 
-    return handle_camera_or_other_functions(body.accion or "camera")
+    return ui_layer_manager(body.accion or "camera")
 
 
 @app.post("/api/process", response_model=ChatResponse)

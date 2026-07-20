@@ -87,6 +87,29 @@
   }
 
   /**
+   * ui_layer_manager(function_name) — capa de control de hardware/menús.
+   * return false si la IA tiene prioridad (bloquea la acción).
+   */
+  function uiLayerManager(functionName) {
+    if (is_ai_active) {
+      try {
+        console.info(
+          "[SalomonAILock] Acción " +
+            (functionName || "secondary") +
+            " bloqueada por prioridad de IA."
+        );
+      } catch (_) {}
+      emit({
+        action: "blocked",
+        function_name: functionName || "secondary",
+        is_ai_active: true,
+      });
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Conexión directa al cerebro — sin middleware de cámara/settings/Aa.
    */
   async function callBrainDirect(payload) {
@@ -161,8 +184,11 @@
     release: release,
     isActive: isActive,
     canUseSecondary: canUseSecondary,
+    uiLayerManager: uiLayerManager,
     callBrainDirect: callBrainDirect,
-    /** alias pedido en especificación */
+    /** aliases de la especificación */
     isAiActive: isActive,
+    handleCentralButtonClick: callBrainDirect,
+    executeSalomonBrainProcess: callBrainDirect,
   };
 })();

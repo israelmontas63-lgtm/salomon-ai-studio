@@ -72,8 +72,8 @@
    */
   async function enviarMensaje() {
     if (document.body.classList.contains("control-layer-open")) return;
-    // Mientras el botón IA tiene el lock, no interferir por el formulario Aa
-    if (window.SalomonAILock && window.SalomonAILock.isActive()) return;
+    // ui_layer_manager: chat Aa bloqueado mientras IA central procesa
+    if (window.SalomonAILock && !window.SalomonAILock.uiLayerManager("chat_form")) return;
     if (busy) return;
 
     var input = inputEl();
