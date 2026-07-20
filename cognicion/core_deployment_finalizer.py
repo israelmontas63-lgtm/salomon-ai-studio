@@ -164,6 +164,18 @@ class CoolsolProDeployment:
         except Exception as exc:
             self._fail("Base de Datos", str(exc))
 
+        # 7) Unificación de canales (sin fugas)
+        try:
+            from cognicion.core_flow_verification import run_channel_audit
+
+            audit = run_channel_audit()
+            if audit.get("ok"):
+                self._ok("ChannelUnificationAuditor", audit.get("status", "UNIFIED"))
+            else:
+                self._fail("ChannelUnificationAuditor", audit.get("message", "drift"))
+        except Exception as exc:
+            self._fail("ChannelUnificationAuditor", f"{type(exc).__name__}:{exc}")
+
         for row in self.checks:
             mark = "VERIFICADO" if row["ok"] else "FALLA"
             print(f"[{mark}] -> {row['component']}" + (f" ({row['detail']})" if row["detail"] else ""))

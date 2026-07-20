@@ -107,6 +107,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/ai/secondary",
         "/api/ai/core-state",
         "/api/deploy/finalize",
+        "/api/deploy/channels",
         "/api/motor/estado",
         "/api/chat/nuevo",
         "/api/proveedores",
@@ -1267,6 +1268,14 @@ def api_deploy_finalize() -> dict:
     from cognicion.core_deployment_finalizer import run_finalizer
 
     return run_finalizer()
+
+
+@app.get("/api/deploy/channels")
+def api_deploy_channels() -> dict:
+    """Auditoría de unificación de canales → núcleo Salomón."""
+    from cognicion.core_flow_verification import run_channel_audit
+
+    return run_channel_audit()
 
 
 @app.post("/api/process", response_model=ChatResponse)
