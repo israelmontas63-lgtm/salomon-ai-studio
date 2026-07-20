@@ -20,21 +20,27 @@ class LogicEngine:
 
     @classmethod
     def permite_web(cls, mensaje: str) -> bool:
-        from config.memory_cortex import pedido_busqueda_explicito, web_agentes_autorizados
+        from config.memory_cortex import pedido_busqueda_explicito
 
         if not cls._locked:
             return True
         if pedido_busqueda_explicito(mensaje):
             return True
-        # Despliegue neuronal: agentes autorizados + necesidad real de búsqueda
-        if web_agentes_autorizados():
+        # Motor neuronal maestro: vacíos factuales → enjambre autónomo
+        try:
+            from cognicion.core_salomon_master_neural_engine import obtener_master_neural
+
+            return obtener_master_neural().should_search_web(mensaje)
+        except Exception:
             try:
+                from config.memory_cortex import web_agentes_autorizados
                 from cognicion.busqueda.agente import necesita_busqueda_web
 
-                return necesita_busqueda_web(mensaje)
+                if web_agentes_autorizados():
+                    return necesita_busqueda_web(mensaje)
             except Exception:
-                return True
-        return False
+                pass
+            return False
 
     @classmethod
     def estado(cls) -> dict[str, Any]:
@@ -42,11 +48,8 @@ class LogicEngine:
 
         return {
             "locked": cls._locked,
-            "web_policy": (
-                "agentes_autorizados+Busca en la web sobre…"
-                if web_agentes_autorizados()
-                else "Busca en la web sobre…"
-            ),
+            "web_policy": "master_neural_auto_swarm+Busca en la web sobre…",
             "web_agentes": web_agentes_autorizados(),
             "razonamiento_primero": True,
+            "master_neural": True,
         }

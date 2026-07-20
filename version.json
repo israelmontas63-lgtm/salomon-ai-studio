@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-20T13:40:00Z",
-  "timestamp": 1753015200,
-  "version": "109.4.0",
+  "timestamp_iso": "2026-07-20T14:00:00Z",
+  "timestamp": 1753016400,
+  "version": "110.0.0",
   "channel": "main",
-  "label": "chat-history-drawer",
+  "label": "master-neural-engine",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "CHAT_HISTORY_DRAWER",
-  "notes": "v109.4.0 - Herramientas→Chat: recientes/guardados, persistencia SQLite+local, hidratar historial. Incluye puente voz-visión."
+  "protocol": "MASTER_NEURAL_ENGINE",
+  "notes": "v110.0.0 - Motor neuronal maestro: audit APIs/memoria, enjambre web paralelo ante vacíos, generación de imagen multimodal."
 }

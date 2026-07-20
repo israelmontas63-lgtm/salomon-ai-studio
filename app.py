@@ -114,6 +114,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/deploy/channels",
         "/api/deploy/neural-link",
         "/api/deploy/continuation",
+        "/api/neural/master",
         "/api/deploy/stream",
         "/api/motor/estado",
         "/api/chat/nuevo",
@@ -1309,6 +1310,13 @@ def api_deploy_continuation() -> dict:
     )
     return report
 
+
+@app.get("/api/neural/master")
+def api_neural_master(session_id: str | None = None) -> dict:
+    """Motor neuronal maestro: auditoría APIs + memoria + capacidad de enjambre."""
+    from cognicion.core_salomon_master_neural_engine import run_master_neural_audit
+
+    return run_master_neural_audit(session_id)
 
 @app.get("/api/deploy/stream")
 async def api_deploy_stream():

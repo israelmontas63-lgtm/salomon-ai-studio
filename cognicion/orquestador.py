@@ -223,6 +223,45 @@ class MotorCognicion:
             except Exception as exc:
                 meta["cognicion"]["busqueda_web_error"] = type(exc).__name__
 
+        # Motor neuronal maestro: enjambre paralelo + imagen multimodal
+        try:
+            from cognicion.core_salomon_master_neural_engine import obtener_master_neural
+
+            hechos = ""
+            try:
+                hechos = str(
+                    ((meta.get("cognicion") or {}).get("memoria") or {}).get("hechos")
+                    or ""
+                )
+            except Exception:
+                hechos = ""
+            rag_empty = not bool((meta.get("cognicion") or {}).get("rag_usado"))
+            neural = obtener_master_neural().enrich_turn(
+                entrada,
+                session_id=self.session_id,
+                hechos_personales=hechos,
+                rag_empty=rag_empty,
+            )
+            for bloque_n in neural.get("bloques") or []:
+                if bloque_n:
+                    bloques.append(bloque_n)
+            if neural.get("ok"):
+                meta["cognicion"]["master_neural"] = {
+                    "swarm": bool((neural.get("swarm") or {}).get("ok")),
+                    "image": bool((neural.get("image") or {}).get("ok")),
+                    "via": "core_salomon_master_neural_engine",
+                }
+                if (neural.get("swarm") or {}).get("ok"):
+                    meta["busqueda_consultada"] = True
+                    meta["cognicion"]["memory_cortex"] = "master_neural_swarm"
+                if (neural.get("image") or {}).get("url"):
+                    meta["cognicion"]["imagen_generada"] = {
+                        "url": neural["image"].get("url"),
+                        "via": neural["image"].get("via"),
+                    }
+        except Exception as exc:
+            meta["cognicion"]["master_neural_error"] = type(exc).__name__
+
         _, resultados = consultar_conectores(entrada, lat=lat, lon=lon)
         for resultado in resultados:
             bloques.append(resultado.contexto)

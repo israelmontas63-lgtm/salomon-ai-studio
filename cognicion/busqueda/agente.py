@@ -35,7 +35,7 @@ def necesita_busqueda_web(
     respuesta_previa: str | None = None,
     forzar: bool = False,
 ) -> bool:
-    """Activa web SOLO con pedido explícito de Israel (Memory Cortex)."""
+    """Web: pedido explícito, o enjambre autónomo ante vacío factual (BUSQUEDA_WEB_AUTO)."""
     from cognicion.busqueda.pedido_explicito import (
         es_saludo_o_charla_simple,
         pedido_busqueda_explicito,
@@ -43,16 +43,26 @@ def necesita_busqueda_web(
 
     if forzar:
         return True
-    # Saludos / charla: NUNCA salir a internet (ni por cuota LLM)
     if es_saludo_o_charla_simple(mensaje):
         return False
     if pedido_busqueda_explicito(mensaje):
         return True
-    # Cuota LLM agotada: solo si ya hubo pedido explícito en el mensaje
-    # (no inventar búsquedas de películas / Wikipedia)
+    # Respuesta previa vacía / límite → reintentar con web si auto
+    if respuesta_previa and respuesta_parece_limite_o_vacia(respuesta_previa):
+        try:
+            from settings import BUSQUEDA_WEB_AUTO
+
+            if BUSQUEDA_WEB_AUTO:
+                return True
+        except Exception:
+            pass
     _ = llm_limitado
-    _ = respuesta_previa
-    return False
+    try:
+        from cognicion.core_salomon_master_neural_engine import obtener_master_neural
+
+        return obtener_master_neural().should_search_web(mensaje)
+    except Exception:
+        return False
 
 
 def respuesta_parece_limite_o_vacia(texto: str) -> bool:
