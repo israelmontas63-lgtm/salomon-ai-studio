@@ -1,116 +1,267 @@
 /**
- * Salomón AI — Smart Button (control directo del cerebro + state lock)
- * IDLE: activa is_ai_active → mic → POST /api/ai-process (sin middleware UI).
- * CÁMARA: el gatillo sigue en camera_logic (capture); AI lock bloquea cámara al activarse.
+ * Salomón AI — Smart Button + Motor de Gestos Futurista (Hold & Stream)
+ * Tap < 600ms → Dictado | Hold ≥ 600ms → IA Conversacional | Tap activo → Neutralizar
+ * Máquina de estados finitos; sin debounce de doble toque.
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
   "use strict";
 
+  var HOLD_MS = 600;
+  var States = Object.freeze({
+    IDLE: "IDLE",
+    PRESSING: "PRESSING",
+    DICTATION: "DICTATION",
+    CONVERSATIONAL: "CONVERSATIONAL",
+    PROCESSING: "PROCESSING",
+  });
+
   function lock() {
     return window.SalomonAILock || null;
+  }
+
+  function haptic(pattern) {
+    try {
+      if (navigator.vibrate) navigator.vibrate(pattern || 12);
+    } catch (_) {}
   }
 
   class SmartButton {
     constructor(root) {
       this.root = root;
+      this.state = States.IDLE;
       this.recognition = null;
-      this.root.addEventListener("click", (e) => this.onClick(e));
+      this._holdTimer = null;
+      this._pressStart = 0;
+      this._holdFired = false;
+      this._pointerId = null;
+      this._ignoreClickUntil = 0;
+
+      // Gestos: pointer (zero-collision); click solo como fallback teclado
+      this.root.addEventListener("pointerdown", (e) => this._onPointerDown(e));
+      this.root.addEventListener("pointerup", (e) => this._onPointerUp(e));
+      this.root.addEventListener("pointercancel", (e) => this._onPointerCancel(e));
+      this.root.addEventListener("pointerleave", (e) => {
+        if (this.state === States.PRESSING && e.pointerType === "mouse") {
+          this._onPointerCancel(e);
+        }
+      });
+      this.root.addEventListener("click", (e) => this._onClickFallback(e));
+      this.root.addEventListener("contextmenu", (e) => e.preventDefault());
+
       window.addEventListener("salomon:ai-lock", (ev) => {
         var d = (ev && ev.detail) || {};
         if (d.action === "release") {
-          this.root.classList.remove("is-ai-locked");
+          this.root.classList.remove("is-ai-locked", "is-holographic", "is-conversational");
+          if (this.state === States.CONVERSATIONAL || this.state === States.DICTATION) {
+            this._setState(States.IDLE);
+          }
         }
         if (d.action === "activate") {
           this.root.classList.add("is-ai-locked");
         }
       });
+
+      this.root.setAttribute("data-gesture-engine", "futuristic-hold-stream");
+      this.root.setAttribute("data-hold-ms", String(HOLD_MS));
+      window.SalomonGestureEngine = {
+        HOLD_MS: HOLD_MS,
+        states: States,
+        getState: () => this.state,
+      };
     }
 
-    onClick(e) {
-      // Control Layer abierto → silencio
-      if (document.body.classList.contains("control-layer-open")) return;
-      if (window.SalomonSettings && window.SalomonSettings.isOpen()) return;
+    _setState(next) {
+      this.state = next;
+      this.root.setAttribute("data-gesture-state", next);
+      this.root.classList.toggle("is-pressing", next === States.PRESSING);
+      this.root.classList.toggle(
+        "is-dictation",
+        next === States.DICTATION
+      );
+      this.root.classList.toggle(
+        "is-conversational",
+        next === States.CONVERSATIONAL
+      );
+      this.root.classList.toggle(
+        "is-holographic",
+        next === States.CONVERSATIONAL || next === States.PRESSING
+      );
+      this.root.classList.toggle(
+        "is-processing",
+        next === States.PROCESSING
+      );
+      window.dispatchEvent(
+        new CustomEvent("salomon:gesture-state", {
+          detail: { state: next, holdMs: HOLD_MS },
+        })
+      );
+    }
 
-      // Cámara activa: el shutter lo maneja camera_logic (capture); no IA
-      if (window.SalomonUI && window.SalomonUI.isMicBlocked()) return;
-      if (window.SalomonCamera && window.SalomonCamera.isActive()) return;
+    _blockedByUi() {
+      if (document.body.classList.contains("control-layer-open")) return true;
+      if (window.SalomonSettings && window.SalomonSettings.isOpen()) return true;
+      if (window.SalomonUI && window.SalomonUI.isMicBlocked()) return true;
+      // Cámara activa: el centro es shutter (camera_logic capture phase)
+      if (window.SalomonCamera && window.SalomonCamera.isActive()) return true;
+      return false;
+    }
+
+    _onPointerDown(e) {
+      if (this._blockedByUi()) return;
+      if (e.button != null && e.button !== 0) return;
+
+      // Tap durante modo activo → Neutralizador Maestro
+      if (
+        this.state === States.DICTATION ||
+        this.state === States.CONVERSATIONAL ||
+        this.state === States.PROCESSING ||
+        (lock() && lock().isActive() && this.state !== States.IDLE && this.state !== States.PRESSING)
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.neutralize("tap_while_active");
+        this._ignoreClickUntil = Date.now() + 400;
+        return;
+      }
+
+      if (this.state !== States.IDLE) return;
 
       e.preventDefault();
-      e.stopPropagation();
-
-      var L = lock();
-      // Segundo toque con IA activa → cierre / restauración
-      if (L && L.isActive() && this.recognition) {
-        this._stopMic();
-        L.release("smart_button_cancel");
-        return;
-      }
-      if (L && L.isActive() && !this.recognition) {
-        L.release("smart_button_close");
-        this.root.classList.remove("is-active", "is-listening", "is-ai-locked");
-        return;
-      }
-
-      // Prioridad: activar state lock de inmediato
-      if (L) L.activate("smart_button");
-      this.root.classList.add("is-ai-locked", "is-active");
-      this._notify("Modo IA exclusivo: cámara y menús bloqueados. Habla ahora…");
-      this.toggleMic();
-    }
-
-    toggleMic() {
-      if (this.recognition) {
-        this._stopMic();
-        var L = lock();
-        if (L) L.release("mic_stop");
-        return;
-      }
-      this._startMic();
-    }
-
-    _startMic() {
-      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) {
-        // Sin mic: aún así priorizamos IA — si hay texto en input, cerebro directo
-        this._sendFromInputOrNotify();
-        return;
-      }
       try {
-        this.recognition = new SR();
-        this.recognition.lang = "es-DO";
-        this.recognition.interimResults = false;
-        this.recognition.continuous = false;
-        this.root.classList.add("is-listening", "is-active");
-        this.recognition.onresult = (ev) => {
-          var text =
-            (ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript) || "";
-          this._stopMic(true);
-          if (text) {
-            this._callBrain(text);
-          } else {
-            var L = lock();
-            if (L) L.release("empty_transcript");
-          }
-        };
-        this.recognition.onerror = () => {
-          this._stopMic(true);
-          var L = lock();
-          if (L) L.release("mic_error");
-        };
-        this.recognition.onend = () => {
-          if (this.recognition) this._stopMic(true);
-        };
-        this.recognition.start();
-      } catch (_) {
-        this._notify("No se pudo iniciar el micrófono.");
-        this._stopMic(true);
-        var L2 = lock();
-        if (L2) L2.release("mic_exception");
+        this.root.setPointerCapture(e.pointerId);
+      } catch (_) {}
+      this._pointerId = e.pointerId;
+      this._pressStart = Date.now();
+      this._holdFired = false;
+      this._setState(States.PRESSING);
+      this.root.classList.add("is-active");
+      haptic(8);
+
+      clearTimeout(this._holdTimer);
+      this._holdTimer = setTimeout(() => {
+        this._holdTimer = null;
+        if (this.state !== States.PRESSING) return;
+        this._holdFired = true;
+        haptic([18, 40, 18]);
+        this._enterConversational();
+      }, HOLD_MS);
+    }
+
+    _onPointerUp(e) {
+      if (this._pointerId != null && e.pointerId !== this._pointerId) return;
+      this._pointerId = null;
+      try {
+        this.root.releasePointerCapture(e.pointerId);
+      } catch (_) {}
+
+      clearTimeout(this._holdTimer);
+      this._holdTimer = null;
+
+      if (this.state === States.PRESSING && !this._holdFired) {
+        // Toque rápido → Dictado
+        e.preventDefault();
+        this._ignoreClickUntil = Date.now() + 400;
+        this._enterDictation();
+        return;
+      }
+
+      // Hold ya disparó conversacional: soltar no cancela (stream sigue)
+      if (this.state === States.CONVERSATIONAL) {
+        this._ignoreClickUntil = Date.now() + 400;
       }
     }
 
-    _stopMic(keepLock) {
+    _onPointerCancel(e) {
+      if (this._pointerId != null && e.pointerId !== this._pointerId) return;
+      clearTimeout(this._holdTimer);
+      this._holdTimer = null;
+      this._pointerId = null;
+      if (this.state === States.PRESSING && !this._holdFired) {
+        this.root.classList.remove("is-active", "is-pressing", "is-holographic");
+        this._setState(States.IDLE);
+      }
+    }
+
+    _onClickFallback(e) {
+      // Evita doble disparo tras pointer; permite Enter/Space accesible
+      if (Date.now() < this._ignoreClickUntil) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (this._blockedByUi()) return;
+      if (e.detail === 0) {
+        // Activación por teclado
+        e.preventDefault();
+        if (
+          this.state === States.DICTATION ||
+          this.state === States.CONVERSATIONAL ||
+          (lock() && lock().isActive())
+        ) {
+          this.neutralize("keyboard_tap");
+        } else if (this.state === States.IDLE) {
+          this._enterDictation();
+        }
+      }
+    }
+
+    /** Neutralizador: cierra dictado / conversacional / lock → baseline */
+    neutralize(reason) {
+      haptic(10);
+      this._stopMic(false);
+      var L = lock();
+      if (L && L.isActive()) L.release(reason || "gesture_neutralize");
+      this.root.classList.remove(
+        "is-active",
+        "is-listening",
+        "is-ai-locked",
+        "is-holographic",
+        "is-dictation",
+        "is-conversational",
+        "is-pressing",
+        "is-processing"
+      );
+      this._setState(States.IDLE);
+      window.dispatchEvent(
+        new CustomEvent("salomon:gesture-neutralized", {
+          detail: { reason: reason || "tap" },
+        })
+      );
+    }
+
+    _enterDictation() {
+      var L = lock();
+      if (L) L.activate("gesture_dictation");
+      this._setState(States.DICTATION);
+      this.root.classList.add("is-ai-locked", "is-active", "is-listening");
+      this.root.classList.remove("is-holographic", "is-conversational");
+      this._notify("Dictado: habla ahora (toque rápido para cancelar)…");
+      this._startMic({ continuous: false, mode: "dictation" });
+    }
+
+    _enterConversational() {
+      var L = lock();
+      if (L) L.activate("gesture_conversational");
+      this._setState(States.CONVERSATIONAL);
+      this.root.classList.add(
+        "is-ai-locked",
+        "is-active",
+        "is-listening",
+        "is-holographic",
+        "is-conversational"
+      );
+      this._notify(
+        "Modo IA Conversacional activo. Habla con fluidez — un toque para salir."
+      );
+      this._startMic({ continuous: true, mode: "conversational" });
+    }
+
+    _startMic(opts) {
+      opts = opts || {};
+      var continuous = !!opts.continuous;
+      var mode = opts.mode || "dictation";
+
       if (this.recognition) {
         try {
           this.recognition.onend = null;
@@ -118,13 +269,108 @@
         } catch (_) {}
         this.recognition = null;
       }
-      this.root.classList.remove("is-listening");
-      if (!keepLock) {
-        this.root.classList.remove("is-active", "is-ai-locked");
+
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        this._sendFromInputOrNotify();
+        return;
+      }
+
+      try {
+        this.recognition = new SR();
+        this.recognition.lang = "es-DO";
+        this.recognition.interimResults = continuous;
+        this.recognition.continuous = continuous;
+        this.root.classList.add("is-listening", "is-active");
+
+        this.recognition.onresult = (ev) => {
+          var text = "";
+          for (var i = ev.resultIndex; i < ev.results.length; i++) {
+            if (ev.results[i].isFinal) {
+              text += (ev.results[i][0] && ev.results[i][0].transcript) || "";
+            }
+          }
+          text = (text || "").trim();
+          if (!text) return;
+
+          if (mode === "dictation") {
+            this._stopMic(true);
+            this._callBrain(text, { mode: "dictation" });
+          } else {
+            // Conversacional: cada frase final va al cerebro; mic sigue
+            this._callBrain(text, { mode: "conversational", keepMic: true });
+          }
+        };
+
+        this.recognition.onerror = () => {
+          if (mode === "dictation") {
+            this._stopMic(true);
+            var L = lock();
+            if (L) L.release("mic_error");
+            this._setState(States.IDLE);
+            this.root.classList.remove("is-active", "is-ai-locked", "is-listening");
+          }
+          // En conversacional, intentar reiniciar
+          if (mode === "conversational" && this.state === States.CONVERSATIONAL) {
+            setTimeout(() => {
+              if (this.state === States.CONVERSATIONAL) {
+                this._startMic({ continuous: true, mode: "conversational" });
+              }
+            }, 350);
+          }
+        };
+
+        this.recognition.onend = () => {
+          if (mode === "conversational" && this.state === States.CONVERSATIONAL) {
+            // Reabrir stream si el motor cortó solo
+            try {
+              if (this.recognition) this.recognition.start();
+            } catch (_) {
+              this.recognition = null;
+              this._startMic({ continuous: true, mode: "conversational" });
+            }
+            return;
+          }
+          if (this.recognition) this._stopMic(true);
+        };
+
+        this.recognition.start();
+      } catch (_) {
+        this._notify("No se pudo iniciar el micrófono.");
+        this._stopMic(true);
+        var L2 = lock();
+        if (L2) L2.release("mic_exception");
+        this._setState(States.IDLE);
       }
     }
 
-    async _callBrain(text) {
+    _stopMic(keepLock) {
+      if (this.recognition) {
+        try {
+          this.recognition.onend = null;
+          this.recognition.onresult = null;
+          this.recognition.onerror = null;
+          this.recognition.stop();
+        } catch (_) {}
+        this.recognition = null;
+      }
+      this.root.classList.remove("is-listening");
+      if (!keepLock) {
+        this.root.classList.remove(
+          "is-active",
+          "is-ai-locked",
+          "is-holographic",
+          "is-dictation",
+          "is-conversational",
+          "is-pressing"
+        );
+        if (this.state !== States.PROCESSING) this._setState(States.IDLE);
+      }
+    }
+
+    async _callBrain(text, opts) {
+      opts = opts || {};
+      var keepMic = !!opts.keepMic;
       var L = lock();
       var chat = document.getElementById("chat");
       if (chat) {
@@ -141,14 +387,14 @@
         chat.scrollTop = chat.scrollHeight;
       }
 
-      // Gatillo verbal Modo Visión — abre cámara + elevación sin tocar Back
+      var prevState = this.state;
+      if (!keepMic) this._setState(States.PROCESSING);
+
       var VT = window.SalomonVisionModeTrigger;
       if (VT && VT.matches && VT.matches(text)) {
         document.body.classList.add("salomon-processing");
         var engaged = await VT.engage({ source: "smart_button_voice" });
         document.body.classList.remove("salomon-processing");
-        this.root.classList.remove("is-active", "is-listening", "is-ai-locked");
-        if (L && L.release) L.release("vision_mode_trigger");
         if (chat) {
           var typingVis = chat.querySelector(".bubble.typing");
           if (typingVis) typingVis.remove();
@@ -160,6 +406,9 @@
           chat.appendChild(botVis);
           chat.scrollTop = chat.scrollHeight;
         }
+        if (!keepMic) {
+          this.neutralize("vision_mode_trigger");
+        }
         return;
       }
 
@@ -169,12 +418,15 @@
         (window.trigger_ai_core || (L && L.trigger_ai_core) || (L && L.callBrainDirect))
           ? await (window.trigger_ai_core || L.trigger_ai_core || L.callBrainDirect).call(
               null,
-              { mensaje: text, reason: "smart_button_voice" }
+              {
+                mensaje: text,
+                reason: opts.mode === "conversational" ? "gesture_hold_ai" : "gesture_tap_dictation",
+                keep_lock: keepMic,
+              }
             )
           : await this._fallbackFetch(text);
 
       document.body.classList.remove("salomon-processing");
-      this.root.classList.remove("is-active", "is-listening", "is-ai-locked");
 
       var data = (result && result.data) || {};
       var meta = data.metadata || {};
@@ -195,7 +447,6 @@
         chat.scrollTop = chat.scrollHeight;
       }
 
-      // Reproducir audio si el cerebro lo envió
       if (result && result.data && result.data.audio_base64) {
         try {
           var mime = result.data.audio_mime || "audio/mpeg";
@@ -203,6 +454,31 @@
           audio.play().catch(function () {});
         } catch (_) {}
       }
+
+      if (keepMic && prevState === States.CONVERSATIONAL) {
+        this._setState(States.CONVERSATIONAL);
+        this.root.classList.add(
+          "is-ai-locked",
+          "is-active",
+          "is-listening",
+          "is-holographic",
+          "is-conversational"
+        );
+        return;
+      }
+
+      // Dictado: vuelve a baseline
+      this.root.classList.remove(
+        "is-active",
+        "is-listening",
+        "is-ai-locked",
+        "is-holographic",
+        "is-dictation",
+        "is-conversational",
+        "is-processing"
+      );
+      this._setState(States.IDLE);
+      if (L && L.isActive() && !keepMic) L.release("dictation_done");
     }
 
     async _fallbackFetch(text) {
@@ -231,13 +507,11 @@
       var text = (input && input.value ? input.value : "").trim();
       if (text) {
         if (input) input.value = "";
-        this._callBrain(text);
+        this._callBrain(text, { mode: "dictation" });
         return;
       }
       this._notify("Micrófono no disponible. Escribe con Aa o usa un navegador con voz.");
-      var L = lock();
-      if (L) L.release("no_speech_api");
-      this.root.classList.remove("is-active", "is-ai-locked");
+      this.neutralize("no_speech_api");
     }
 
     _notify(msg) {
@@ -248,6 +522,15 @@
       el.textContent = msg;
       chat.appendChild(el);
       chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Compat: APIs previas
+    onClick(e) {
+      this._onClickFallback(e);
+    }
+    toggleMic() {
+      if (this.recognition) this.neutralize("toggle_mic");
+      else this._enterDictation();
     }
   }
 

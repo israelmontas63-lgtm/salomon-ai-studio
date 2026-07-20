@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-20T13:00:00Z",
-  "timestamp": 1753012800,
-  "version": "109.0.0",
+  "timestamp_iso": "2026-07-20T13:10:00Z",
+  "timestamp": 1753013400,
+  "version": "109.1.0",
   "channel": "main",
-  "label": "neural-link-auditor",
+  "label": "futuristic-gesture-hold-stream",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "NEURAL_LINK_AUDIT",
-  "notes": "v109.0.0 - Auditor enlace neuronal UI-Vision-Brain; contrato macro/micro alineado; prompts anti-divagacion; /api/deploy/neural-link."
+  "protocol": "FUTURISTIC_GESTURE_ENGINE",
+  "notes": "v109.1.0 - Smart button: tap=dictado, hold>600ms=IA conversacional holographica, tap activo=neutralizar."
 }
