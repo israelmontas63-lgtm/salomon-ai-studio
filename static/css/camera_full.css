@@ -82,7 +82,7 @@ body.vision-immersive #side-aa {
   pointer-events: none !important;
 }
 
-/* Cluster cámara: wrap relativo; Jilo se superpone (no flex lateral) */
+/* Cluster cámara: wrap relativo; Giro se despliega arriba al activar */
 body.vision-immersive .control-side:has(#cam-wrap),
 body.vision-immersive #cam-wrap {
   display: grid !important;
@@ -93,6 +93,7 @@ body.vision-immersive #cam-wrap {
 body.vision-immersive #cam-wrap {
   width: 52px;
   height: 52px;
+  overflow: visible;
 }
 
 body.vision-immersive #btn-cam {
@@ -143,35 +144,38 @@ body.vision-immersive #side-aa {
   justify-self: end;
 }
 
-/* Jilo: overlay absoluto sobre esquina superior derecha de la cámara */
+/* Giro: despliegue vertical hacia arriba (~18px / 5mm), mismo eje X */
 body.vision-immersive .btn-flip,
 body.vision-immersive #btn-flip {
   position: absolute !important;
-  top: -12px !important;
-  right: -8px !important;
-  left: auto !important;
-  bottom: auto !important;
-  transform: none !important;
-  width: 32px;
-  height: 32px;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  z-index: 10;
+  left: 50% !important;
+  bottom: calc(100% + 18px) !important;
+  top: auto !important;
+  right: auto !important;
+  width: 40px;
+  height: 40px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 15;
   margin: 0 !important;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 2px solid #d4af37;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transform: translateX(-50%) translateY(8px) scale(0.75) !important;
+}
+
+body.vision-immersive .cam-wrap.is-active .btn-flip,
+body.vision-immersive .cam-wrap.is-active #btn-flip {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
 }
 
 body.vision-immersive .btn-flip img {
-  width: 16px;
-  height: 16px;
-}
-
-body.vision-immersive .cam-wrap.is-active .btn-flip {
-  transform: none !important;
+  width: 18px;
+  height: 18px;
 }
 
 /* Badge ojos: más discreto en inmersivo */

@@ -1,10 +1,10 @@
 {
   "timestamp_iso": "2026-07-20T02:25:00Z",
   "timestamp": 1752973500,
-  "version": "108.2.0",
+  "version": "108.3.0",
   "channel": "main",
-  "label": "jilo-camera-absolute-overlap",
+  "label": "giro-vertical-deploy-18px",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "JILO_TOP_RIGHT_OVERLAY",
-  "notes": "v108.2.0 - Jilo/flip absolute overlay top:-12px right:-8px z-index:10 sobre botón cámara."
+  "protocol": "GIRO_UPWARD_DEPLOY",
+  "notes": "v108.3.0 - Giro se despliega hacia arriba (~18px/5mm) al tocar cámara; mismo eje horizontal."
 }

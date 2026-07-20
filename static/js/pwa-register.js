@@ -10,7 +10,7 @@
   }
 
   // Bump con cada release de CACHE en service-worker.js
-  var SW_URL = "/service-worker.js?v=31";
+  var SW_URL = "/service-worker.js?v=32";
 
   function registerSw() {
     navigator.serviceWorker
