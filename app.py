@@ -63,6 +63,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/salud",
         "/api/salud/detalle",
         "/api/version",
+        "/api/llm/status",
         "/api/bca/estado",
         "/api/tunel/estado",
         "/api/cognicion/vdcp/estado",

@@ -166,27 +166,36 @@ class MotorCognicion:
         except Exception as exc:
             meta["cognicion"]["tiempo_local_error"] = type(exc).__name__
 
-        # Cerebro Cognitivo Dual — claridad + lecciones episódicas + crítico
+        # Cerebro Cognitivo Dual — claridad + lecciones (omitir en Free/light si mensaje corto)
+        _skip_dual = False
         try:
-            from cognicion.cognitivo import ciclo_pre_tarea, registrar_correccion
+            from settings import BOOT_LIGHT, RENDER_FREE_TIER
 
-            pre = ciclo_pre_tarea(entrada, session_id=self.session_id)
-            meta["cognicion"]["dual"] = {
-                "deseo": (pre.get("claridad") or {}).get("deseo"),
-                "intencion_central": (pre.get("claridad") or {}).get("intencion_central"),
-                "viable": (pre.get("critico") or {}).get("viable"),
-                "lecciones_n": len(pre.get("lecciones") or []),
-            }
-            if pre.get("bloque_interno"):
-                bloques.append(pre["bloque_interno"])
-            if pre.get("es_correccion"):
-                apr = registrar_correccion(entrada, session_id=self.session_id)
-                meta["cognicion"]["aprendizaje_error"] = apr
-                if apr.get("mensaje_israel"):
-                    meta["cognicion"]["frase_aprendizaje"] = apr.get("frase")
-        except Exception as exc:
-            meta["cognicion"]["dual_error"] = type(exc).__name__
+            _skip_dual = bool(BOOT_LIGHT or RENDER_FREE_TIER) and len((entrada or "").strip()) < 180
+        except Exception:
+            _skip_dual = len((entrada or "").strip()) < 120
+        if not _skip_dual:
+            try:
+                from cognicion.cognitivo import ciclo_pre_tarea, registrar_correccion
 
+                pre = ciclo_pre_tarea(entrada, session_id=self.session_id)
+                meta["cognicion"]["dual"] = {
+                    "deseo": (pre.get("claridad") or {}).get("deseo"),
+                    "intencion_central": (pre.get("claridad") or {}).get("intencion_central"),
+                    "viable": (pre.get("critico") or {}).get("viable"),
+                    "lecciones_n": len(pre.get("lecciones") or []),
+                }
+                if pre.get("bloque_interno"):
+                    bloques.append(pre["bloque_interno"])
+                if pre.get("es_correccion"):
+                    apr = registrar_correccion(entrada, session_id=self.session_id)
+                    meta["cognicion"]["aprendizaje_error"] = apr
+                    if apr.get("mensaje_israel"):
+                        meta["cognicion"]["frase_aprendizaje"] = apr.get("frase")
+            except Exception as exc:
+                meta["cognicion"]["dual_error"] = type(exc).__name__
+        else:
+            meta["cognicion"]["dual_skipped"] = "boot_light_short"
         if plan.usar_rag:
             # Memoria unificada (inmediata + personal + RAG + JSON de sesión)
             ctx_mem, meta_mem = self._memory.contexto_para_turno(entrada)

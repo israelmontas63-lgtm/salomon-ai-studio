@@ -29,8 +29,28 @@ from cognicion.respuesta_local import respuesta_local_chat
 _log = obtener_logger("llm")
 _ultimo_uso: dict[str, object] = {}
 
-# Tope duro por llamada (ms) — deja margen al proxy Render (~30s)
-_LLM_HTTP_TIMEOUT_MS = int(os.getenv("LLM_HTTP_TIMEOUT_MS", "18000") or "18000")
+# Tope duro por llamada (ms). Free Tier Render: corto para no matar el proxy (~30s).
+_render_free = os.getenv("RENDER_FREE_TIER", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+_LLM_HTTP_TIMEOUT_MS = int(
+    os.getenv(
+        "LLM_HTTP_TIMEOUT_MS",
+        "8000" if _render_free else "20000",
+    )
+    or ("8000" if _render_free else "20000")
+)
+# Cuántos modelos Gemini probar (1 en Free = evita 18s×N)
+_LLM_MAX_MODELS = int(
+    os.getenv("LLM_MAX_MODELS", "1" if _render_free else "3") or "1"
+)
+# Presupuesto total de la cascada cloud (s) antes de forzar local
+_LLM_TOTAL_BUDGET_S = float(
+    os.getenv("LLM_TOTAL_BUDGET_S", "16" if _render_free else "45") or "16"
+)
 
 
 def _env_key(*names: str) -> str:
@@ -92,6 +112,8 @@ def estado_llm() -> dict[str, Any]:
         "fallback": bool(LLM_FALLBACK),
         "local_fallback": bool(LLM_LOCAL_FALLBACK),
         "timeout_ms": _LLM_HTTP_TIMEOUT_MS,
+        "max_models": _LLM_MAX_MODELS,
+        "budget_s": _LLM_TOTAL_BUDGET_S,
         "keys": {
             "gemini": bool(_env_key("GEMINI_API_KEY")),
             "openai": bool(_env_key("OPENAI_API_KEY")),
@@ -353,13 +375,18 @@ class GeminiProvider:
 
     def _modelos_a_probar(self, model_name: str | None) -> list[str]:
         principal = model_name or GEMINI_MODEL
+        # Free Tier: preferir lite si no hay override (más rápido, menos Error 49)
+        if _render_free and not model_name:
+            lite = "gemini-2.0-flash-lite"
+            if lite not in (principal or ""):
+                principal = lite
         vistos: set[str] = set()
         orden: list[str] = []
         for modelo in [principal, *GEMINI_MODELOS_RESPALDO]:
             if modelo and modelo not in vistos:
                 vistos.add(modelo)
                 orden.append(modelo)
-        return orden
+        return orden[: max(1, _LLM_MAX_MODELS)]
 
     def chat_con_historial(
         self,
@@ -373,6 +400,11 @@ class GeminiProvider:
         if not self.disponible():
             raise _falta_clave("gemini")
         client = self._cliente()
+        # Free Tier: system prompt corto = menos latencia / menos timeout
+        sys_inst = system_instruction or ""
+        if _render_free and len(sys_inst) > 4500:
+            sys_inst = sys_inst[:4499] + "…"
+            print(f"[LLM] system_instruction truncado a {len(sys_inst)} chars", flush=True)
         contents = _historial_a_gemini_contents(historial, mensaje)
         ultimo_error: Exception | None = None
 
@@ -383,7 +415,7 @@ class GeminiProvider:
                     flush=True,
                 )
                 cfg_kwargs: dict[str, Any] = {
-                    "system_instruction": system_instruction or None,
+                    "system_instruction": sys_inst or None,
                 }
                 try:
                     cfg_kwargs["http_options"] = types.HttpOptions(
@@ -418,6 +450,9 @@ class GeminiProvider:
                         modelo=modelo,
                         error=type(exc).__name__,
                     )
+                    continue
+                # En Free Tier no abortar: dejar que la cascada pruebe Groq/local
+                if _render_free:
                     continue
                 raise
 
@@ -821,7 +856,14 @@ def _orden_fallback(desde: str) -> list[str]:
 
 
 def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
+    import time
+
+    t0 = time.monotonic()
     principal = obtener_proveedor()
+
+    def _agotado() -> bool:
+        return (time.monotonic() - t0) >= float(_LLM_TOTAL_BUDGET_S)
+
     if not LLM_FALLBACK:
         try:
             resultado = ejecutar(principal)
@@ -829,11 +871,10 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
             return resultado
         except Exception as exc:
             ultimo = _anclar_error_proveedor(exc, provider=principal.nombre)
-            # Aun con fallback off: intenta local para no dejar Error 49 vacío
             local = _PROVEEDORES.get("local")
             if local is not None:
                 try:
-                    print("[LLM] fallback-off → local de emergencia", flush=True)
+                    print("[LLM] fallback-off -> local de emergencia", flush=True)
                     texto = ejecutar(local)
                     if texto:
                         _registrar_uso("local", fallback=True, error_previo=type(exc).__name__)
@@ -843,7 +884,22 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
             raise ultimo
 
     ultimo_error: Exception | None = None
-    for indice, nombre in enumerate(_orden_fallback(principal.nombre)):
+    # Free Tier: Gemini → Groq (rápido) → local. OpenAI al final (más lento).
+    orden = _orden_fallback(principal.nombre)
+    if _render_free:
+        prefer = [principal.nombre, "gemini", "groq", "local", "openai"]
+        orden = []
+        for n in prefer:
+            if n not in orden:
+                orden.append(n)
+
+    for indice, nombre in enumerate(orden):
+        if nombre != "local" and _agotado():
+            print(
+                f"[LLM] presupuesto {_LLM_TOTAL_BUDGET_S}s agotado — salto a local",
+                flush=True,
+            )
+            break
         proveedor = _PROVEEDORES.get(nombre)
         if proveedor is None:
             continue
@@ -853,6 +909,10 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
         if nombre == "local" and not LLM_LOCAL_FALLBACK:
             continue
         try:
+            print(
+                f"[LLM] intento provider={nombre} t+{time.monotonic()-t0:.1f}s",
+                flush=True,
+            )
             resultado = ejecutar(proveedor)
             if not resultado and nombre != "local":
                 continue
@@ -874,7 +934,6 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
             ultimo_error = _anclar_error_proveedor(exc, provider=nombre)
             continue
         except Exception as exc:
-            # No abortar la cascada: probar el siguiente proveedor
             ultimo_error = _anclar_error_proveedor(exc, provider=nombre)
             evento(
                 _log,
@@ -885,11 +944,10 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
             )
             continue
 
-    # Último recurso siempre: local (anti Error 49 / chat muerto)
     local = _PROVEEDORES.get("local")
     if local is not None:
         try:
-            print("[LLM] último recurso local tras fallos cloud", flush=True)
+            print("[LLM] ultimo recurso local tras fallos/timeout cloud", flush=True)
             texto = ejecutar(local)
             if texto:
                 _registrar_uso(
