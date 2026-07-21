@@ -10,13 +10,17 @@ Created by Israel Monta - Salomón AI Studio
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 
-_ctx: ContextVar[ContextoPeticion | None] = ContextVar("salomon_capas_ctx", default=None)
-_ctx_token: ContextVar[Token[ContextoPeticion | None] | None] = ContextVar(
+# Declaración tipada con forward-ref string → seguro ante orden de definición
+_ctx: ContextVar["ContextoPeticion | None"] = ContextVar(
+    "salomon_capas_ctx", default=None
+)
+_ctx_token: ContextVar["Token[ContextoPeticion | None] | None"] = ContextVar(
     "salomon_capas_ctx_token", default=None
 )
 
@@ -60,14 +64,17 @@ def establecer_contexto(
     Fija el contexto de la petición actual (ContextVar).
     Reemplaza cualquier contexto previo de este task/hilo de forma segura.
     """
-    # Limpiar token anterior en el mismo task (evita Token reuse warnings)
+    # Limpiar token anterior en el mismo task (evita Token reuse + fugas)
     prev = _ctx_token.get()
     if prev is not None:
         try:
             _ctx.reset(prev)
         except (ValueError, LookupError, RuntimeError):
             pass
-        _ctx_token.set(None)
+        try:
+            _ctx_token.set(None)
+        except Exception:
+            pass
 
     safe_extra = MappingProxyType(dict(extra)) if extra else MappingProxyType({})
     ctx = ContextoPeticion(
@@ -111,13 +118,41 @@ def limpiar_contexto() -> None:
                 _ctx.set(None)
             except Exception:
                 pass
-        _ctx_token.set(None)
+        try:
+            _ctx_token.set(None)
+        except Exception:
+            pass
     else:
         try:
             _ctx.set(None)
+        except Exception:
+            pass
+        try:
+            _ctx_token.set(None)
         except Exception:
             pass
 
 
 def contexto_activo() -> bool:
     return _ctx.get() is not None
+
+
+@contextmanager
+def usar_contexto(
+    *,
+    api_key: str | None = None,
+    session_id: str | None = None,
+    request_id: str | None = None,
+    **extra: Any,
+) -> Iterator[ContextoPeticion]:
+    """Context manager: establece + limpia siempre (cero fugas en tests/workers)."""
+    ctx = establecer_contexto(
+        api_key=api_key,
+        session_id=session_id,
+        request_id=request_id,
+        **extra,
+    )
+    try:
+        yield ctx
+    finally:
+        limpiar_contexto()

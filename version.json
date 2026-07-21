@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T16:20:00Z",
-  "timestamp": 1753114800,
-  "version": "110.18.1",
+  "timestamp_iso": "2026-07-21T16:35:00Z",
+  "timestamp": 1753115700,
+  "version": "110.19.0",
   "channel": "main",
-  "label": "industrial-audit-hotfix",
+  "label": "master-layer-sync",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "INDUSTRIAL_AUDIT_2026",
-  "notes": "v110.18.1 — Auditoría industrial: frena bucles SW, cámara lista antes de CAMARA_ACTIVA, chat/visión fail-soft, rutas sellado→plugins/scripts, tuerquita sello honesto. SW v70."
+  "protocol": "MASTER_LAYER_SYNC_2026",
+  "notes": "v110.19.0 — Blindaje absoluto Capas 1–5: ContextVar, hot-plug, pipeline LLM fallback, búsqueda en cascada, SCE/30-X. Tuerquita muestra master_sync. SW v71."
 }

@@ -13,6 +13,7 @@ from cognicion.capas.contexto import (
     establecer_contexto,
     limpiar_contexto,
     obtener_contexto,
+    usar_contexto,
 )
 from cognicion.capas.loader import estado_capas, inicializar_capas
 from cognicion.capas.pipeline import (
@@ -23,6 +24,7 @@ from cognicion.capas.pipeline import (
     listar_manejadores,
     registrar_manejador,
 )
+from cognicion.capas.verificar_conexion import verificar_conexion_maestra
 
 __all__ = [
     "ContextoPeticion",
@@ -38,4 +40,6 @@ __all__ = [
     "listar_manejadores",
     "obtener_contexto",
     "registrar_manejador",
+    "usar_contexto",
+    "verificar_conexion_maestra",
 ]

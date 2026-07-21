@@ -150,6 +150,12 @@
           : sis.bridges_sealed === false
             ? "pendiente"
             : "activo";
+      var master =
+        sis.master_sync === true
+          ? "master sync OK"
+          : sis.master_sync === false
+            ? "master sync pendiente"
+            : "capas listas";
       this.metaEl.innerHTML = "";
       var line1 = document.createElement("div");
       line1.textContent = "v" + ver + " · Build " + String(build);
@@ -160,6 +166,8 @@
         sce +
         " · Capas 1–7 " +
         sealed +
+        " · " +
+        master +
         (proto ? " · " + proto : "");
       var line3 = document.createElement("div");
       line3.className = "control-layer__meta-ok";

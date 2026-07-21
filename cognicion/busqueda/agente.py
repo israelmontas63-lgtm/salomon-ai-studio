@@ -39,6 +39,12 @@ _MARCADORES_LIMITE: Final[tuple[str, ...]] = (
     "429",
     "too many requests",
     "insufficient_quota",
+    "syntaxerror",
+    "syntax error",
+    "traceback (most recent call last)",
+    "exception:",
+    "error de cuota",
+    "cuota agotada",
 )
 
 # Prefijos conversacionales → aislar la entidad de búsqueda real
@@ -433,38 +439,53 @@ def buscar_web(consulta: str) -> dict[str, Any]:
     """
     Cascada síncrona: Tavily (reintentos + breaker) → respaldo Wikipedia/DDG/noticias.
     Timeouts cortos para no bloquear el hilo Flask/FastAPI.
+    Fail-soft: nunca propaga excepciones al caller.
     """
     t0 = time.perf_counter()
-    q = extraer_consulta(consulta)
-    if not q:
+    try:
+        q = extraer_consulta(consulta)
+        if not q:
+            return _json_safe(
+                {
+                    "exito": False,
+                    "error": "consulta_vacia",
+                    "consulta": "",
+                    "resultados": [],
+                    "respuesta_directa": "",
+                    "motor": None,
+                    "elapsed_ms": 0.0,
+                }
+            )
+
+        tavily = _buscar_tavily(q)
+        if tavily and not tavily.get("error") and (
+            tavily.get("respuesta_directa") or tavily.get("resultados")
+        ):
+            pack = {"exito": True, **tavily}
+            pack["elapsed_ms"] = _finite_float((time.perf_counter() - t0) * 1000)
+            return _json_safe(pack)
+
+        respaldo = _buscar_respaldo(q)
+        if tavily and tavily.get("error"):
+            respaldo["aviso_tavily"] = tavily["error"]
+        respaldo["exito"] = bool(
+            respaldo.get("respuesta_directa") or respaldo.get("resultados")
+        )
+        respaldo["elapsed_ms"] = _finite_float((time.perf_counter() - t0) * 1000)
+        return _json_safe(respaldo)
+    except Exception as exc:
         return _json_safe(
             {
                 "exito": False,
-                "error": "consulta_vacia",
-                "consulta": "",
+                "error": type(exc).__name__,
+                "consulta": extraer_consulta(consulta) if consulta else "",
                 "resultados": [],
                 "respuesta_directa": "",
                 "motor": None,
-                "elapsed_ms": 0.0,
+                "fail_soft": True,
+                "elapsed_ms": _finite_float((time.perf_counter() - t0) * 1000),
             }
         )
-
-    tavily = _buscar_tavily(q)
-    if tavily and not tavily.get("error") and (
-        tavily.get("respuesta_directa") or tavily.get("resultados")
-    ):
-        pack = {"exito": True, **tavily}
-        pack["elapsed_ms"] = _finite_float((time.perf_counter() - t0) * 1000)
-        return _json_safe(pack)
-
-    respaldo = _buscar_respaldo(q)
-    if tavily and tavily.get("error"):
-        respaldo["aviso_tavily"] = tavily["error"]
-    respaldo["exito"] = bool(
-        respaldo.get("respuesta_directa") or respaldo.get("resultados")
-    )
-    respaldo["elapsed_ms"] = _finite_float((time.perf_counter() - t0) * 1000)
-    return _json_safe(respaldo)
 
 
 def resumir_estilo_salomon(

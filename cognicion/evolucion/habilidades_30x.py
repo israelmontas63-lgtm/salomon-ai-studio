@@ -99,12 +99,16 @@ _CACHE_30X: dict[str, Any] | None = None
 _cache_lock = threading.RLock()
 
 _FORBIDDEN_LOCAL: Final[tuple[str, ...]] = (
+    "torch",
     "torch local",
+    "cuda",
     "cuda local",
     "gpu local",
     "pip install runtime",
     "camera-engine",
     "pesos locales",
+    "tensorflow",
+    "transformers",
 )
 
 
@@ -115,7 +119,8 @@ def _propuesta_sce(h: dict[str, Any]) -> str:
     return (
         f"integrar capacidad {h.get('nombre', '')}: {kws}; "
         f"modo {modo} vía {remoto}; "
-        f"visión voz idiomas comic eficiencia; sin torch ni cuda local"
+        f"visión voz idiomas comic eficiencia; "
+        f"sin dependencias pesadas locales ni GPU local"
     )
 
 
@@ -236,7 +241,7 @@ def integrar_30x_via_sce(*, registrar_ledger: bool = True, force: bool = False) 
                 analizar_valor(
                     "integrar Evolución 30-X + Comic Engine: 30 capacidades ligeras "
                     "(visión, voz, idiomas, cómic, eficiencia) vía API Free Tier, "
-                    "arquitectura sana, sin torch ni cuda local",
+                    "arquitectura sana, sin dependencias pesadas locales ni GPU local",
                     registrar_ledger=True,
                 )
             except Exception:
@@ -347,6 +352,6 @@ def bloque_contexto_30x() -> str:
             str(st.get("mensaje") or ""),
             f"Prioridad hoy: #{p.get('id')} {p.get('nombre')} — {p.get('motivo')}.",
             "Comic_Engine activo: Guion → Storyboard → Ilustración → Lettering.",
-            "Free Tier: motores remotos/ligeros; sin torch local ni tocar Golden Camera.",
+            "Free Tier: motores remotos/ligeros; sin dependencias pesadas locales ni GPU local.",
         ]
     )

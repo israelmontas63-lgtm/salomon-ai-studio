@@ -667,10 +667,28 @@ def api_version() -> dict:
         sistema["bridges_sealed"] = False
         sistema["seal_degraded"] = True
 
+    # Conexión maestra Capas 1–5 (contexto→loader→pipeline→búsqueda→SCE)
+    try:
+        from cognicion.capas.verificar_conexion import verificar_conexion_maestra
+
+        master = verificar_conexion_maestra()
+        sistema["master_sync"] = bool(master.get("ok"))
+        sistema["master_protocol"] = master.get("protocol")
+        sistema["master_capas"] = {
+            k: bool((v or {}).get("ok")) for k, v in (master.get("capas") or {}).items()
+        }
+        if not master.get("ok"):
+            sistema["seal_degraded"] = True
+    except Exception:
+        sistema["master_sync"] = False
+        sistema["seal_degraded"] = True
+
     sistema["activo"] = bool(sistema.get("sce_activo")) and not bool(
         sistema.get("seal_degraded")
     )
-    if sistema.get("sce_activo") and sistema.get("bridges_sealed"):
+    if sistema.get("sce_activo") and sistema.get("bridges_sealed") and sistema.get(
+        "master_sync"
+    ):
         sistema["activo"] = True
     elif sistema.get("sce_activo") and sistema.get("bridges_sealed") is False:
         sistema["activo"] = False

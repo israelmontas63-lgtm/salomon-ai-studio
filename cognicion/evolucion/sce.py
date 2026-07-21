@@ -77,9 +77,11 @@ _BENEFICIO: Final[tuple[str, ...]] = (
 
 _RIESGO: Final[tuple[str, ...]] = (
     "torch",
+    "import torch",
     "tensorflow",
     "transformers",
     "diffusers",
+    "cuda",
     "cuda local",
     "gpu local",
     "rm -rf",

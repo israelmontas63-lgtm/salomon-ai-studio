@@ -4,6 +4,7 @@ Pipeline de respuesta — extensión por Protocol + fallback LLM.
 
 Iteración fail-soft sobre manejadores registrados (snapshot thread-safe),
 trazabilidad de latencia por capa y tipado estricto.
+Un plugin roto nunca bloquea el fallback estándar al LLM.
 Created by Israel Monta - Salomón AI Studio
 """
 
@@ -13,8 +14,6 @@ import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
-
-from cognicion.llm import chat_con_historial
 
 _registry_lock = threading.RLock()
 
@@ -83,6 +82,17 @@ def _snapshot_manejadores() -> list[tuple[int, str, ManejadorRespuesta]]:
         return list(_manejadores)
 
 
+def _texto_limpio(valor: Any) -> str:
+    if valor is None:
+        return ""
+    if isinstance(valor, str):
+        return valor.strip()
+    try:
+        return str(valor).strip()
+    except Exception:
+        return ""
+
+
 def generar_respuesta(
     mensaje: str,
     historial: list[dict],
@@ -94,10 +104,12 @@ def generar_respuesta(
     """
     Intenta manejadores registrados por plugins; fallback al LLM estándar.
     Fail-soft: un manejador roto no bloquea el hilo ni el resto del pipeline.
+    Siempre retorna ResultadoPipeline limpio (nunca None).
     """
     ctx: dict[str, Any] = dict(contexto or {})
     latencias: list[dict[str, Any]] = []
     errores: list[dict[str, str]] = list(ctx.get("errores_capas") or [])
+    hist = historial if isinstance(historial, list) else []
 
     # Snapshot: hot-plug concurrente no altera la iteración en curso
     handlers = _snapshot_manejadores()
@@ -107,37 +119,46 @@ def generar_respuesta(
         try:
             resultado = manejador(
                 mensaje,
-                historial,
+                hist,
                 system_instruction,
                 model_name=model_name,
                 contexto=ctx,
             )
             ms = round((time.perf_counter() - t0) * 1000, 2)
-            latencias.append({"capa": nombre, "ms": ms, "hit": bool(resultado and resultado.texto)})
-            if resultado is not None and (resultado.texto or "").strip():
-                meta = dict(resultado.metadata or {})
+            texto_hit = _texto_limpio(getattr(resultado, "texto", None) if resultado else None)
+            latencias.append({"capa": nombre, "ms": ms, "hit": bool(texto_hit)})
+            if resultado is not None and texto_hit:
+                meta = dict(getattr(resultado, "metadata", None) or {})
                 meta.setdefault("capa", nombre)
                 meta["latencias_capas"] = latencias
                 if errores:
                     meta["errores_capas"] = errores
                 return ResultadoPipeline(
-                    texto=resultado.texto,
+                    texto=texto_hit,
                     metadata=meta,
-                    capa=resultado.capa or nombre,
+                    capa=_texto_limpio(getattr(resultado, "capa", None)) or nombre,
                 )
         except Exception as exc:
             ms = round((time.perf_counter() - t0) * 1000, 2)
-            latencias.append({"capa": nombre, "ms": ms, "hit": False, "error": type(exc).__name__})
+            latencias.append(
+                {"capa": nombre, "ms": ms, "hit": False, "error": type(exc).__name__}
+            )
             errores.append({nombre: type(exc).__name__})
             # No re-raise — fail-soft hacia el siguiente manejador / LLM
 
+    # Fallback estándar al LLM (núcleo)
     t_llm = time.perf_counter()
+    texto = ""
     try:
-        texto = chat_con_historial(
-            mensaje,
-            historial,
-            system_instruction,
-            model_name=model_name,
+        from cognicion.llm import chat_con_historial
+
+        texto = _texto_limpio(
+            chat_con_historial(
+                mensaje,
+                hist,
+                system_instruction,
+                model_name=model_name,
+            )
         )
     except Exception as exc:
         errores.append({"llm": type(exc).__name__})
@@ -149,7 +170,7 @@ def generar_respuesta(
         {
             "capa": "llm",
             "ms": round((time.perf_counter() - t_llm) * 1000, 2),
-            "hit": bool((texto or "").strip()),
+            "hit": bool(texto),
         }
     )
 
