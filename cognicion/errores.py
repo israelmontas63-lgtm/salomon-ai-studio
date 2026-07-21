@@ -434,7 +434,13 @@ def auditar_excepcion(
         f"{tb.rstrip()}\n"
         f"{'=' * 72}\n"
     )
-    print(banner, flush=True)
+    try:
+        print(banner, flush=True)
+    except UnicodeEncodeError:
+        print(
+            banner.replace("→", "->").replace("—", "-").replace("«", '"').replace("»", '"'),
+            flush=True,
+        )
     try:
         from cognicion.registro import evento, obtener_logger
 

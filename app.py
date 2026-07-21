@@ -1116,7 +1116,12 @@ def salud_detalle() -> dict:
     except Exception:
         memoria_ok = False
 
-    from cognicion.llm import gemini_disponible, llm_disponible, proveedor_respaldo_disponible
+    from cognicion.llm import (
+        estado_llm,
+        gemini_disponible,
+        llm_disponible,
+        proveedor_respaldo_disponible,
+    )
     from settings import GROQ_API_KEY, LLM_LOCAL_FALLBACK, OPENAI_API_KEY
 
     return {
@@ -1137,9 +1142,20 @@ def salud_detalle() -> dict:
             "groq_configurado": bool(GROQ_API_KEY),
             "llm_local_fallback": LLM_LOCAL_FALLBACK,
             "proveedor_respaldo": proveedor_respaldo_disponible(),
+            "llm": estado_llm(),
         },
         "bca": os.getenv("BCA_SUPERVISOR") == "1",
     }
+
+
+@app.get("/api/llm/status")
+def api_llm_status() -> dict:
+    """Diagnóstico LLM sin secretos — keys presentes, timeouts, proveedor."""
+    from cognicion.llm import estado_llm
+
+    st = estado_llm()
+    st["ok"] = bool(st.get("disponible") or any((st.get("keys") or {}).values()))
+    return st
 
 
 @app.get("/api/bca/estado")

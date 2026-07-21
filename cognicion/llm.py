@@ -4,6 +4,8 @@ Cliente LLM centralizado — proveedores intercambiables (google.genai + OpenAI)
 
 from __future__ import annotations
 
+import os
+import traceback
 from typing import Any, Callable, Protocol
 
 from settings import (
@@ -26,6 +28,82 @@ from cognicion.respuesta_local import respuesta_local_chat
 
 _log = obtener_logger("llm")
 _ultimo_uso: dict[str, object] = {}
+
+# Tope duro por llamada (ms) — deja margen al proxy Render (~30s)
+_LLM_HTTP_TIMEOUT_MS = int(os.getenv("LLM_HTTP_TIMEOUT_MS", "18000") or "18000")
+
+
+def _env_key(*names: str) -> str:
+    """Lee la API key en caliente desde el entorno (no solo al importar settings)."""
+    for name in names:
+        val = (os.getenv(name) or "").strip()
+        if val:
+            return val
+    # Fallback a settings capturados al boot
+    mapping = {
+        "GEMINI_API_KEY": GEMINI_API_KEY,
+        "OPENAI_API_KEY": OPENAI_API_KEY,
+        "GROQ_API_KEY": GROQ_API_KEY,
+    }
+    for name in names:
+        val = (mapping.get(name) or "").strip()
+        if val:
+            return val
+    return ""
+
+
+def _falta_clave(provider: str) -> Exception:
+    from core.error_codes import format_error_response
+
+    msg = (
+        f"Falta API key del proveedor «{provider}». "
+        "Configura GEMINI_API_KEY / OPENAI_API_KEY / GROQ_API_KEY en Render → Environment."
+    )
+    exc = RuntimeError(msg)
+    pack = format_error_response(
+        exc,
+        code=42,
+        cause=msg,
+        hint="api",
+        origin=f"cognicion.llm.{provider}",
+        audit=True,
+        extra_meta={"provider": provider},
+    )
+    setattr(exc, "salomon_error_pack", pack)
+    setattr(exc, "salomon_error_code", 42)
+    print(
+        f"[LLM] ERROR 42 — sin clave para {provider}. "
+        f"GEMINI={bool(_env_key('GEMINI_API_KEY'))} "
+        f"OPENAI={bool(_env_key('OPENAI_API_KEY'))} "
+        f"GROQ={bool(_env_key('GROQ_API_KEY'))}",
+        flush=True,
+    )
+    return exc
+
+
+def estado_llm() -> dict[str, Any]:
+    """Diagnóstico seguro (sin filtrar secretos) para /api/version o /api/llm/status."""
+    try:
+        disponible = llm_disponible()
+    except Exception:
+        disponible = False
+    return {
+        "provider": MODEL_PROVIDER,
+        "fallback": bool(LLM_FALLBACK),
+        "local_fallback": bool(LLM_LOCAL_FALLBACK),
+        "timeout_ms": _LLM_HTTP_TIMEOUT_MS,
+        "keys": {
+            "gemini": bool(_env_key("GEMINI_API_KEY")),
+            "openai": bool(_env_key("OPENAI_API_KEY")),
+            "groq": bool(_env_key("GROQ_API_KEY")),
+        },
+        "models": {
+            "gemini": GEMINI_MODEL,
+            "openai": OPENAI_MODEL,
+            "groq": GROQ_MODEL,
+        },
+        "disponible": disponible,
+    }
 
 
 def _anclar_error_proveedor(exc: Exception, *, provider: str) -> Exception:
@@ -55,12 +133,22 @@ def _anclar_error_proveedor(exc: Exception, *, provider: str) -> Exception:
             error=type(exc).__name__,
             detail=str(exc)[:240],
         )
+        print(
+            f"[LLM] {provider} → Error {info['code']}: {type(exc).__name__}: {str(exc)[:200]}",
+            flush=True,
+        )
+        print(traceback.format_exc()[-1200:], flush=True)
     except Exception as bridge_exc:
         evento(
             _log,
             "llm_error_codes_bridge_fail",
             provider=provider,
             error=type(bridge_exc).__name__,
+        )
+        print(
+            f"[LLM] bridge_fail {provider}: {type(exc).__name__}: {exc}\n"
+            f"{traceback.format_exc()[-800:]}",
+            flush=True,
         )
     return exc
 
@@ -234,16 +322,34 @@ class GeminiProvider:
 
     def __init__(self) -> None:
         self._client = None
+        self._client_key: str = ""
 
     def _cliente(self):
-        if self._client is None:
+        key = _env_key("GEMINI_API_KEY")
+        if not key:
+            raise _falta_clave("gemini")
+        if self._client is None or self._client_key != key:
             from google import genai
+            from google.genai import types
 
-            self._client = genai.Client(api_key=GEMINI_API_KEY)
+            opts = None
+            try:
+                opts = types.HttpOptions(timeout=int(_LLM_HTTP_TIMEOUT_MS))
+            except Exception:
+                opts = None
+            kwargs: dict[str, Any] = {"api_key": key}
+            if opts is not None:
+                kwargs["http_options"] = opts
+            self._client = genai.Client(**kwargs)
+            self._client_key = key
+            print(
+                f"[LLM] Gemini client listo (key_len={len(key)} timeout_ms={_LLM_HTTP_TIMEOUT_MS})",
+                flush=True,
+            )
         return self._client
 
     def disponible(self) -> bool:
-        return bool(GEMINI_API_KEY)
+        return bool(_env_key("GEMINI_API_KEY"))
 
     def _modelos_a_probar(self, model_name: str | None) -> list[str]:
         principal = model_name or GEMINI_MODEL
@@ -264,22 +370,36 @@ class GeminiProvider:
     ) -> str:
         from google.genai import types
 
+        if not self.disponible():
+            raise _falta_clave("gemini")
         client = self._cliente()
         contents = _historial_a_gemini_contents(historial, mensaje)
         ultimo_error: Exception | None = None
 
         for modelo in self._modelos_a_probar(model_name):
             try:
+                print(
+                    f"[LLM] Gemini generate_content model={modelo} turns={len(contents)}",
+                    flush=True,
+                )
+                cfg_kwargs: dict[str, Any] = {
+                    "system_instruction": system_instruction or None,
+                }
+                try:
+                    cfg_kwargs["http_options"] = types.HttpOptions(
+                        timeout=int(_LLM_HTTP_TIMEOUT_MS)
+                    )
+                except Exception:
+                    pass
                 respuesta = client.models.generate_content(
                     model=modelo,
                     contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                    ),
+                    config=types.GenerateContentConfig(**cfg_kwargs),
                 )
                 texto = (respuesta.text or "").strip()
                 if texto:
                     return texto
+                print(f"[LLM] Gemini respuesta vacía model={modelo}", flush=True)
             except Exception as exc:
                 ultimo_error = _anclar_error_proveedor(exc, provider="gemini")
                 evento(
@@ -306,6 +426,8 @@ class GeminiProvider:
         return ""
 
     def generar_texto(self, prompt: str, model_name: str | None = None) -> str:
+        if not self.disponible():
+            raise _falta_clave("gemini")
         client = self._cliente()
         ultimo_error: Exception | None = None
 
@@ -386,14 +508,21 @@ class OpenAIProvider:
     nombre = "openai"
 
     def disponible(self) -> bool:
-        return bool(OPENAI_API_KEY)
+        return bool(_env_key("OPENAI_API_KEY"))
 
     def _cliente(self):
         from openai import OpenAI
 
-        kwargs: dict[str, str] = {"api_key": OPENAI_API_KEY}
-        if OPENAI_BASE_URL:
-            kwargs["base_url"] = OPENAI_BASE_URL
+        key = _env_key("OPENAI_API_KEY")
+        if not key:
+            raise _falta_clave("openai")
+        kwargs: dict[str, Any] = {
+            "api_key": key,
+            "timeout": max(5.0, float(_LLM_HTTP_TIMEOUT_MS) / 1000.0),
+        }
+        base = (os.getenv("OPENAI_BASE_URL") or OPENAI_BASE_URL or "").strip()
+        if base:
+            kwargs["base_url"] = base
         return OpenAI(**kwargs)
 
     def _mensajes_openai(
@@ -405,6 +534,7 @@ class OpenAIProvider:
         return _mensajes_openai_style(
             mensaje, historial, system_instruction, label="openai"
         )
+
     def chat_con_historial(
         self,
         mensaje: str,
@@ -412,8 +542,11 @@ class OpenAIProvider:
         system_instruction: str,
         model_name: str | None = None,
     ) -> str:
+        if not self.disponible():
+            raise _falta_clave("openai")
         try:
             client = self._cliente()
+            print("[LLM] OpenAI chat.completions.create", flush=True)
             respuesta = client.chat.completions.create(
                 model=model_name or OPENAI_MODEL,
                 messages=self._mensajes_openai(mensaje, historial, system_instruction),
@@ -423,6 +556,8 @@ class OpenAIProvider:
             raise _anclar_error_proveedor(exc, provider="openai") from exc
 
     def generar_texto(self, prompt: str, model_name: str | None = None) -> str:
+        if not self.disponible():
+            raise _falta_clave("openai")
         try:
             client = self._cliente()
             respuesta = client.chat.completions.create(
@@ -470,14 +605,18 @@ class GroqProvider:
     nombre = "groq"
 
     def disponible(self) -> bool:
-        return bool(GROQ_API_KEY)
+        return bool(_env_key("GROQ_API_KEY"))
 
     def _cliente(self):
         from openai import OpenAI
 
+        key = _env_key("GROQ_API_KEY")
+        if not key:
+            raise _falta_clave("groq")
         return OpenAI(
-            api_key=GROQ_API_KEY,
+            api_key=key,
             base_url="https://api.groq.com/openai/v1",
+            timeout=max(5.0, float(_LLM_HTTP_TIMEOUT_MS) / 1000.0),
         )
 
     def _mensajes_openai(
@@ -497,8 +636,11 @@ class GroqProvider:
         system_instruction: str,
         model_name: str | None = None,
     ) -> str:
+        if not self.disponible():
+            raise _falta_clave("groq")
         try:
             client = self._cliente()
+            print("[LLM] Groq chat.completions.create", flush=True)
             respuesta = client.chat.completions.create(
                 model=model_name or GROQ_MODEL,
                 messages=self._mensajes_openai(mensaje, historial, system_instruction),
@@ -508,6 +650,8 @@ class GroqProvider:
             raise _anclar_error_proveedor(exc, provider="groq") from exc
 
     def generar_texto(self, prompt: str, model_name: str | None = None) -> str:
+        if not self.disponible():
+            raise _falta_clave("groq")
         try:
             client = self._cliente()
             respuesta = client.chat.completions.create(
@@ -679,9 +823,24 @@ def _orden_fallback(desde: str) -> list[str]:
 def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
     principal = obtener_proveedor()
     if not LLM_FALLBACK:
-        resultado = ejecutar(principal)
-        _registrar_uso(principal.nombre)
-        return resultado
+        try:
+            resultado = ejecutar(principal)
+            _registrar_uso(principal.nombre)
+            return resultado
+        except Exception as exc:
+            ultimo = _anclar_error_proveedor(exc, provider=principal.nombre)
+            # Aun con fallback off: intenta local para no dejar Error 49 vacío
+            local = _PROVEEDORES.get("local")
+            if local is not None:
+                try:
+                    print("[LLM] fallback-off → local de emergencia", flush=True)
+                    texto = ejecutar(local)
+                    if texto:
+                        _registrar_uso("local", fallback=True, error_previo=type(exc).__name__)
+                        return texto
+                except Exception:
+                    pass
+            raise ultimo
 
     ultimo_error: Exception | None = None
     for indice, nombre in enumerate(_orden_fallback(principal.nombre)):
@@ -689,6 +848,7 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
         if proveedor is None:
             continue
         if nombre != "local" and not proveedor.disponible():
+            print(f"[LLM] skip {nombre}: sin API key", flush=True)
             continue
         if nombre == "local" and not LLM_LOCAL_FALLBACK:
             continue
@@ -714,9 +874,8 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
             ultimo_error = _anclar_error_proveedor(exc, provider=nombre)
             continue
         except Exception as exc:
+            # No abortar la cascada: probar el siguiente proveedor
             ultimo_error = _anclar_error_proveedor(exc, provider=nombre)
-            if not _es_error_recuperable(exc) and nombre != "local":
-                raise
             evento(
                 _log,
                 "proveedor_fallido",
@@ -725,6 +884,22 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
                 error_codigo=getattr(exc, "salomon_error_code", None),
             )
             continue
+
+    # Último recurso siempre: local (anti Error 49 / chat muerto)
+    local = _PROVEEDORES.get("local")
+    if local is not None:
+        try:
+            print("[LLM] último recurso local tras fallos cloud", flush=True)
+            texto = ejecutar(local)
+            if texto:
+                _registrar_uso(
+                    "local",
+                    fallback=True,
+                    error_previo=type(ultimo_error).__name__ if ultimo_error else None,
+                )
+                return texto
+        except Exception as exc:
+            ultimo_error = _anclar_error_proveedor(exc, provider="local")
 
     if ultimo_error:
         raise ultimo_error

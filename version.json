@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T20:40:00Z",
-  "timestamp": 1753130400,
-  "version": "110.21.4",
+  "timestamp_iso": "2026-07-21T20:45:00Z",
+  "timestamp": 1753130700,
+  "version": "110.21.5",
   "channel": "main",
-  "label": "error-text-seal",
+  "label": "llm-key-timeout-fallback",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "CORE_ERROR_CODES",
-  "notes": "v110.21.4 — Sello físico Error NN en /api/chat: nunca texto vacío/genérico; format_error_response obligatorio."
+  "protocol": "LLM_ROBUST_CONNECT",
+  "notes": "v110.21.5 — API keys en caliente, timeout 18s, cascada LLM sin abortar, local de emergencia, /api/llm/status, aritmética local."
 }

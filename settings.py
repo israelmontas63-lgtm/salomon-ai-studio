@@ -169,13 +169,23 @@ MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "gemini").strip().lower()
 LLM_FALLBACK = os.getenv("LLM_FALLBACK", "true").strip().lower() in (
     "1", "true", "yes", "on",
 )
-# En ejecución: no degradar a local si hay claves cloud (salvo override explícito)
+# En ejecución: no degradar a local si hay claves cloud (salvo override explícito).
+# Free Tier Render: local ON por defecto para no colgar el chat si Gemini falla.
 _llm_local_raw = os.getenv("LLM_LOCAL_FALLBACK")
+_render_free = os.getenv("RENDER_FREE_TIER", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
 if _llm_local_raw is None:
-    LLM_LOCAL_FALLBACK = not MODO_EJECUCION
+    LLM_LOCAL_FALLBACK = (not MODO_EJECUCION) or _render_free
 else:
     LLM_LOCAL_FALLBACK = _llm_local_raw.strip().lower() in (
-        "1", "true", "yes", "on",
+        "1",
+        "true",
+        "yes",
+        "on",
     )
 
 # ── Búsqueda web (Tavily preferido; DDG/noticias como respaldo) ────────────

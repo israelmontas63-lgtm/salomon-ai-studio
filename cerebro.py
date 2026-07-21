@@ -417,6 +417,69 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             except Exception:
                 pass
 
+        # Aritmética trivial — respuesta local sin proveedor (anti Error 49)
+        if not imagen_base64:
+            try:
+                import ast
+                import operator
+                import re
+
+                t = (entrada or "").strip().lower()
+                m = re.match(
+                    r"(?i)^\s*(?:cu[aá]nto\s+es|cuanto\s+es|calcula|compute)?\s*"
+                    r"([0-9\.\s\+\-\*\/\(\)]+)\s*\??\s*$",
+                    t,
+                )
+                expr = None
+                if m:
+                    expr = re.sub(r"\s+", "", m.group(1))
+                elif re.fullmatch(r"[0-9\.\s\+\-\*\/\(\)]+", t or ""):
+                    expr = re.sub(r"\s+", "", t)
+                if expr and 1 < len(expr) <= 40:
+                    ops = {
+                        ast.Add: operator.add,
+                        ast.Sub: operator.sub,
+                        ast.Mult: operator.mul,
+                        ast.Div: operator.truediv,
+                        ast.USub: operator.neg,
+                    }
+
+                    def _eval(node):
+                        if isinstance(node, ast.Expression):
+                            return _eval(node.body)
+                        if isinstance(node, ast.Constant) and isinstance(
+                            node.value, (int, float)
+                        ):
+                            return node.value
+                        if isinstance(node, ast.BinOp) and type(node.op) in ops:
+                            return ops[type(node.op)](_eval(node.left), _eval(node.right))
+                        if isinstance(node, ast.UnaryOp) and type(node.op) in ops:
+                            return ops[type(node.op)](_eval(node.operand))
+                        raise ValueError("expr")
+
+                    val = _eval(ast.parse(expr, mode="eval"))
+                    if isinstance(val, float) and val.is_integer():
+                        val = int(val)
+                    texto_m = f"Israel, {expr} = {val}."
+                    self._historial.append(Mensaje(rol="usuario", contenido=entrada))
+                    self._historial.append(Mensaje(rol="asistente", contenido=texto_m))
+                    self._recortar_historial()
+                    self._motor.registrar_turno(entrada, texto_m)
+                    tts = _tts_para_respuesta(texto_m)
+                    return RespuestaSalomon(
+                        texto=texto_m,
+                        exito=True,
+                        metadata={
+                            "cognicion": {"fast_path": "aritmetica_local"},
+                            "tts_async": TTS_ASYNC,
+                        },
+                        audio_base64=tts.audio_base64,
+                        audio_mime=tts.audio_mime,
+                        tts_disponible=tts.tts_disponible,
+                    )
+            except Exception:
+                pass
+
         # Puente voz→visión (standby / analítico / off) — sin imagen aún
         if not imagen_base64:
             try:
