@@ -258,6 +258,11 @@
       var L = lock();
       // Mantener ojos activos (sinapsis visión+voz)
       if (L) L.activate("gesture_dictation", { keepCamera: true });
+      try {
+        if (window.SalomonVoiceLayer && window.SalomonVoiceLayer.unlock) {
+          window.SalomonVoiceLayer.unlock();
+        }
+      } catch (_) {}
       this._setState(States.DICTATION);
       this.root.classList.add("is-ai-locked", "is-active", "is-listening", "is-dictation");
       this.root.classList.remove("is-holographic", "is-conversational");
@@ -268,6 +273,11 @@
     _enterConversational() {
       var L = lock();
       if (L) L.activate("gesture_conversational", { keepCamera: true });
+      try {
+        if (window.SalomonVoiceLayer && window.SalomonVoiceLayer.unlock) {
+          window.SalomonVoiceLayer.unlock();
+        }
+      } catch (_) {}
       this._setState(States.CONVERSATIONAL);
       this.root.classList.add(
         "is-ai-locked",
@@ -429,6 +439,13 @@
             await Veng.handleChatCommand(text);
           } catch (_) {}
           document.body.classList.remove("salomon-processing");
+          try {
+            if (window.SalomonVoiceLayer && window.SalomonVoiceLayer.speakViaApi) {
+              await window.SalomonVoiceLayer.speakViaApi(
+                "Listo. Modo visual actualizado."
+              );
+            }
+          } catch (_) {}
           if (!keepMic) this.neutralize("voice_vision_bridge");
           return;
         }
@@ -443,11 +460,21 @@
           if (typingVis) typingVis.remove();
           var botVis = document.createElement("div");
           botVis.className = "bubble bot";
-          botVis.textContent =
+          var visTexto =
             (engaged && engaged.texto) ||
             "Cámara en reposo. Di «¿puedes ver lo que está frente a mí?» para analizar.";
+          botVis.textContent = visTexto;
           chat.appendChild(botVis);
           chat.scrollTop = chat.scrollHeight;
+          try {
+            if (window.SalomonVoiceLayer && window.SalomonVoiceLayer.ensureSpeak) {
+              await window.SalomonVoiceLayer.ensureSpeak({
+                texto: visTexto,
+                audio_base64: engaged && engaged.audio_base64,
+                audio_mime: engaged && engaged.audio_mime,
+              });
+            }
+          } catch (_) {}
         }
         if (!keepMic) this.neutralize("vision_mode_trigger");
         return;
@@ -466,6 +493,8 @@
                     ? "double_tap_ai"
                     : "single_tap_dictation",
                 keep_lock: keepMic,
+                keep_camera: true,
+                force_tts: true,
               }
             )
           : await this._fallbackFetch(text);
@@ -518,22 +547,25 @@
         );
       }
 
-      if (result && result.data && result.data.audio_base64) {
-        try {
-          if (
-            window.SalomonVoiceLayer &&
-            window.SalomonVoiceLayer.playFromResponse
-          ) {
-            window.SalomonVoiceLayer.playFromResponse(result.data);
-          } else {
-            var mime = result.data.audio_mime || "audio/mpeg";
-            var audio = new Audio(
-              "data:" + mime + ";base64," + result.data.audio_base64
-            );
-            audio.play().catch(function () {});
-          }
-        } catch (_) {}
-      }
+      // Obligatorio en dictado/voz: Adam TTS (audio del cerebro o /api/tts)
+      try {
+        var speakPayload =
+          (result && result.data) ||
+          (data && (data.texto || data.audio_base64) ? data : null);
+        if (
+          speakPayload &&
+          window.SalomonVoiceLayer &&
+          window.SalomonVoiceLayer.ensureSpeak
+        ) {
+          await window.SalomonVoiceLayer.ensureSpeak(speakPayload);
+        } else if (speakPayload && speakPayload.audio_base64) {
+          var mime = speakPayload.audio_mime || "audio/mpeg";
+          var audio = new Audio(
+            "data:" + mime + ";base64," + speakPayload.audio_base64
+          );
+          audio.play().catch(function () {});
+        }
+      } catch (_) {}
 
       if (keepMic && prevState === States.CONVERSATIONAL) {
         this._setState(States.CONVERSATIONAL);

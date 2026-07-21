@@ -75,12 +75,16 @@
 
       this._emit(States.IDLE);
 
-      // Portero: si la IA toma el control, apagar stream físico al instante
+      // Portero: apagar cámara solo si la IA no pide mantener ojos (visión+voz)
       window.addEventListener("salomon:ai-lock", (ev) => {
         var d = (ev && ev.detail) || {};
-        if (d.action === "activate" && this.isActive()) {
-          this.closeCamera();
-        }
+        if (d.action !== "activate" || !this.isActive()) return;
+        var keep =
+          d.hardware === "camera_kept_for_vision" ||
+          d.keepCamera === true ||
+          d.keep_camera === true;
+        if (keep) return;
+        this.closeCamera();
       });
     },
 
@@ -469,37 +473,38 @@
         throw new Error("getUserMedia no disponible");
       }
 
+      const wIdeal = opts.fast ? 1280 : 1920;
+      const hIdeal = opts.fast ? 720 : 1080;
+      // Autofoco continuo + resolución nítida en el pedido inicial (no solo post-hoc)
       const constraints = {
         audio: false,
         video: {
           facingMode: { ideal: facingMode },
-          width: { ideal: opts.fast ? 960 : 1280 },
-          height: { ideal: opts.fast ? 540 : 720 },
+          width: { ideal: wIdeal, min: 640 },
+          height: { ideal: hIdeal, min: 480 },
+          frameRate: { ideal: 30, max: 30 },
+          advanced: [
+            { focusMode: "continuous" },
+            { facingMode: facingMode },
+          ],
         },
       };
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      this.stream = stream;
-
-      if (!opts.skipFocus) {
-        try {
-          // Foco en idle — no bloquear el primer frame
-          const self = this;
-          const mode =
-            this.focusMode === "macro" || this.focusMode === "micro"
-              ? this.focusMode
-              : "continuous";
-          if (window.SalomonMain && window.SalomonMain.deferHeavy) {
-            window.SalomonMain.deferHeavy(function () {
-              self.setFocusMode(mode);
-            });
-          } else {
-            setTimeout(function () {
-              self.setFocusMode(mode);
-            }, 0);
-          }
-        } catch (_) {}
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (_) {
+        // Fallback sin advanced (algunos navegadores rechazan focusMode en gUM)
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: wIdeal },
+            height: { ideal: hIdeal },
+          },
+        });
       }
+      this.stream = stream;
 
       await new Promise((resolve, reject) => {
         requestAnimationFrame(() => {
@@ -522,6 +527,52 @@
           }
         });
       });
+
+      if (!opts.skipFocus) {
+        try {
+          const mode =
+            this.focusMode === "macro" || this.focusMode === "micro"
+              ? this.focusMode
+              : "continuous";
+          // Aplicar autofoco de inmediato (frame nítido para el modelo)
+          await this.setFocusMode(mode);
+          await this.ensureSharpFocus();
+        } catch (_) {}
+      }
+    },
+
+    /**
+     * Refuerza autofoco continuo + espera breve a que el sensor estabilice.
+     * Llamar antes de capturar fotogramas para análisis visual.
+     */
+    async ensureSharpFocus() {
+      if (!this.stream) return false;
+      const track = this.stream.getVideoTracks()[0];
+      if (!track) return false;
+      try {
+        const caps =
+          typeof track.getCapabilities === "function"
+            ? track.getCapabilities()
+            : {};
+        if (caps.focusMode && caps.focusMode.includes("continuous")) {
+          try {
+            await track.applyConstraints({
+              advanced: [{ focusMode: "continuous" }],
+            });
+          } catch (_) {
+            try {
+              await track.applyConstraints({ focusMode: "continuous" });
+            } catch (__) {}
+          }
+        }
+        // Pequeña espera para que el AF termine antes del buffer
+        await new Promise(function (r) {
+          setTimeout(r, 180);
+        });
+        return true;
+      } catch (_) {
+        return false;
+      }
     },
 
     _stopStream() {

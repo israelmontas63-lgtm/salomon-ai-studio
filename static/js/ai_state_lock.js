@@ -100,6 +100,8 @@
     emit({
       action: "activate",
       reason: reason,
+      keepCamera: keepCamera,
+      keep_camera: keepCamera,
       hardware: keepCamera ? "camera_kept_for_vision" : "camera_forced_off",
     });
     return true;
@@ -311,6 +313,9 @@
     try {
       if (cam && cam.autoFocusFromText) {
         await cam.autoFocusFromText(mensaje);
+      }
+      if (cam && cam.ensureSharpFocus) {
+        await cam.ensureSharpFocus();
       }
     } catch (_) {}
 
