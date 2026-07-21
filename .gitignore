@@ -68,3 +68,10 @@ _integrity_backup_dist/
 maqueta-estructura-salomon.html
 maqueta-camara-selfie.html
 maqueta-camara-limpia.html
+
+# Shell local pre-flatten (no deploy)
+_legacy_workspace/
+ACCESS_URL.txt
+lighthouse-pwa.json
+.tunnel.log
+.tunnel.err.log

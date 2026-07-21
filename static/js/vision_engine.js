@@ -1,6 +1,6 @@
 /**
  * Salomón AI — Vision Engine (ojos del agente)
- * Conecta frames de video → cerebro (/api/cognicion/vision).
+ * Conecta frames de video → cerebro (/api/vision/brain-bridge).
  * Session State: al cerrar cámara se corta todo flujo visual.
  * Created by Israel Monta - Salomón AI Studio
  */
