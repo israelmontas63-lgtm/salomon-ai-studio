@@ -252,12 +252,21 @@ class MotorCognicion:
             except Exception:
                 hechos = ""
             rag_empty = not bool((meta.get("cognicion") or {}).get("rag_usado"))
+            # Saludos: enjambre ligero sin enrich neuronal (evita colgar Free Tier)
+            include_neural = True
+            try:
+                from config.memory_cortex import es_saludo_o_charla_simple
+
+                if es_saludo_o_charla_simple(entrada):
+                    include_neural = False
+            except Exception:
+                include_neural = True
             cascade = cascade_reason(
                 entrada,
                 session_id=self.session_id,
                 hechos_personales=hechos,
                 rag_empty=rag_empty,
-                include_neural_enrich=True,
+                include_neural_enrich=include_neural,
             )
             for bloque_n in cascade.get("bloques") or []:
                 if bloque_n:

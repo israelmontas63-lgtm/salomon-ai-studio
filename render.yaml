@@ -55,7 +55,7 @@ services:
       - key: CARTESIA_MODEL_ID
         value: "sonic-3.5"
       - key: TTS_ASYNC
-        value: "false"
+        value: "true"
       # Adam Voice ID — case-sensitive ('n' minúscula en NInz; F en GcF)
       - key: ELEVENLABS_VOICE_ID
         value: "pNInz6obpgDQGcFmaJgB"

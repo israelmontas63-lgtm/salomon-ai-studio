@@ -76,7 +76,16 @@
   }
 
   function formatError(data, status) {
-    if (!data) return "Error " + status + ". ¿Lo intentamos de nuevo?";
+    if (!data) {
+      if (status === 0 || !status) {
+        return (
+          "La conexión con el servidor se cortó (posible timeout). " +
+          "Reintenta: el chat ya no espera la voz para responderte."
+        );
+      }
+      return "Error " + status + ". ¿Lo intentamos de nuevo?";
+    }
+    if (data.texto) return String(data.texto);
     var detail = data.detail;
     if (typeof detail === "string" && detail) return detail;
     if (Array.isArray(detail) && detail.length) {
@@ -87,6 +96,15 @@
         .join(" · ");
     }
     if (data.mensaje) return String(data.mensaje);
+    var meta = data.metadata || {};
+    var cog = meta.cognicion || {};
+    if (cog.llm_error || cog.enriquecer_error || meta.fail_soft) {
+      return (
+        "No pude completar la respuesta (" +
+        (cog.llm_error || cog.enriquecer_error || "fail_soft") +
+        "). ¿Lo intentamos de nuevo?"
+      );
+    }
     return "No pude completar la respuesta. ¿Lo intentamos de nuevo?";
   }
 
@@ -227,12 +245,20 @@
             },
           })
         );
+      } else if (res.ok && data.texto) {
+        // Texto usable aunque exito=false (fail-soft)
+        addBubble(data.texto, "bot", null, mediaUrlFromResponse(data));
+        reproducirAudioRespuesta(data);
       } else {
         addBubble(formatError(data, res.status), "bot");
       }
-    } catch (_) {
+    } catch (err) {
       if (typing && typing.parentNode) typing.parentNode.removeChild(typing);
-      addBubble("Hubo un problema de conexión con el servidor. ¿Reintentamos?", "bot");
+      console.error("[SalomonChat] fetch falló:", err);
+      addBubble(
+        "Hubo un problema de conexión con el servidor. ¿Reintentamos?",
+        "bot"
+      );
     } finally {
       setLoading(false);
     }

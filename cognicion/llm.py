@@ -4,7 +4,7 @@ Cliente LLM centralizado — proveedores intercambiables (google.genai + OpenAI)
 
 from __future__ import annotations
 
-from typing import Callable, Protocol
+from typing import Any, Callable, Protocol
 
 from settings import (
     GEMINI_API_KEY,
@@ -54,22 +54,141 @@ class ModelProvider(Protocol):
     ) -> str: ...
 
 
+def _finite_chars(text: Any, limit: int) -> str:
+    if text is None:
+        return ""
+    if isinstance(text, bytes):
+        raw = text.decode("utf-8", errors="replace")
+    else:
+        raw = str(text)
+    raw = raw.strip()
+    if not raw:
+        return ""
+    if len(raw) > limit:
+        return raw[: limit - 1] + "…"
+    return raw
+
+
+def _sanitizar_historial_chat(
+    historial: list[dict],
+    mensaje: str,
+    *,
+    role_assistant: str = "model",
+    max_turns: int = 16,
+    max_msg_chars: int = 3_500,
+    max_total_chars: int = 28_000,
+) -> tuple[list[dict[str, Any]], str, dict[str, Any]]:
+    """
+    Cemento de historial para proveedores LLM:
+    - roles solo user / model|assistant
+    - sin vacíos / nulos
+    - roles estrictamente alternados
+    - tope de caracteres (anti overflow de contexto)
+    """
+    meta: dict[str, Any] = {
+        "turns_in": len(historial or []),
+        "dropped_empty": 0,
+        "merged_same_role": 0,
+        "truncated": False,
+        "capped_total": False,
+    }
+    msg = _finite_chars(mensaje, max_msg_chars * 3)  # turno actual puede ir enriquecido
+    if not msg:
+        msg = "…"
+
+    cleaned: list[dict[str, Any]] = []
+    for item in historial or []:
+        if not isinstance(item, dict):
+            meta["dropped_empty"] += 1
+            continue
+        raw_role = str(item.get("role") or "").strip().lower()
+        if raw_role in ("user", "usuario"):
+            role = "user"
+        elif raw_role in ("model", "assistant", "asistente"):
+            role = role_assistant
+        else:
+            meta["dropped_empty"] += 1
+            continue
+        parts = item.get("parts")
+        if isinstance(parts, list) and parts:
+            texto = _finite_chars(parts[0], max_msg_chars)
+        else:
+            texto = _finite_chars(item.get("content") or item.get("contenido"), max_msg_chars)
+        if not texto:
+            meta["dropped_empty"] += 1
+            continue
+        if cleaned and cleaned[-1]["role"] == role:
+            cleaned[-1]["parts"][0] = _finite_chars(
+                cleaned[-1]["parts"][0] + "\n" + texto, max_msg_chars
+            )
+            meta["merged_same_role"] += 1
+        else:
+            cleaned.append({"role": role, "parts": [texto]})
+
+    # Debe empezar en user (Gemini)
+    while cleaned and cleaned[0]["role"] != "user":
+        cleaned.pop(0)
+        meta["truncated"] = True
+
+    # Máximo N pares (user+assistant)
+    max_msgs = max(2, int(max_turns) * 2)
+    if len(cleaned) > max_msgs:
+        cleaned = cleaned[-max_msgs:]
+        meta["truncated"] = True
+        while cleaned and cleaned[0]["role"] != "user":
+            cleaned.pop(0)
+
+    # No terminar en user: el mensaje actual se añade aparte
+    if cleaned and cleaned[-1]["role"] == "user":
+        cleaned.pop()
+        meta["truncated"] = True
+
+    # Presupuesto total
+    total = sum(len(x["parts"][0]) for x in cleaned) + len(msg)
+    while cleaned and total > max_total_chars:
+        dropped = cleaned.pop(0)
+        total -= len(dropped["parts"][0])
+        meta["capped_total"] = True
+        meta["truncated"] = True
+        while cleaned and cleaned[0]["role"] != "user":
+            cleaned.pop(0)
+
+    meta["turns_out"] = len(cleaned)
+    meta["chars_out"] = total
+    return cleaned, msg, meta
+
+
 def _historial_a_gemini_contents(historial: list[dict], mensaje: str) -> list:
     from google.genai import types
 
+    cleaned, msg, meta = _sanitizar_historial_chat(
+        historial, mensaje, role_assistant="model"
+    )
+    evento(
+        _log,
+        "llm_payload_gemini",
+        turns=meta.get("turns_out"),
+        chars=meta.get("chars_out"),
+        dropped_empty=meta.get("dropped_empty"),
+        merged=meta.get("merged_same_role"),
+        truncated=meta.get("truncated"),
+        capped=meta.get("capped_total"),
+    )
     contents: list = []
-    for item in historial:
-        rol = "user" if item.get("role") == "user" else "model"
-        parts = item.get("parts") or []
-        texto = str(parts[0]) if parts else ""
-        if not texto:
-            continue
+    for item in cleaned:
         contents.append(
-            types.Content(role=rol, parts=[types.Part.from_text(text=texto)])
+            types.Content(
+                role=item["role"],
+                parts=[types.Part.from_text(text=item["parts"][0])],
+            )
         )
     contents.append(
-        types.Content(role="user", parts=[types.Part.from_text(text=mensaje)])
+        types.Content(role="user", parts=[types.Part.from_text(text=msg)])
     )
+    if not contents:
+        contents.append(
+            types.Content(role="user", parts=[types.Part.from_text(text=msg or "Hola")])
+        )
     return contents
 
 
@@ -126,8 +245,21 @@ class GeminiProvider:
                     return texto
             except Exception as exc:
                 ultimo_error = exc
+                evento(
+                    _log,
+                    "llm_gemini_exception",
+                    modelo=modelo,
+                    error=type(exc).__name__,
+                    detail=str(exc)[:400],
+                    contents_n=len(contents),
+                )
                 if _es_error_recuperable(exc):
-                    evento(_log, "gemini_modelo_fallido", modelo=modelo, error=type(exc).__name__)
+                    evento(
+                        _log,
+                        "gemini_modelo_fallido",
+                        modelo=modelo,
+                        error=type(exc).__name__,
+                    )
                     continue
                 raise
 
@@ -183,6 +315,35 @@ class GeminiProvider:
         return (respuesta.text or "").strip()
 
 
+def _mensajes_openai_style(
+    mensaje: str,
+    historial: list[dict],
+    system_instruction: str,
+    *,
+    label: str = "openai",
+) -> list[dict[str, str]]:
+    cleaned, msg, meta = _sanitizar_historial_chat(
+        historial, mensaje, role_assistant="assistant"
+    )
+    evento(
+        _log,
+        f"llm_payload_{label}",
+        turns=meta.get("turns_out"),
+        chars=meta.get("chars_out"),
+        truncated=meta.get("truncated"),
+        capped=meta.get("capped_total"),
+        dropped_empty=meta.get("dropped_empty"),
+        merged=meta.get("merged_same_role"),
+    )
+    mensajes: list[dict[str, str]] = [
+        {"role": "system", "content": system_instruction or ""},
+    ]
+    for item in cleaned:
+        mensajes.append({"role": item["role"], "content": item["parts"][0]})
+    mensajes.append({"role": "user", "content": msg})
+    return mensajes
+
+
 class OpenAIProvider:
     nombre = "openai"
 
@@ -203,17 +364,9 @@ class OpenAIProvider:
         historial: list[dict],
         system_instruction: str,
     ) -> list[dict[str, str]]:
-        mensajes: list[dict[str, str]] = [
-            {"role": "system", "content": system_instruction},
-        ]
-        for item in historial:
-            rol = "user" if item.get("role") == "user" else "assistant"
-            parts = item.get("parts") or []
-            if parts:
-                mensajes.append({"role": rol, "content": str(parts[0])})
-        mensajes.append({"role": "user", "content": mensaje})
-        return mensajes
-
+        return _mensajes_openai_style(
+            mensaje, historial, system_instruction, label="openai"
+        )
     def chat_con_historial(
         self,
         mensaje: str,
@@ -289,16 +442,9 @@ class GroqProvider:
         historial: list[dict],
         system_instruction: str,
     ) -> list[dict[str, str]]:
-        mensajes: list[dict[str, str]] = [
-            {"role": "system", "content": system_instruction},
-        ]
-        for item in historial:
-            rol = "user" if item.get("role") == "user" else "assistant"
-            parts = item.get("parts") or []
-            if parts:
-                mensajes.append({"role": rol, "content": str(parts[0])})
-        mensajes.append({"role": "user", "content": mensaje})
-        return mensajes
+        return _mensajes_openai_style(
+            mensaje, historial, system_instruction, label="groq"
+        )
 
     def chat_con_historial(
         self,
@@ -313,7 +459,6 @@ class GroqProvider:
             messages=self._mensajes_openai(mensaje, historial, system_instruction),
         )
         return (respuesta.choices[0].message.content or "").strip()
-
     def generar_texto(self, prompt: str, model_name: str | None = None) -> str:
         client = self._cliente()
         respuesta = client.chat.completions.create(

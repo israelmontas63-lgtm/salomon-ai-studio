@@ -56,7 +56,13 @@ CARTESIA_SAMPLE_RATE = int(os.getenv("CARTESIA_SAMPLE_RATE", "44100") or "44100"
 # Compatibilidad de flags de orquestación (sin motores legacy)
 TTS_RATE = int(os.getenv("TTS_RATE", "185"))
 TTS_VOLUME = float(os.getenv("TTS_VOLUME", "0.95"))
-TTS_ASYNC = os.getenv("TTS_ASYNC", "false").strip().lower() in ("1", "true", "yes", "on")
+TTS_ASYNC = os.getenv(
+    "TTS_ASYNC",
+    # Free Tier Render: nunca bloquear /api/chat esperando ElevenLabs (proxy ~30s)
+    "true" if os.getenv("RENDER_FREE_TIER", "true").strip().lower() in ("1", "true", "yes", "on") else "false",
+).strip().lower() in ("1", "true", "yes", "on")
+# Tope duro de espera TTS en rutas síncronas (segundos)
+TTS_SYNC_TIMEOUT_S = float(os.getenv("TTS_SYNC_TIMEOUT_S", "8"))
 
 # ── OpenAI (proveedor alternativo) ───────────────────────────────────────
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()

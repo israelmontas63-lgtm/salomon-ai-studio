@@ -27,6 +27,7 @@ from settings import (
     GEMINI_MAX_TURNOS,
     GEMINI_MODEL,
     TTS_ASYNC,
+    TTS_SYNC_TIMEOUT_S,
 )
 
 # Tipo ligero (sin SDK Cartesia) — el motor se importa solo en texto_a_voz()
@@ -36,13 +37,42 @@ from cognicion.voz.tipos import ResultadoTTS
 def texto_a_voz(texto: str) -> ResultadoTTS:
     """
     TTS vía ServiceManager (única ruta): ElevenLabs → Cartesia.
-    Sin simulaciones — solo proveedores reales con API key.
+    Con tope de tiempo: nunca debe colgar /api/chat en Render Free Tier.
     """
     if not (texto or "").strip():
         return ResultadoTTS(tts_disponible=False, error="texto_vacio", motor="none")
-    from cognicion.servicios import obtener_manager
 
-    return obtener_manager().hablar(texto)
+    import concurrent.futures
+
+    def _run() -> ResultadoTTS:
+        from cognicion.servicios import obtener_manager
+
+        return obtener_manager().hablar(texto)
+
+    try:
+        timeout = max(2.0, float(TTS_SYNC_TIMEOUT_S or 8.0))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            fut = pool.submit(_run)
+            return fut.result(timeout=timeout)
+    except concurrent.futures.TimeoutError:
+        return ResultadoTTS(
+            tts_disponible=False,
+            error="tts_timeout",
+            motor="none",
+        )
+    except Exception as exc:
+        return ResultadoTTS(
+            tts_disponible=False,
+            error=f"tts_{type(exc).__name__}",
+            motor="none",
+        )
+
+
+def _tts_para_respuesta(texto: str) -> ResultadoTTS:
+    """Chat/PWA: en Free Tier o TTS_ASYNC no bloquea el texto."""
+    if TTS_ASYNC:
+        return ResultadoTTS(tts_disponible=False, error=None, motor="deferred")
+    return texto_a_voz(texto)
 
 
 @dataclass
@@ -276,11 +306,11 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         if not entrada:
             aviso = "Estoy atento. Escribe tu consulta cuando quieras."
-            tts = texto_a_voz(aviso)
+            tts = _tts_para_respuesta(aviso)
             return RespuestaSalomon(
                 texto=aviso,
                 exito=False,
-                metadata={"motivo": "entrada_vacia", "tts_error": tts.error},
+                metadata={"motivo": "entrada_vacia", "tts_error": tts.error, "tts_async": TTS_ASYNC},
                 audio_base64=tts.audio_base64,
                 audio_mime=tts.audio_mime,
                 tts_disponible=tts.tts_disponible,
@@ -298,7 +328,7 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                     self._historial.append(Mensaje(rol="asistente", contenido=texto_id))
                     self._recortar_historial()
                     self._motor.registrar_turno(entrada, texto_id)
-                    tts = texto_a_voz(texto_id)
+                    tts = _tts_para_respuesta(texto_id)
                     return RespuestaSalomon(
                         texto=texto_id,
                         exito=True,
@@ -312,7 +342,41 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                                 "protocolo": pack_id.get("protocolo")
                                 or "SALOMON_CONSCIOUSNESS",
                                 "version": "103.0.0",
-                            }
+                            },
+                            "tts_async": TTS_ASYNC,
+                        },
+                        audio_base64=tts.audio_base64,
+                        audio_mime=tts.audio_mime,
+                        tts_disponible=tts.tts_disponible,
+                    )
+            except Exception:
+                pass
+
+        # Saludo / charla simple: respuesta inmediata sin enjambre ni TTS bloqueante
+        if not imagen_base64:
+            try:
+                from config.memory_cortex import es_saludo_o_charla_simple
+
+                if es_saludo_o_charla_simple(entrada):
+                    texto_hi = (
+                        "Israel, aquí estoy. ¿En qué te acompaño hoy?"
+                    )
+                    self._historial.append(Mensaje(rol="usuario", contenido=entrada))
+                    self._historial.append(
+                        Mensaje(rol="asistente", contenido=texto_hi)
+                    )
+                    self._recortar_historial()
+                    self._motor.registrar_turno(entrada, texto_hi)
+                    tts = _tts_para_respuesta(texto_hi)
+                    return RespuestaSalomon(
+                        texto=texto_hi,
+                        exito=True,
+                        metadata={
+                            "cognicion": {
+                                "fast_path": "saludo",
+                                "memory_cortex": "saludo_simple",
+                            },
+                            "tts_async": TTS_ASYNC,
                         },
                         audio_base64=tts.audio_base64,
                         audio_mime=tts.audio_mime,
@@ -347,8 +411,9 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                     self._historial.append(Mensaje(rol="asistente", contenido=texto_vis))
                     self._recortar_historial()
                     self._motor.registrar_turno(entrada, texto_vis)
-                    tts = texto_a_voz(texto_vis)
+                    tts = _tts_para_respuesta(texto_vis)
                     meta_vis = {k: v for k, v in pack.items() if k != "texto"}
+                    meta_vis["tts_async"] = TTS_ASYNC
                     return RespuestaSalomon(
                         texto=texto_vis,
                         exito=True,
@@ -505,14 +570,9 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             tts = ResultadoTTS(tts_disponible=False)
             meta_extra["tts_pendiente"] = True
         else:
-            try:
-                tts = texto_a_voz(respuesta_texto)
-            except Exception as exc_tts:
-                # La voz no debe tumbar el texto del frontend
-                tts = ResultadoTTS(
-                    tts_disponible=False,
-                    error=f"tts_{type(exc_tts).__name__}",
-                )
+            tts = _tts_para_respuesta(respuesta_texto)
+            if tts.error:
+                meta_extra["tts_error"] = tts.error
 
         metadata = {
             "sesion_id": self._sesion_id,
@@ -534,31 +594,51 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
         )
 
     def _historial_para_gemini(self) -> list[dict]:
-        """Convierte el historial reciente al formato de chat de Gemini."""
+        """
+        Historial limpio para LLM:
+        - solo usuario/asistente con texto
+        - sin el turno user actual (se envía aparte enriquecido)
+        - roles alternados (user/model); merge si hay dobles
+        - tope GEMINI_MAX_TURNOS
+        """
         conversacion = [
-            m for m in self._historial
-            if m.rol in ("usuario", "asistente")
+            m
+            for m in self._historial
+            if m.rol in ("usuario", "asistente") and (m.contenido or "").strip()
         ]
 
         if conversacion and conversacion[-1].rol == "usuario":
             conversacion = conversacion[:-1]
 
-        max_mensajes = GEMINI_MAX_TURNOS * 2
+        max_mensajes = max(2, GEMINI_MAX_TURNOS * 2)
         conversacion = conversacion[-max_mensajes:]
 
         historial: list[dict] = []
         for mensaje in conversacion:
+            texto = (mensaje.contenido or "").strip()
+            if not texto:
+                continue
+            # Tope por mensaje (anti-contexto hinchado desde DB)
+            if len(texto) > 3_500:
+                texto = texto[:3_499] + "…"
             rol = "user" if mensaje.rol == "usuario" else "model"
             if historial and historial[-1]["role"] == rol:
-                historial[-1]["parts"][0] += f"\n{mensaje.contenido}"
+                prev = historial[-1]["parts"][0]
+                merged = f"{prev}\n{texto}"
+                historial[-1]["parts"][0] = (
+                    merged if len(merged) <= 3_500 else merged[:3_499] + "…"
+                )
             else:
-                historial.append({"role": rol, "parts": [mensaje.contenido]})
+                historial.append({"role": rol, "parts": [texto]})
 
         while historial and historial[0]["role"] != "user":
             historial.pop(0)
 
-        return historial
+        # No dejar user pendiente: el mensaje actual se adjunta en llm.py
+        if historial and historial[-1]["role"] == "user":
+            historial.pop()
 
+        return historial
     def _mensaje_error_gemini(self, error: Exception) -> str:
         texto_error = enmascarar_secreto(str(error)).lower()
 
@@ -724,6 +804,26 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         try:
             historial = self._historial_para_gemini()
+            # Tope del prompt enriquecido (evita rechazo por ventana de contexto)
+            if len(mensaje_gemini) > 12_000:
+                mensaje_gemini = mensaje_gemini[:11_999] + "…"
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["prompt_truncated"] = True
+
+            from cognicion.registro import evento, obtener_logger
+
+            _clog = obtener_logger("cerebro.chat")
+            evento(
+                _clog,
+                "chat_payload_armado",
+                session=self._sesion_id,
+                historial_turns=len(historial),
+                historial_chars=sum(
+                    len((h.get("parts") or [""])[0]) for h in historial
+                ),
+                mensaje_chars=len(mensaje_gemini),
+                model=(config_modelo or {}).get("model_name"),
+            )
 
             from cognicion.capas.pipeline import generar_respuesta
 
@@ -766,6 +866,15 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             return texto, True, meta_extra
 
         except Exception as exc:
+            from cognicion.registro import evento, obtener_logger
+
+            evento(
+                obtener_logger("cerebro.chat"),
+                "chat_llm_exception",
+                session=self._sesion_id,
+                error=type(exc).__name__,
+                detail=str(exc)[:400],
+            )
             texto_error = str(exc).lower()
             codigo = getattr(exc, "code", None)
             status = getattr(exc, "status_code", None)
@@ -782,6 +891,9 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                     "too many requests",
                     "model_not_found",
                     "does not exist",
+                    "invalid argument",
+                    "please ensure that multiturn",
+                    "must alternate",
                 )
             )
             if recuperable:

@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T16:50:00Z",
-  "timestamp": 1753116600,
-  "version": "110.20.0",
+  "timestamp_iso": "2026-07-21T18:40:00Z",
+  "timestamp": 1753123200,
+  "version": "110.20.1",
   "channel": "main",
-  "label": "layer-08-asalomon",
+  "label": "chat-memory-tts-hotfix",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "ASALOMON_L8_2026",
-  "notes": "v110.20.0 — Capa 8 Asalomón: metaconocimiento, formas de razonamiento e identidad post-L7. Capas 1–8 selladas. SW v72."
+  "protocol": "CHAT_MEMORY_FIX_2026",
+  "notes": "v110.20.1 — Historial LLM sanitizado (roles/tokens); saludo fast-path; TTS async en Render; logs de payload. Desbloquea chat colgado."
 }
