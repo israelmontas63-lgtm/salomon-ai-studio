@@ -2318,7 +2318,7 @@ def cognicion_vision(body: VisionRequest) -> ChatResponse:
             session_id=session_id,
             metadata=meta,
             audio_base64=brain.get("audio_base64"),
-            audio_mime=brain.get("audio_mime"),
+            audio_mime=brain.get("audio_mime") or "audio/mpeg",
             tts_disponible=bool(brain.get("tts_disponible")),
         )
 
@@ -2339,7 +2339,7 @@ def cognicion_vision(body: VisionRequest) -> ChatResponse:
         session_id=session_id,
         metadata=meta,
         audio_base64=respuesta.audio_base64,
-        audio_mime=respuesta.audio_mime,
+        audio_mime=respuesta.audio_mime or "audio/mpeg",
         tts_disponible=respuesta.tts_disponible,
     )
 

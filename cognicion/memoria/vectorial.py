@@ -32,6 +32,13 @@ class _CohereChromaEF:
             return []
         return self._mgr.embed_texts(texts)
 
+    # Chroma ≥1.0 llama embed_query / embed_documents (no solo __call__)
+    def embed_query(self, input: list[str]) -> list[list[float]]:
+        return self(input)
+
+    def embed_documents(self, input: list[str]) -> list[list[float]]:
+        return self(input)
+
 
 
 def reiniciar_instancia() -> "MemoriaVectorial":
@@ -310,10 +317,14 @@ class MemoriaVectorial:
                 where=filtro,
             )
         except Exception:
-            resultado = self._coleccion.query(
-                query_texts=[consulta],
-                n_results=limite,
-            )
+            try:
+                resultado = self._coleccion.query(
+                    query_texts=[consulta],
+                    n_results=limite,
+                )
+            except Exception:
+                # Cero crash del cerebro: RAG degradado → sin fragmentos
+                return []
 
         documentos = resultado.get("documents", [[]])[0]
         metadatos = resultado.get("metadatas", [[]])[0]
