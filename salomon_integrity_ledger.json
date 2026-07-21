@@ -73,15 +73,15 @@
     "golden_snapshots/salud_activa/**"
   ],
   "file_signatures_sha256": {
-    "app.py": "126d369301494baf08b1e93d5b54eef3965e13503d8fdc5bd33341e168617ef5",
-    "studio/dist/camera-engine.js": "f084982dba855f8bfe979d6a5939fee8186fce858e0d046ed3855ae5b7a5f849",
-    "studio/dist/camera-v13.js": "d9ce3352f318b19d583323831d014454e036d00d2ae35a1e5fc625bf01989bed",
-    "studio/dist/camera-v13.css": "f6d6cf71d8d1b22873932d3bfdb2faf5153ce2326afd6f500281c37b1b5a1b20",
-    "studio/dist/index.html": "00943746b86bf36436eaff2c124a306cda93d27f2c3f36587a99158e5cc0142b",
-    "studio/dist/salomon-security-kernel.js": "cf42ef62d1ec2b9fd181dc2ca64cd2f2ca58e32fd314aeed204534d7886b95ec",
-    "studio/src/features/camera_v13/MediaStreamManager.js": "f03c5464120b513bdbde9876bf89e2f40aef6e0d7843fe48a2ce2db286b16250",
+    "app.py": "d16ded5f30abc594371bc7d09c65ceada9063a81ae6b77b98f21b00b60de73f1",
+    "studio/dist/camera-engine.js": "33a800579e6a62d4f869954e1269d2845166ff9bde319b28cfb80a0d92fad5ed",
+    "studio/dist/camera-v13.js": "8e68b8f967a4fdc5c9bfa5c6795bed7af34347bb55650d98935a9da38cf1f47a",
+    "studio/dist/camera-v13.css": "6d39ee11ecbe40219baebf0cc14b3e79e8f5db0cb41419411b244cdc07c53ccd",
+    "studio/dist/index.html": "e0a803c571767c10c8d39b75a18e3db8a10f39dd59cde87e147a43cb1dbdf8a8",
+    "studio/dist/salomon-security-kernel.js": "c83914f6da04a31eef8a672625d1eefe9e495ba91e2918c5d584da9d2bea5571",
+    "studio/src/features/camera_v13/MediaStreamManager.js": "1e8fea4afc5070bc30be4be62af46b328f6c41b439d078fbb75a2b96f72a947b",
     "studio/src/features/camera_v13/CameraV13.jsx": "8adff11e1a29af6c4ad8996b7b02b39d1c3c00e8f231e41c1ca198e2960dd535",
-    "version.json": "9dd9136653600772e1b9c98e16eee86a9cca38ae005865b1f9701d9a2376189f"
+    "version.json": "b47179b2f3534d33527504fc61e808d554ec581742586ae2ed515e25d46d5f4c"
   },
   "invariants": [
     "MediaStreamManager.forceReset debe existir",

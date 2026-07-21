@@ -5,7 +5,7 @@ services:
     runtime: python
     plan: free
     rootDir: .
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -c "import gunicorn, uvicorn; print('gunicorn_ok', gunicorn.__version__)" && python -c "from cognicion.eficiencia import estado_eficiencia; print(estado_eficiencia()['version'])" && python -m compileall -q cognicion persistencia mente core views config cerebro.py app.py settings.py && python -c "from cognicion.capas_inteligencia.synaptic_bus import list_synapses; print('synaptic_ok', len(list_synapses()))"
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -c "import gunicorn, uvicorn; print('gunicorn_ok', gunicorn.__version__)" && python -m compileall -q cognicion persistencia mente core views config cerebro.py app.py settings.py && python -c "from cognicion.eficiencia import estado_eficiencia; print('eficiencia', estado_eficiencia()['version'])" && python -c "from cognicion.capas_inteligencia.synaptic_bus import list_synapses; print('synaptic_ok', len(list_synapses()))" && python -c "from cognicion.core_salomon_api_arsenal_image_generator import obtener_arsenal; print('arsenal_ok', obtener_arsenal().STATUS)"
     startCommand: python -m gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 90 --graceful-timeout 20 --max-requests 120 --max-requests-jitter 20
     healthCheckPath: /api/salud
     envVars:

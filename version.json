@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T03:50:00Z",
-  "timestamp": 1753069800,
-  "version": "110.17.0",
+  "timestamp_iso": "2026-07-21T04:00:00Z",
+  "timestamp": 1753070400,
+  "version": "110.17.1",
   "channel": "main",
-  "label": "api-arsenal-image-generator",
+  "label": "render-deploy-recovery",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "API_ARSENAL_IMAGE_GENERATOR_ACTIVE",
-  "notes": "v110.17.0 - Arsenal APIs + genera imagen en chat PWA; SW v65."
+  "protocol": "RENDER_DEPLOY_RECOVERY",
+  "notes": "v110.17.1 - Recovery after Failed deploy ID b82d71f (not a git SHA). Validated compile/import; ledger refreshed; arsenal build check; SW v66."
 }
