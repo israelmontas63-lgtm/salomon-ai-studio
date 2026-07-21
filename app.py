@@ -1659,20 +1659,24 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
             pass
 
     try:
-        return _chat_core(body, session_id, salomon)
+        # Sello industrial: nunca devolver fallo vacío/genérico — siempre «Error NN: …»
+        return _sellar_respuesta_error_numerico(_chat_core(body, session_id, salomon))
     except Exception as exc:
         from core.error_codes import format_error_response, get_error_info
 
-        # Blindaje oficial: código 20–49 + estructura estándar (+ audit stack)
+        # Blindaje oficial: código 20–49 + texto físico Error NN (+ audit stack)
         pack = format_error_response(
             exc,
             hint="api",
             origin="api.chat",
             audit=True,
         )
-        info = get_error_info(pack["error_codigo"])
+        info = get_error_info(pack.get("error_codigo", 49))
+        texto = str(pack.get("texto") or "").strip()
+        if not texto.lower().startswith("error "):
+            texto = f"Error {info['code']}: {info['message']}"
         return ChatResponse(
-            texto=str(pack.get("texto") or f"Error {info['code']}: {info['message']}"),
+            texto=texto,
             exito=False,
             session_id=session_id,
             metadata=pack,
@@ -1689,6 +1693,83 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
             except Exception:
                 pass
 
+
+def _sellar_respuesta_error_numerico(resp: ChatResponse) -> ChatResponse:
+    """
+    Garantía física: si el chat falló o el texto es genérico/vacío,
+    la burbuja debe mostrar exactamente «Error NN: causa» (core.error_codes).
+    """
+    import re
+
+    from core.error_codes import format_error_response, get_error_info
+
+    texto = (resp.texto or "").strip()
+    meta = dict(resp.metadata or {})
+    cog = meta.get("cognicion") if isinstance(meta.get("cognicion"), dict) else {}
+    codigo_meta = meta.get("error_codigo") or cog.get("error_codigo")
+    ya_numerico = bool(re.match(r"(?i)^Error\s+\d{2}\b", texto))
+    generico = bool(
+        re.search(
+            r"(?i)no pude completar|no puedo completar|tropiezo interno|"
+            r"filtro de coherencia|respuesta incompleta|lo intentamos de nuevo",
+            texto,
+        )
+    )
+    fallo = (resp.exito is False) or (not texto) or generico or bool(codigo_meta and not ya_numerico)
+    if not fallo:
+        return resp
+    if ya_numerico and resp.exito is False:
+        # Ya tiene Error NN — solo asegurar metadata
+        if not codigo_meta:
+            m = re.match(r"(?i)^Error\s+(\d{2})\b", texto)
+            if m:
+                meta["error_codigo"] = int(m.group(1))
+                meta.setdefault("cognicion", {})
+                if isinstance(meta["cognicion"], dict):
+                    meta["cognicion"]["error_codigo"] = int(m.group(1))
+                return ChatResponse(
+                    texto=texto,
+                    exito=False,
+                    session_id=resp.session_id,
+                    metadata=meta,
+                    audio_base64=resp.audio_base64,
+                    audio_mime=resp.audio_mime or "audio/mpeg",
+                    tts_disponible=bool(resp.tts_disponible),
+                    imagen_url=resp.imagen_url,
+                )
+        return resp
+
+    try:
+        code = int(codigo_meta) if codigo_meta is not None else 49
+    except (TypeError, ValueError):
+        code = 49
+    if not (20 <= code <= 49):
+        code = 49
+    info = get_error_info(code)
+    causa = (
+        str(meta.get("error_causa") or cog.get("error_causa") or "").strip()
+        or (texto if texto and not generico else "")
+        or str(info["message"])
+    )
+    pack = format_error_response(
+        code=code,
+        cause=causa,
+        hint="api",
+        origin="api.chat.seal",
+        audit=False,
+        extra_meta={"sealed": True},
+    )
+    meta.update(pack)
+    return ChatResponse(
+        texto=str(pack["texto"]),
+        exito=False,
+        session_id=resp.session_id,
+        metadata=meta,
+        audio_base64=None,
+        audio_mime=resp.audio_mime or "audio/mpeg",
+        tts_disponible=False,
+        imagen_url=resp.imagen_url,
+    )
 
 def _chat_core(body: ChatRequest, session_id: str, salomon) -> ChatResponse:
     imagen_b64 = body.imagen_base64 or body.image_frame

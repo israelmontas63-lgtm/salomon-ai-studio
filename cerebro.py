@@ -1032,8 +1032,14 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                     )
                     return degradada, False, meta_extra
                 return degradada, True, meta_extra
-            # Fallo duro: estructura estandarizada al usuario
-            return self._mensaje_error_gemini(exc), False, meta_extra
+            # Fallo duro: texto físico «Error NN: …» (nunca genérico)
+            texto_duro = str(pack.get("texto") or "").strip()
+            if not texto_duro.lower().startswith("error "):
+                texto_duro = self._mensaje_error_gemini(exc)
+            if not texto_duro.lower().startswith("error "):
+                texto_duro = f"Error {codigo_num}: {info['message']}"
+            meta_extra["cognicion"]["error_texto"] = texto_duro
+            return texto_duro, False, meta_extra
 
     def _contar_turnos(self) -> int:
         return sum(1 for m in self._historial if m.rol in ("usuario", "asistente"))

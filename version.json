@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T20:35:00Z",
-  "timestamp": 1753130100,
-  "version": "110.21.3",
+  "timestamp_iso": "2026-07-21T20:40:00Z",
+  "timestamp": 1753130400,
+  "version": "110.21.4",
   "channel": "main",
-  "label": "industrial-error-codes-full",
+  "label": "error-text-seal",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "CORE_ERROR_CODES",
-  "notes": "v110.21.3 — Blindaje industrial: core.error_codes en chat, LLM (Gemini/OpenAI/Groq) y visión; catálogo único."
+  "notes": "v110.21.4 — Sello físico Error NN en /api/chat: nunca texto vacío/genérico; format_error_response obligatorio."
 }
