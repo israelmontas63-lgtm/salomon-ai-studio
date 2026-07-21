@@ -550,11 +550,11 @@
           textNode.textContent = replyText;
           bot.appendChild(textNode);
           var imgMeta =
+            data.imagen_url ||
             (meta.cognicion &&
               meta.cognicion.imagen_generada &&
               meta.cognicion.imagen_generada.url) ||
             meta.imagen_generada_url ||
-            data.imagen_url ||
             null;
           if (imgMeta) {
             var imgEl = document.createElement("img");

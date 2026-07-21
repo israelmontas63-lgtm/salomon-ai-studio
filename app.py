@@ -442,6 +442,7 @@ class ChatResponse(BaseModel):
     audio_base64: str | None = None
     audio_mime: str = "audio/mpeg"
     tts_disponible: bool = False
+    imagen_url: str | None = None
 
 
 class SessionResponse(BaseModel):
@@ -1278,6 +1279,44 @@ def api_ai_central_button(body: CentralButtonRequest) -> dict:
         only_activate=body.only_activate,
     )
     brain = pack.get("brain") or {}
+    # Dictado / botón: dispatcher universal → FAL/Replicate si pidió imagen
+    try:
+        from cognicion.core_salomon_universal_key_dispatcher import (
+            dispatch_image_intent,
+            obtener_dispatcher,
+        )
+
+        if mensaje and obtener_dispatcher().wants_image(mensaje):
+            meta_b = dict(brain.get("metadata") or {})
+            meta_b.setdefault("cognicion", {})
+            gen = (meta_b.get("cognicion") or {}).get("imagen_generada") or {}
+            url = gen.get("url") if isinstance(gen, dict) else None
+            if not url:
+                pack_img = dispatch_image_intent(mensaje)
+                if pack_img.get("ok") and pack_img.get("url"):
+                    url = str(pack_img["url"])
+                    meta_b["cognicion"]["imagen_generada"] = {
+                        "url": url,
+                        "via": pack_img.get("via") or "universal_dispatcher",
+                    }
+                    brain = dict(brain)
+                    brain["metadata"] = meta_b
+                    texto_b = str(brain.get("texto") or "")
+                    if url not in texto_b:
+                        brain["texto"] = (
+                            (texto_b.rstrip() + "\n\n") if texto_b.strip() else ""
+                        ) + f"Imagen lista: {url}"
+                    brain["imagen_url"] = url
+                    pack = dict(pack)
+                    pack["brain"] = brain
+            elif url:
+                brain = dict(brain)
+                brain["imagen_url"] = url
+                pack = dict(pack)
+                pack["brain"] = brain
+    except Exception:
+        pass
+
     if (mensaje or imagen_b64) and brain.get("session_id") and brain.get("texto"):
         _persistir_turno(
             brain["session_id"],
@@ -1553,22 +1592,76 @@ def _chat_core(body: ChatRequest, session_id: str, salomon) -> ChatResponse:
         autonomo=body.autonomo,
     )
 
+    meta = dict(respuesta.metadata or {})
+    meta.setdefault("cognicion", {})
+    imagen_url = None
+    try:
+        gen = (meta.get("cognicion") or {}).get("imagen_generada") or {}
+        imagen_url = gen.get("url") if isinstance(gen, dict) else None
+    except Exception:
+        imagen_url = None
+
+    # Garantía: pedido de imagen → dispatcher universal (FAL/Replicate/OpenAI)
+    try:
+        from cognicion.core_salomon_universal_key_dispatcher import (
+            dispatch_image_intent,
+            obtener_dispatcher,
+        )
+
+        if obtener_dispatcher().wants_image(body.mensaje or "") and not imagen_url:
+            pack_img = dispatch_image_intent(body.mensaje or "")
+            if pack_img.get("ok") and pack_img.get("url"):
+                imagen_url = str(pack_img["url"])
+                meta["cognicion"]["imagen_generada"] = {
+                    "url": imagen_url,
+                    "via": pack_img.get("via") or "universal_dispatcher",
+                }
+    except Exception as exc_img:
+        meta["cognicion"]["imagen_hook_error"] = type(exc_img).__name__
+        # Fallback arsenal directo
+        try:
+            from cognicion.core_salomon_api_arsenal_image_generator import (
+                generate_from_intent,
+                obtener_arsenal,
+            )
+
+            if obtener_arsenal().wants_image(body.mensaje or "") and not imagen_url:
+                pack_img = generate_from_intent(body.mensaje or "")
+                if pack_img.get("ok") and pack_img.get("url"):
+                    imagen_url = str(pack_img["url"])
+                    meta["cognicion"]["imagen_generada"] = {
+                        "url": imagen_url,
+                        "via": pack_img.get("via") or "arsenal_chat_hook",
+                    }
+        except Exception as exc2:
+            meta["cognicion"]["imagen_hook_error"] = (
+                meta["cognicion"].get("imagen_hook_error")
+                or type(exc2).__name__
+            )
+
+    texto_out = respuesta.texto or ""
+    if imagen_url and imagen_url not in texto_out:
+        texto_out = (
+            (texto_out.rstrip() + "\n\n") if texto_out.strip() else ""
+        ) + f"Imagen lista: {imagen_url}"
+
     # Persistir también turnos solo-imagen (antes se perdían si mensaje vacío)
     if body.mensaje.strip() or imagen_b64:
         _persistir_turno(
             session_id,
             body.mensaje.strip() or "[foto]",
-            respuesta.texto,
+            texto_out,
         )
 
     return ChatResponse(
-        texto=respuesta.texto,
+        texto=texto_out,
         exito=respuesta.exito,
         session_id=session_id,
-        metadata=respuesta.metadata,
+        metadata=meta,
         audio_base64=respuesta.audio_base64,
-        audio_mime=respuesta.audio_mime,
+        audio_mime=respuesta.audio_mime or "audio/mpeg",
         tts_disponible=respuesta.tts_disponible,
+        imagen_url=imagen_url,
     )
 
 
@@ -2707,6 +2800,43 @@ def api_media_job(job_id: str) -> dict:
 class ArsenalImagenRequest(BaseModel):
     mensaje: str = Field(default="", max_length=4000)
     prompt: str = Field(default="", max_length=4000)
+
+
+@app.get("/api/dispatcher/status")
+def api_dispatcher_status() -> dict:
+    """Inventario runtime de llaves + capacidad de imagen (Fal/Replicate/OpenAI)."""
+    from cognicion.core_salomon_universal_key_dispatcher import obtener_dispatcher
+
+    d = obtener_dispatcher()
+    inv = d.inventory()
+    return {
+        "ok": True,
+        "module": d.MODULE,
+        "status": d.STATUS,
+        "version": d.VERSION,
+        "inventory": inv,
+        "image_generation_available": inv.get("image_generation_available"),
+        "backend": "FastAPI",
+    }
+
+
+@app.post("/api/dispatcher/imagen")
+def api_dispatcher_imagen(body: ArsenalImagenRequest) -> dict:
+    """Despacho inmediato: prompt gráfico → Fal/Replicate/OpenAI → URL."""
+    from cognicion.core_salomon_universal_key_dispatcher import dispatch_image_intent
+
+    mensaje = (body.mensaje or body.prompt or "").strip()
+    if not mensaje:
+        raise HTTPException(status_code=400, detail="mensaje_requerido")
+    pack = dispatch_image_intent(mensaje)
+    return {
+        "exito": bool(pack.get("ok")),
+        "url": pack.get("url"),
+        "via": pack.get("via"),
+        "error": pack.get("error"),
+        "inventory": pack.get("inventory"),
+        "imagen_url": pack.get("url"),
+    }
 
 
 @app.get("/api/arsenal/status")

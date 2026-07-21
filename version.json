@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T04:00:00Z",
-  "timestamp": 1753070400,
-  "version": "110.17.1",
+  "timestamp_iso": "2026-07-21T04:20:00Z",
+  "timestamp": 1753071600,
+  "version": "110.17.2",
   "channel": "main",
-  "label": "render-deploy-recovery",
+  "label": "universal-key-dispatcher-images",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "RENDER_DEPLOY_RECOVERY",
-  "notes": "v110.17.1 - Recovery after Failed deploy ID b82d71f (not a git SHA). Validated compile/import; ledger refreshed; arsenal build check; SW v66."
+  "protocol": "UNIVERSAL_KEY_DISPATCHER_READY",
+  "notes": "v110.17.2 - Dispatcher universal Fal/Replicate; chat+dictado devuelven imagen_url; SW v67."
 }

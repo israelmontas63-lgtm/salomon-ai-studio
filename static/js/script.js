@@ -53,11 +53,11 @@
 
   function mediaUrlFromResponse(data) {
     if (!data) return null;
+    if (data.imagen_url) return data.imagen_url;
     var meta = data.metadata || {};
     var cog = meta.cognicion || {};
     var gen = cog.imagen_generada || meta.imagen_generada || null;
     if (gen && gen.url) return gen.url;
-    if (data.imagen_url) return data.imagen_url;
     if (data.url_relativa) return data.url_relativa;
     return null;
   }

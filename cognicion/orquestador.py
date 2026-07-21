@@ -254,10 +254,16 @@ class MotorCognicion:
                 if (neural.get("swarm") or {}).get("ok"):
                     meta["busqueda_consultada"] = True
                     meta["cognicion"]["memory_cortex"] = "master_neural_swarm"
-                if (neural.get("image") or {}).get("url"):
+                if (neural.get("image") or {}).get("url") or (
+                    (neural.get("image") or {}).get("pack") or {}
+                ).get("url_relativa"):
+                    img_pack = neural.get("image") or {}
+                    url_img = img_pack.get("url") or (
+                        (img_pack.get("pack") or {}).get("url_relativa")
+                    )
                     meta["cognicion"]["imagen_generada"] = {
-                        "url": neural["image"].get("url"),
-                        "via": neural["image"].get("via"),
+                        "url": url_img,
+                        "via": img_pack.get("via"),
                     }
         except Exception as exc:
             meta["cognicion"]["master_neural_error"] = type(exc).__name__

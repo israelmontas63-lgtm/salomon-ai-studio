@@ -127,7 +127,10 @@ class SalomonAPIArsenalImageGenerator:
 
             pack = bridge_colsub_media(prompt, hint="imagen_hd")
             url = _extract_url(pack)
-            if url or (isinstance(pack, dict) and pack.get("exito")):
+            if not url and isinstance(pack, dict):
+                # neural success shape: url_relativa en la raíz
+                url = pack.get("url_relativa") or pack.get("url")
+            if url:
                 return {
                     "ok": True,
                     "url": url,
@@ -136,11 +139,14 @@ class SalomonAPIArsenalImageGenerator:
                     "bloque": (
                         "[Generación de imagen — arsenal multimodal]\n"
                         f"Prompt: {prompt[:200]}\n"
-                        f"URL: {url or '(ver metadata)'}\n"
-                        "Instrucción: Describe la imagen y comparte el enlace."
+                        f"URL: {url}\n"
+                        "Instrucción: Describe la imagen y di que ya está lista en el chat. "
+                        "Incluye la URL exactamente."
                     ),
                     "via": "bridge_colsub_media",
                 }
+            if isinstance(pack, dict) and pack.get("exito") and not url:
+                last_err = "exito_sin_url"
         except Exception as exc:
             last_err = type(exc).__name__
 
@@ -149,19 +155,19 @@ class SalomonAPIArsenalImageGenerator:
 
             resultado = generar_imagen(prompt)
             url = _extract_url(resultado) if isinstance(resultado, dict) else None
-            if isinstance(resultado, dict) and (
-                resultado.get("exito") or resultado.get("ok") or url
-            ):
+            if not url and isinstance(resultado, dict):
+                url = resultado.get("url_relativa") or resultado.get("url")
+            if url:
                 return {
                     "ok": True,
-                    "url": url or resultado.get("url_relativa") or resultado.get("url"),
+                    "url": url,
                     "pack": resultado,
                     "prompt": prompt,
                     "bloque": (
-                        "[Generación de imagen — Fal/Replicate/DALL·E]\n"
+                        "[Generación de imagen — Fal/Replicate/DALL-E]\n"
                         f"Prompt: {prompt[:200]}\n"
-                        f"URL: {url or resultado.get('url_relativa') or '(ver metadata)'}\n"
-                        "Instrucción: Informa a Israel del resultado."
+                        f"URL: {url}\n"
+                        "Instrucción: Informa a Israel que la imagen está lista."
                     ),
                     "via": "generar_imagen",
                 }
@@ -174,7 +180,7 @@ class SalomonAPIArsenalImageGenerator:
             "prompt": prompt,
             "bloque": (
                 "[Generación de imagen no disponible]\n"
-                "Activa FAL_KEY, REPLICATE_API_TOKEN u OPENAI_API_KEY en Render. "
+                "Activa FAL_KEY, REPLICATE_API_TOKEN/REPLICATE_API_KEY u OPENAI_API_KEY. "
                 "Avisa con claridad y ofrece reintentar."
             ),
         }
