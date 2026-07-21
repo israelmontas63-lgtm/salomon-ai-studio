@@ -18,9 +18,12 @@ from contextlib import asynccontextmanager
 from settings import ROOT_DIR
 from dotenv import load_dotenv
 
-# Root .env + vault SBI (firma/plantilla/tokens en security/credentials/)
-load_dotenv(ROOT_DIR / ".env")
-load_dotenv(ROOT_DIR / "security" / "credentials" / "sbi.env", override=True)
+# Root .env + vault SBI. En Render NUNCA pisar secretos de plataforma.
+_ON_RENDER = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
+load_dotenv(ROOT_DIR / ".env", override=not _ON_RENDER)
+_sbi = ROOT_DIR / "security" / "credentials" / "sbi.env"
+if _sbi.exists():
+    load_dotenv(_sbi, override=not _ON_RENDER)
 
 from cognicion.registro import configurar_registro, evento, obtener_logger
 
@@ -64,6 +67,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/salud/detalle",
         "/api/version",
         "/api/llm/status",
+        "/api/llm/reload-env",
         "/api/bca/estado",
         "/api/tunel/estado",
         "/api/cognicion/vdcp/estado",
@@ -1156,6 +1160,16 @@ def api_llm_status() -> dict:
 
     st = estado_llm()
     st["ok"] = bool(st.get("disponible") or any((st.get("keys") or {}).values()))
+    return st
+
+
+@app.post("/api/llm/reload-env")
+def api_llm_reload_env() -> dict:
+    """Recarga .env / secretos y reinicia clientes LLM (sin exponer keys)."""
+    from cognicion.llm import recargar_entorno_llm
+
+    st = recargar_entorno_llm()
+    st["ok"] = bool(st.get("keys", {}).get("gemini") or st.get("disponible"))
     return st
 
 

@@ -11,10 +11,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).resolve().parent
-# Local: _render_repo/.env; también acepta .env del workspace padre (SALOMON AI SS/.env).
-load_dotenv(ROOT_DIR / ".env")
-load_dotenv(ROOT_DIR.parent / ".env")
-load_dotenv(ROOT_DIR / "security" / "credentials" / "sbi.env", override=True)
+# Local: cargar .env. En Render NUNCA pisar secretos de plataforma.
+_ON_RENDER = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
+load_dotenv(ROOT_DIR / ".env", override=not _ON_RENDER)
+load_dotenv(ROOT_DIR.parent / ".env", override=not _ON_RENDER)
+_sbi_env = ROOT_DIR / "security" / "credentials" / "sbi.env"
+if _sbi_env.exists():
+    load_dotenv(_sbi_env, override=not _ON_RENDER)
 
 # Persistencia: DATA_DIR / SESIONES_DB via env (disco Render o ruta externa)
 _data_env = os.getenv("DATA_DIR", "").strip()
@@ -31,7 +34,7 @@ except Exception:
 
 # ── Google Gemini ──────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite").strip()
 GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash").strip()
 GEMINI_MAX_TURNOS = int(os.getenv("GEMINI_MAX_TURNOS", "20"))
 GEMINI_MODELOS_RESPALDO = [

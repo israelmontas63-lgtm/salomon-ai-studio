@@ -28,6 +28,27 @@ from cognicion.respuesta_local import respuesta_local_chat
 
 _log = obtener_logger("llm")
 _ultimo_uso: dict[str, object] = {}
+# Circuit breaker: si Gemini responde 429/limit:0, saltar a Groq unos minutos
+_gemini_skip_until: float = 0.0
+
+
+def _gemini_circuit_abierto() -> bool:
+    import time
+
+    return time.monotonic() < float(_gemini_skip_until)
+
+
+def _gemini_circuit_abrir(segundos: float = 180.0) -> None:
+    global _gemini_skip_until
+    import time
+
+    _gemini_skip_until = time.monotonic() + max(30.0, float(segundos))
+    print(f"[LLM] Gemini circuit OPEN {segundos:.0f}s -> cascada Groq/local", flush=True)
+
+
+def _gemini_circuit_cerrar() -> None:
+    global _gemini_skip_until
+    _gemini_skip_until = 0.0
 
 # Tope duro por llamada (ms). Free Tier Render: corto para no matar el proxy (~30s).
 _render_free = os.getenv("RENDER_FREE_TIER", "true").strip().lower() in (
@@ -36,20 +57,23 @@ _render_free = os.getenv("RENDER_FREE_TIER", "true").strip().lower() in (
     "yes",
     "on",
 )
+# Gemini exige deadline >= 10s (API 400 si es menor). Free Tier: 12s + hard cut.
 _LLM_HTTP_TIMEOUT_MS = int(
     os.getenv(
         "LLM_HTTP_TIMEOUT_MS",
-        "8000" if _render_free else "20000",
+        "12000" if _render_free else "20000",
     )
-    or ("8000" if _render_free else "20000")
+    or ("12000" if _render_free else "20000")
 )
-# Cuántos modelos Gemini probar (1 en Free = evita 18s×N)
+if _LLM_HTTP_TIMEOUT_MS < 10000:
+    _LLM_HTTP_TIMEOUT_MS = 10000  # mínimo impuesto por Google GenAI
+# Cuántos modelos Gemini probar (1 en Free = evita N×timeout)
 _LLM_MAX_MODELS = int(
     os.getenv("LLM_MAX_MODELS", "1" if _render_free else "3") or "1"
 )
 # Presupuesto total de la cascada cloud (s) antes de forzar local
 _LLM_TOTAL_BUDGET_S = float(
-    os.getenv("LLM_TOTAL_BUDGET_S", "16" if _render_free else "45") or "16"
+    os.getenv("LLM_TOTAL_BUDGET_S", "18" if _render_free else "45") or "18"
 )
 
 
@@ -76,8 +100,8 @@ def _falta_clave(provider: str) -> Exception:
     from core.error_codes import format_error_response
 
     msg = (
-        f"Falta API key del proveedor «{provider}». "
-        "Configura GEMINI_API_KEY / OPENAI_API_KEY / GROQ_API_KEY en Render → Environment."
+        f"Falta API key del proveedor '{provider}'. "
+        "Configura GEMINI_API_KEY / OPENAI_API_KEY / GROQ_API_KEY en Render Environment."
     )
     exc = RuntimeError(msg)
     pack = format_error_response(
@@ -128,6 +152,53 @@ def estado_llm() -> dict[str, Any]:
     }
 
 
+def recargar_entorno_llm() -> dict[str, Any]:
+    """
+    Recarga .env (override) + reinicia clientes LLM cacheados.
+    No imprime secretos. Útil tras actualizar GEMINI_API_KEY en local/Render.
+    """
+    from pathlib import Path
+
+    from dotenv import load_dotenv
+
+    root = Path(__file__).resolve().parents[1]
+    load_dotenv(root / ".env", override=True)
+    load_dotenv(root / "security" / "credentials" / "sbi.env", override=True)
+
+    # Invalidar clientes cacheados para forzar nueva key
+    _gemini_circuit_cerrar()
+    for nombre, prov in list(_PROVEEDORES.items()):
+        if hasattr(prov, "_client"):
+            try:
+                prov._client = None
+            except Exception:
+                pass
+        if hasattr(prov, "_client_key"):
+            try:
+                prov._client_key = ""
+            except Exception:
+                pass
+
+    global _LLM_HTTP_TIMEOUT_MS
+    try:
+        raw = int(os.getenv("LLM_HTTP_TIMEOUT_MS", str(_LLM_HTTP_TIMEOUT_MS)) or _LLM_HTTP_TIMEOUT_MS)
+        _LLM_HTTP_TIMEOUT_MS = max(10000, raw)
+    except Exception:
+        _LLM_HTTP_TIMEOUT_MS = max(10000, int(_LLM_HTTP_TIMEOUT_MS))
+
+    st = estado_llm()
+    st["reloaded"] = True
+    st["gemini_key_len"] = len(_env_key("GEMINI_API_KEY"))
+    st["gemini_circuit_open"] = _gemini_circuit_abierto()
+    print(
+        f"[LLM] entorno recargado gemini_key={bool(_env_key('GEMINI_API_KEY'))} "
+        f"timeout_ms={_LLM_HTTP_TIMEOUT_MS}",
+        flush=True,
+    )
+    return st
+
+
+
 def _anclar_error_proveedor(exc: Exception, *, provider: str) -> Exception:
     """
     Clasifica el fallo con el diccionario oficial (core.error_codes)
@@ -156,7 +227,7 @@ def _anclar_error_proveedor(exc: Exception, *, provider: str) -> Exception:
             detail=str(exc)[:240],
         )
         print(
-            f"[LLM] {provider} → Error {info['code']}: {type(exc).__name__}: {str(exc)[:200]}",
+            f"[LLM] {provider} -> Error {info['code']}: {type(exc).__name__}: {str(exc)[:200]}",
             flush=True,
         )
         print(traceback.format_exc()[-1200:], flush=True)
@@ -356,7 +427,16 @@ class GeminiProvider:
 
             opts = None
             try:
-                opts = types.HttpOptions(timeout=int(_LLM_HTTP_TIMEOUT_MS))
+                retry = None
+                try:
+                    # 1 intento: fallar rápido en 429 y cascada a Groq (evita Error 49 por latencia)
+                    retry = types.HttpRetryOptions(attempts=1)
+                except Exception:
+                    retry = None
+                kwargs_opts: dict[str, Any] = {"timeout": int(_LLM_HTTP_TIMEOUT_MS)}
+                if retry is not None:
+                    kwargs_opts["retry_options"] = retry
+                opts = types.HttpOptions(**kwargs_opts)
             except Exception:
                 opts = None
             kwargs: dict[str, Any] = {"api_key": key}
@@ -371,6 +451,8 @@ class GeminiProvider:
         return self._client
 
     def disponible(self) -> bool:
+        if _gemini_circuit_abierto():
+            return False
         return bool(_env_key("GEMINI_API_KEY"))
 
     def _modelos_a_probar(self, model_name: str | None) -> list[str]:
@@ -434,7 +516,8 @@ class GeminiProvider:
                 # Timeout duro en hilo (HttpOptions a veces no corta a tiempo en Render)
                 import concurrent.futures
 
-                hard_s = max(4.0, float(_LLM_HTTP_TIMEOUT_MS) / 1000.0)
+                # Google GenAI exige deadline >= 10s; nunca cortar antes.
+                hard_s = max(10.0, float(_LLM_HTTP_TIMEOUT_MS) / 1000.0)
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                     fut = pool.submit(_call)
                     try:
@@ -450,6 +533,7 @@ class GeminiProvider:
                 print(f"[LLM] Gemini respuesta vacía model={modelo}", flush=True)
             except Exception as exc:
                 ultimo_error = _anclar_error_proveedor(exc, provider="gemini")
+                _marcar_cuota_gemini(exc)
                 evento(
                     _log,
                     "llm_gemini_exception",
@@ -493,6 +577,7 @@ class GeminiProvider:
                     return texto
             except Exception as exc:
                 ultimo_error = _anclar_error_proveedor(exc, provider="gemini")
+                _marcar_cuota_gemini(exc)
                 if _es_error_recuperable(exc):
                     continue
                 raise
@@ -817,8 +902,21 @@ def _es_error_recuperable(exc: Exception) -> bool:
             "incorrect api key",
             "does not exist",
             "model_not_found",
+            "deadline",
+            "invalid_argument",
+            "too short",
+            "timeout",
         )
     )
+
+
+def _marcar_cuota_gemini(exc: Exception) -> None:
+    texto = str(exc).lower()
+    if any(
+        x in texto
+        for x in ("429", "quota", "resource_exhausted", "resourceexhausted", "rate limit")
+    ):
+        _gemini_circuit_abrir(180.0)
 
 
 def _proveedor_respaldo(actual: str) -> ModelProvider | None:

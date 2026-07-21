@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T20:57:00Z",
-  "timestamp": 1753131420,
-  "version": "110.21.8",
+  "timestamp_iso": "2026-07-21T21:10:00Z",
+  "timestamp": 1753132200,
+  "version": "110.21.10",
   "channel": "main",
-  "label": "skip-agent-free-tier",
+  "label": "gemini-env-deadline-fix",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "LLM_ROBUST_CONNECT",
-  "notes": "v110.21.8 — Skip agente autónomo en Free Tier chat; enrich light + hard timeout Gemini."
+  "notes": "v110.21.10 — Never override Render secrets; Gemini deadline >=10s; retry=1; reload-env; flash-lite default."
 }
