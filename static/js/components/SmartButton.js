@@ -1,15 +1,14 @@
 /**
- * Salomón AI — Motor Definitivo del Botón Inteligente (Seamless)
- * Tap rápido (<300ms típico / suelta antes de 500ms) → Dictado
- * Long press (≥500ms) → Conversacional IA
- * Tap con modo activo → Neutralizador Maestro (baseline)
+ * Salomón AI — Controlador Sináptico del Botón Inteligente
+ * 1 toque → Dictado / STT (escucha inmediata)
+ * 2 toques → IA avanzada (contexto completo)
+ * Toque con modo activo → Apagado total (mic + visión + lock)
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
   "use strict";
 
-  var TAP_MAX_MS = 300;
-  var HOLD_MS = 500;
+  var DOUBLE_TAP_MS = 320;
   var States = Object.freeze({
     IDLE: "IDLE",
     PRESSING: "PRESSING",
@@ -33,11 +32,11 @@
       this.root = root;
       this.state = States.IDLE;
       this.recognition = null;
-      this._holdTimer = null;
       this._pressStart = 0;
-      this._holdFired = false;
       this._pointerId = null;
       this._ignoreClickUntil = 0;
+      this._tapCount = 0;
+      this._tapTimer = null;
 
       this.root.addEventListener("pointerdown", (e) => this._onPointerDown(e));
       this.root.addEventListener("pointerup", (e) => this._onPointerUp(e));
@@ -73,22 +72,21 @@
       });
 
       this.root.classList.add("is-seamless");
-      this.root.setAttribute("data-gesture-engine", "seamless-smart-button");
-      this.root.setAttribute("data-hold-ms", String(HOLD_MS));
-      this.root.setAttribute("data-tap-max-ms", String(TAP_MAX_MS));
+      this.root.setAttribute("data-gesture-engine", "synaptic-smart-button");
+      this.root.setAttribute("data-double-tap-ms", String(DOUBLE_TAP_MS));
       this.root.setAttribute(
         "aria-label",
-        "Salomón: toque = dictado · mantén = conversar · toque otra vez = salir"
+        "Salomón: 1 toque = dictado · 2 toques = IA · toque otra vez = apagar"
       );
 
       window.SalomonGestureEngine = {
-        HOLD_MS: HOLD_MS,
-        TAP_MAX_MS: TAP_MAX_MS,
+        DOUBLE_TAP_MS: DOUBLE_TAP_MS,
         states: States,
         getState: () => this.state,
-        engine: "seamless",
+        engine: "synaptic-tap",
       };
       window.SalomonSeamlessButton = this;
+      window.SalomonSmartButton = this;
       this._setState(States.IDLE);
     }
 
@@ -105,24 +103,21 @@
       this.root.classList.toggle("is-processing", next === States.PROCESSING);
       window.dispatchEvent(
         new CustomEvent("salomon:gesture-state", {
-          detail: { state: next, holdMs: HOLD_MS, tapMaxMs: TAP_MAX_MS },
+          detail: { state: next, doubleTapMs: DOUBLE_TAP_MS },
         })
       );
     }
 
     _blockedByUi() {
+      // No bloquear por cámara: sinapsis multimodal (visión + voz + tacto)
       if (document.body.classList.contains("control-layer-open")) return true;
       if (window.SalomonSettings && window.SalomonSettings.isOpen()) return true;
       if (window.SalomonUI && window.SalomonUI.isMicBlocked()) return true;
-      if (window.SalomonCamera && window.SalomonCamera.isActive()) return true;
       return false;
     }
 
-    _onPointerDown(e) {
-      if (this._blockedByUi()) return;
-      if (e.button != null && e.button !== 0) return;
-
-      if (
+    _isActiveMode() {
+      return (
         this.state === States.DICTATION ||
         this.state === States.CONVERSATIONAL ||
         this.state === States.PROCESSING ||
@@ -130,15 +125,26 @@
           lock().isActive() &&
           this.state !== States.IDLE &&
           this.state !== States.PRESSING)
-      ) {
+      );
+    }
+
+    _onPointerDown(e) {
+      if (this._blockedByUi()) return;
+      if (e.button != null && e.button !== 0) return;
+
+      // Toque de apagado: libera mic, lock y visión
+      if (this._isActiveMode()) {
         e.preventDefault();
         e.stopPropagation();
         this.neutralize("tap_while_active");
         this._ignoreClickUntil = Date.now() + 400;
+        this._tapCount = 0;
+        clearTimeout(this._tapTimer);
+        this._tapTimer = null;
         return;
       }
 
-      if (this.state !== States.IDLE) return;
+      if (this.state !== States.IDLE && this.state !== States.PRESSING) return;
 
       e.preventDefault();
       try {
@@ -146,19 +152,9 @@
       } catch (_) {}
       this._pointerId = e.pointerId;
       this._pressStart = Date.now();
-      this._holdFired = false;
       this._setState(States.PRESSING);
       this.root.classList.add("is-active");
       haptic(8);
-
-      clearTimeout(this._holdTimer);
-      this._holdTimer = setTimeout(() => {
-        this._holdTimer = null;
-        if (this.state !== States.PRESSING) return;
-        this._holdFired = true;
-        haptic([16, 30, 16]);
-        this._enterConversational();
-      }, HOLD_MS);
     }
 
     _onPointerUp(e) {
@@ -168,27 +164,39 @@
         this.root.releasePointerCapture(e.pointerId);
       } catch (_) {}
 
-      clearTimeout(this._holdTimer);
-      this._holdTimer = null;
+      if (this.state !== States.PRESSING) return;
 
-      if (this.state === States.PRESSING && !this._holdFired) {
-        e.preventDefault();
-        this._ignoreClickUntil = Date.now() + 400;
-        this._enterDictation();
+      e.preventDefault();
+      this._ignoreClickUntil = Date.now() + 450;
+      this.root.classList.remove("is-pressing");
+      this._setState(States.IDLE);
+      this.root.classList.remove("is-active");
+
+      this._tapCount += 1;
+      if (this._tapCount >= 2) {
+        clearTimeout(this._tapTimer);
+        this._tapTimer = null;
+        this._tapCount = 0;
+        haptic([14, 24, 14]);
+        this._enterConversational();
         return;
       }
 
-      if (this.state === States.CONVERSATIONAL) {
-        this._ignoreClickUntil = Date.now() + 400;
-      }
+      // Esperar posible 2º toque; si no llega → dictado
+      clearTimeout(this._tapTimer);
+      this._tapTimer = setTimeout(() => {
+        this._tapTimer = null;
+        this._tapCount = 0;
+        if (this.state === States.IDLE && !this._isActiveMode()) {
+          this._enterDictation();
+        }
+      }, DOUBLE_TAP_MS);
     }
 
     _onPointerCancel(e) {
       if (this._pointerId != null && e.pointerId !== this._pointerId) return;
-      clearTimeout(this._holdTimer);
-      this._holdTimer = null;
       this._pointerId = null;
-      if (this.state === States.PRESSING && !this._holdFired) {
+      if (this.state === States.PRESSING) {
         this.root.classList.remove("is-active", "is-pressing", "is-holographic");
         this._setState(States.IDLE);
       }
@@ -203,11 +211,7 @@
       if (this._blockedByUi()) return;
       if (e.detail === 0) {
         e.preventDefault();
-        if (
-          this.state === States.DICTATION ||
-          this.state === States.CONVERSATIONAL ||
-          (lock() && lock().isActive())
-        ) {
+        if (this._isActiveMode()) {
           this.neutralize("keyboard_tap");
         } else if (this.state === States.IDLE) {
           this._enterDictation();
@@ -217,9 +221,21 @@
 
     neutralize(reason) {
       haptic(10);
+      clearTimeout(this._tapTimer);
+      this._tapTimer = null;
+      this._tapCount = 0;
       this._stopMic(false);
       var L = lock();
       if (L && L.isActive()) L.release(reason || "gesture_neutralize");
+      // Apagar visión / streaming analítico si estaba activo
+      try {
+        var V = window.SalomonVision;
+        if (V && (V.session && (V.session.analyticalStreaming || V.session.active))) {
+          if (V.disengageVisualMode) {
+            V.disengageVisualMode();
+          }
+        }
+      } catch (_) {}
       this.root.classList.remove(
         "is-active",
         "is-listening",
@@ -240,12 +256,12 @@
 
     _enterDictation() {
       var L = lock();
-      // Mantener ojos activos: antes closeCamera mataba el frame de visión
+      // Mantener ojos activos (sinapsis visión+voz)
       if (L) L.activate("gesture_dictation", { keepCamera: true });
       this._setState(States.DICTATION);
-      this.root.classList.add("is-ai-locked", "is-active", "is-listening");
+      this.root.classList.add("is-ai-locked", "is-active", "is-listening", "is-dictation");
       this.root.classList.remove("is-holographic", "is-conversational");
-      this._notify("Te escucho — dicta tu nota o búsqueda. Un toque para salir.");
+      this._notify("Dictado activo — habla ahora. Un toque para apagar.");
       this._startMic({ continuous: false, mode: "dictation" });
     }
 
@@ -261,7 +277,7 @@
         "is-conversational"
       );
       this._notify(
-        "Conversación con Salomón abierta. Habla con calma — un toque para cerrar."
+        "IA avanzada activa — habla con contexto completo. Un toque para apagar."
       );
       this._startMic({ continuous: true, mode: "conversational" });
     }
@@ -447,8 +463,8 @@
                 mensaje: text,
                 reason:
                   opts.mode === "conversational"
-                    ? "seamless_hold_ai"
-                    : "seamless_tap_dictation",
+                    ? "double_tap_ai"
+                    : "single_tap_dictation",
                 keep_lock: keepMic,
               }
             )

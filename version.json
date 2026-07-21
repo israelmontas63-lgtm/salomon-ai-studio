@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T01:25:00Z",
-  "timestamp": 1753061100,
-  "version": "110.9.1",
+  "timestamp_iso": "2026-07-21T01:40:00Z",
+  "timestamp": 1753062000,
+  "version": "110.10.0",
   "channel": "main",
-  "label": "render-deploy-recovery",
+  "label": "smart-button-synaptic-taps",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "RENDER_DEPLOY_RECOVERY",
-  "notes": "v110.9.1 - Hardened boot/build compileall + layers fail-soft; clean Live redeploy."
+  "protocol": "SMART_BUTTON_SYNAPTIC_CONTROLLER",
+  "notes": "v110.10.0 - 1 toque dictado, 2 toques IA, apagado total; sinapsis vision+voz."
 }

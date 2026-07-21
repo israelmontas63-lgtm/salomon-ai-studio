@@ -63,8 +63,8 @@ class StrictMasterSystemAuditor:
         btn = self._read("static/js/components/SmartButton.js")
         css = self._read("static/css/boton.css")
         if (
-            "HOLD_MS" in btn
-            and "500" in btn
+            "DOUBLE_TAP_MS" in btn
+            and "_tapCount" in btn
             and "DICTATION" in btn
             and "CONVERSATIONAL" in btn
             and "neutralize" in btn
@@ -73,7 +73,7 @@ class StrictMasterSystemAuditor:
         ):
             self._ok(
                 "seamless_button",
-                "Tap/Hold/Neutralizer + z-index 100050",
+                "1-tap dictado / 2-tap IA / neutralize + z-index 100050",
             )
         else:
             self._fail("seamless_button", "boton seamless incompleto")
@@ -257,8 +257,8 @@ class StrictMasterSystemAuditor:
         checks = True
 
         btn = self._read("static/js/components/SmartButton.js")
-        if "pointerdown" in btn and "HOLD_MS" in btn and "neutralize" in btn:
-            self._ok("gesture_fsm", "FSM pointer anticolision activa")
+        if "pointerdown" in btn and "DOUBLE_TAP_MS" in btn and "neutralize" in btn:
+            self._ok("gesture_fsm", "FSM pointer 1/2 toques + apagado activa")
         else:
             self._fail("gesture_fsm", "gestos incompletos")
             checks = False
