@@ -2704,6 +2704,40 @@ def api_media_job(job_id: str) -> dict:
     return st
 
 
+class ArsenalImagenRequest(BaseModel):
+    mensaje: str = Field(default="", max_length=4000)
+    prompt: str = Field(default="", max_length=4000)
+
+
+@app.get("/api/arsenal/status")
+def api_arsenal_status() -> dict:
+    """Inventario de APIs conectadas + capacidad de generación de imágenes."""
+    from cognicion.core_salomon_api_arsenal_image_generator import obtener_arsenal
+
+    return obtener_arsenal().connect_and_activate()
+
+
+@app.post("/api/arsenal/generar_imagen")
+def api_arsenal_generar_imagen(body: ArsenalImagenRequest) -> dict:
+    """Atajo arsenal: «genera una imagen de X» → Fal/Replicate/DALL·E."""
+    from cognicion.core_salomon_api_arsenal_image_generator import generate_from_intent
+
+    mensaje = (body.mensaje or body.prompt or "").strip()
+    if not mensaje:
+        raise HTTPException(status_code=400, detail="mensaje_requerido")
+    if not mensaje.lower().startswith(("genera", "crea", "dibuja", "haz", "renderiza")):
+        mensaje = f"Genera una imagen de {mensaje}"
+    pack = generate_from_intent(mensaje)
+    return {
+        "exito": bool(pack.get("ok")),
+        "url": pack.get("url"),
+        "via": pack.get("via"),
+        "prompt": pack.get("prompt"),
+        "error": pack.get("error"),
+        "resultado": pack.get("pack"),
+    }
+
+
 @app.post("/api/media/generar_imagen")
 def api_media_generar_imagen(body: GenerarImagenRequest) -> dict:
     """Genera imagen HD — routing Colsub (Flux/MJ) o grafo."""

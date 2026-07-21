@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T03:35:00Z",
-  "timestamp": 1753068900,
-  "version": "110.16.2",
+  "timestamp_iso": "2026-07-21T03:50:00Z",
+  "timestamp": 1753069800,
+  "version": "110.17.0",
   "channel": "main",
-  "label": "explicit-user-approval-gate",
+  "label": "api-arsenal-image-generator",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "EXPLICIT_APPROVAL_GATE_ACTIVE",
-  "notes": "v110.16.2 - Gate de aprobación humana explícita; PWA SW v64; badge tuerquita activo."
+  "protocol": "API_ARSENAL_IMAGE_GENERATOR_ACTIVE",
+  "notes": "v110.17.0 - Arsenal APIs + genera imagen en chat PWA; SW v65."
 }

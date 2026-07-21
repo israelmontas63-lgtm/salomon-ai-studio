@@ -292,79 +292,23 @@ class SalomonMasterNeuralEngine:
         if not self.wants_image(mensaje):
             return {"ok": False, "skipped": True, "bloque": ""}
 
-        prompt = (mensaje or "").strip()
-        prompt = re.sub(
-            r"(?i)^(genera(r)?|crea(r)?|dibuja(r)?|haz|renderiza(r)?)\s+"
-            r"(una\s+|la\s+)?(imagen|foto|ilustraci[oó]n|dibujo)\s*(de|del|con)?\s*",
-            "",
-            prompt,
-        ).strip() or mensaje
-
-        # Prefer Colsub / Fal / Flux bridge
+        # Arsenal unificado: Fal → Replicate → DALL·E + extracción correcta de URL
         try:
-            from cognicion.media.media_engine import bridge_colsub_media
+            from cognicion.core_salomon_api_arsenal_image_generator import (
+                generate_from_intent,
+            )
 
-            pack = bridge_colsub_media(prompt, hint="imagen_hd")
-            url = None
-            if isinstance(pack, dict):
-                url = (
-                    pack.get("url")
-                    or pack.get("image_url")
-                    or (pack.get("resultado") or {}).get("url")
-                )
-                if not url and pack.get("images"):
-                    url = (pack["images"][0] or {}).get("url")
-            if url or (isinstance(pack, dict) and pack.get("ok")):
-                return {
-                    "ok": True,
-                    "url": url,
-                    "pack": pack,
-                    "bloque": (
-                        "[Generación de imagen — motor multimodal]\n"
-                        f"Prompt: {prompt[:200]}\n"
-                        f"URL: {url or '(procesando / ver metadata)'}\n"
-                        "Instrucción: Describe la imagen generada y comparte el enlace "
-                        "si está disponible."
-                    ),
-                    "via": "bridge_colsub_media",
-                }
+            return generate_from_intent(mensaje)
         except Exception as exc:
-            last_err = type(exc).__name__
-        else:
-            last_err = None
-
-        try:
-            from cognicion.media import generar_imagen
-
-            resultado = generar_imagen(prompt)
-            if isinstance(resultado, dict) and (
-                resultado.get("url") or resultado.get("exito") or resultado.get("ok")
-            ):
-                url = resultado.get("url") or resultado.get("image_url")
-                return {
-                    "ok": True,
-                    "url": url,
-                    "pack": resultado,
-                    "bloque": (
-                        "[Generación de imagen — fallback OpenAI/DALL·E]\n"
-                        f"Prompt: {prompt[:200]}\n"
-                        f"URL: {url or '(ver metadata)'}\n"
-                        "Instrucción: Informa a Israel del resultado de la generación."
-                    ),
-                    "via": "generar_imagen",
-                }
-        except Exception as exc:
-            last_err = type(exc).__name__
-
-        return {
-            "ok": False,
-            "error": last_err or "media_unavailable",
-            "bloque": (
-                "[Generación de imagen no disponible]\n"
-                "Falta FAL_KEY / REPLICATE_API_TOKEN / OPENAI_API_KEY para renderizar. "
-                "Informa con claridad y ofrece reintentar cuando la clave esté activa."
-            ),
-        }
+            return {
+                "ok": False,
+                "error": type(exc).__name__,
+                "bloque": (
+                    "[Generación de imagen no disponible]\n"
+                    "Falta FAL_KEY / REPLICATE_API_TOKEN / OPENAI_API_KEY para renderizar. "
+                    "Informa con claridad y ofrece reintentar cuando la clave esté activa."
+                ),
+            }
 
     # ─── 5) Pipeline enriquecimiento (llamado desde MotorCognicion) ────
 

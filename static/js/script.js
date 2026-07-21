@@ -26,16 +26,40 @@
     return $("input-send");
   }
 
-  function addBubble(text, role, extraClass) {
+  function addBubble(text, role, extraClass, mediaUrl) {
     var chat = chatEl();
     if (!chat) return null;
     var el = document.createElement("div");
     el.className = "bubble " + (role === "user" ? "user" : "bot");
     if (extraClass) el.classList.add(extraClass);
-    el.textContent = text;
+    if (text) {
+      var span = document.createElement("div");
+      span.className = "bubble-text";
+      span.textContent = text;
+      el.appendChild(span);
+    }
+    if (mediaUrl) {
+      var img = document.createElement("img");
+      img.className = "bubble-gen-image";
+      img.src = mediaUrl;
+      img.alt = "Imagen generada por Salomón";
+      img.loading = "lazy";
+      el.appendChild(img);
+    }
     chat.appendChild(el);
     chat.scrollTop = chat.scrollHeight;
     return el;
+  }
+
+  function mediaUrlFromResponse(data) {
+    if (!data) return null;
+    var meta = data.metadata || {};
+    var cog = meta.cognicion || {};
+    var gen = cog.imagen_generada || meta.imagen_generada || null;
+    if (gen && gen.url) return gen.url;
+    if (data.imagen_url) return data.imagen_url;
+    if (data.url_relativa) return data.url_relativa;
+    return null;
   }
 
   function setLoading(on) {
@@ -166,7 +190,7 @@
       }
 
       if (res.ok && data.exito !== false && data.texto) {
-        addBubble(data.texto, "bot");
+        addBubble(data.texto, "bot", null, mediaUrlFromResponse(data));
         reproducirAudioRespuesta(data);
         window.dispatchEvent(
           new CustomEvent("salomon:chat-turn", {

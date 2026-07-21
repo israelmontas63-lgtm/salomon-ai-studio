@@ -545,7 +545,25 @@
         if (!(meta && meta.vision_local) && replyText) {
           var bot = document.createElement("div");
           bot.className = "bubble bot";
-          bot.textContent = replyText;
+          var textNode = document.createElement("div");
+          textNode.className = "bubble-text";
+          textNode.textContent = replyText;
+          bot.appendChild(textNode);
+          var imgMeta =
+            (meta.cognicion &&
+              meta.cognicion.imagen_generada &&
+              meta.cognicion.imagen_generada.url) ||
+            meta.imagen_generada_url ||
+            data.imagen_url ||
+            null;
+          if (imgMeta) {
+            var imgEl = document.createElement("img");
+            imgEl.className = "bubble-gen-image";
+            imgEl.src = imgMeta;
+            imgEl.alt = "Imagen generada por Salomón";
+            imgEl.loading = "lazy";
+            bot.appendChild(imgEl);
+          }
           chat.appendChild(bot);
           chat.scrollTop = chat.scrollHeight;
         }
