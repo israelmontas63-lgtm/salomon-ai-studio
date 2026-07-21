@@ -2580,16 +2580,29 @@ def cognicion_vision(body: VisionRequest) -> ChatResponse:
             tts_disponible=respuesta.tts_disponible,
         )
     except Exception as exc:
+        from core.error_codes import format_error_response, get_error_info
+
         session_id, _ = _obtener_o_crear_sesion(body.session_id)
+        pack = format_error_response(
+            exc,
+            code=26,
+            cause="Fallo al interpretar la imagen en el puente visión→cerebro.",
+            hint="herramienta",
+            origin="api.vision.brain-bridge",
+            audit=True,
+        )
+        info = get_error_info(pack.get("error_codigo", 26))
+        meta = dict(pack)
+        meta["vision_architecture"] = {
+            "ok": False,
+            "error": type(exc).__name__,
+            "error_codigo": info["code"],
+        }
         return ChatResponse(
-            texto="No pude interpretar la imagen. ¿Reintentamos?",
+            texto=str(pack.get("texto") or f"Error {info['code']}: {info['message']}"),
             exito=False,
             session_id=session_id,
-            metadata={
-                "fail_soft": True,
-                "vision_architecture": {"ok": False, "error": type(exc).__name__},
-                "detail": str(exc)[:240],
-            },
+            metadata=meta,
             audio_base64=None,
             audio_mime="audio/mpeg",
             tts_disponible=False,

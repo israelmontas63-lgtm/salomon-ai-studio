@@ -412,20 +412,26 @@ class OpenAIProvider:
         system_instruction: str,
         model_name: str | None = None,
     ) -> str:
-        client = self._cliente()
-        respuesta = client.chat.completions.create(
-            model=model_name or OPENAI_MODEL,
-            messages=self._mensajes_openai(mensaje, historial, system_instruction),
-        )
-        return (respuesta.choices[0].message.content or "").strip()
+        try:
+            client = self._cliente()
+            respuesta = client.chat.completions.create(
+                model=model_name or OPENAI_MODEL,
+                messages=self._mensajes_openai(mensaje, historial, system_instruction),
+            )
+            return (respuesta.choices[0].message.content or "").strip()
+        except Exception as exc:
+            raise _anclar_error_proveedor(exc, provider="openai") from exc
 
     def generar_texto(self, prompt: str, model_name: str | None = None) -> str:
-        client = self._cliente()
-        respuesta = client.chat.completions.create(
-            model=model_name or OPENAI_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return (respuesta.choices[0].message.content or "").strip()
+        try:
+            client = self._cliente()
+            respuesta = client.chat.completions.create(
+                model=model_name or OPENAI_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return (respuesta.choices[0].message.content or "").strip()
+        except Exception as exc:
+            raise _anclar_error_proveedor(exc, provider="openai") from exc
 
     def analizar_imagen(
         self,
@@ -491,19 +497,26 @@ class GroqProvider:
         system_instruction: str,
         model_name: str | None = None,
     ) -> str:
-        client = self._cliente()
-        respuesta = client.chat.completions.create(
-            model=model_name or GROQ_MODEL,
-            messages=self._mensajes_openai(mensaje, historial, system_instruction),
-        )
-        return (respuesta.choices[0].message.content or "").strip()
+        try:
+            client = self._cliente()
+            respuesta = client.chat.completions.create(
+                model=model_name or GROQ_MODEL,
+                messages=self._mensajes_openai(mensaje, historial, system_instruction),
+            )
+            return (respuesta.choices[0].message.content or "").strip()
+        except Exception as exc:
+            raise _anclar_error_proveedor(exc, provider="groq") from exc
+
     def generar_texto(self, prompt: str, model_name: str | None = None) -> str:
-        client = self._cliente()
-        respuesta = client.chat.completions.create(
-            model=model_name or GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return (respuesta.choices[0].message.content or "").strip()
+        try:
+            client = self._cliente()
+            respuesta = client.chat.completions.create(
+                model=model_name or GROQ_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return (respuesta.choices[0].message.content or "").strip()
+        except Exception as exc:
+            raise _anclar_error_proveedor(exc, provider="groq") from exc
 
     def analizar_imagen(
         self,

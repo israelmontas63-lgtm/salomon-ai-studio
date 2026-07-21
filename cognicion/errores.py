@@ -19,43 +19,19 @@ from typing import Any, Callable, TypeVar
 
 T = TypeVar("T")
 
-# --- Catálogo canónico -------------------------------------------------------
+# --- Catálogo canónico (fuente oficial: core.error_codes) --------------------
 
-CODIGOS: dict[int, str] = {
-    # 20–29 herramientas / capacidades
-    20: "Fallo de herramienta o capacidad cognitiva",
-    21: "Herramienta no encontrada",
-    22: "Herramienta desactivada",
-    23: "Fallo de media o generación",
-    24: "Fallo de búsqueda web",
-    25: "Recurso no disponible",
-    26: "Fallo de visión o captura",
-    27: "Fallo de síntesis de voz (TTS)",
-    28: "Fallo de reconocimiento de voz (STT)",
-    29: "Fallo de agente o autonomía",
-    # 30–39 memoria / historial
-    30: "Fallo de memoria o contexto",
-    31: "Historial de chat inválido o corrupto",
-    32: "Historial vacío o fuera de límite",
-    33: "Fallo al persistir la sesión",
-    34: "Fallo de memoria personal",
-    35: "Fallo de memoria vectorial / RAG",
-    36: "Fallo al enriquecer el mensaje",
-    37: "Contexto truncado por límite de tokens",
-    38: "Sesión de memoria no encontrada",
-    39: "Inconsistencia de roles en el historial",
-    # 40–49 API / conexión
-    40: "Fallo del proveedor LLM",
-    41: "Fallo de conexión o timeout con el modelo",
-    42: "Clave de API ausente o inválida",
-    43: "Permiso denegado por el proveedor (403)",
-    44: "Cuota o límite de uso alcanzado (429)",
-    45: "Modelo no encontrado o no disponible",
-    46: "Respuesta vacía o inválida del modelo",
-    47: "Proveedor temporalmente no disponible (503)",
-    48: "Payload o formato de solicitud rechazado",
-    49: "Error desconocido del proveedor",
-}
+try:
+    from core.error_codes import ERROR_CODES as CODIGOS
+except Exception:  # boot parcial / tests sin core
+    CODIGOS: dict[int, str] = {
+        20: "Fallo de herramienta o capacidad cognitiva",
+        25: "Recurso no disponible",
+        30: "Fallo de memoria o contexto",
+        40: "Fallo del proveedor LLM",
+        41: "Fallo de conexión o timeout con el modelo",
+        49: "Error desconocido del proveedor",
+    }
 
 _DEFAULT_RANGO = {
     "herramienta": 20,
