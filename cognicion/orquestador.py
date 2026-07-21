@@ -156,6 +156,16 @@ class MotorCognicion:
         }
         self._ultimo_plan = meta["cognicion"]
 
+        # Ancla factual de fecha/hora (RD) — evita alucinación y Error 49 por reloj
+        try:
+            from cognicion.tiempo_local import bloque_tiempo_sistema, menciona_fecha_hora
+
+            if menciona_fecha_hora(entrada):
+                bloques.append(bloque_tiempo_sistema())
+                meta["cognicion"]["tiempo_local"] = True
+        except Exception as exc:
+            meta["cognicion"]["tiempo_local_error"] = type(exc).__name__
+
         # Cerebro Cognitivo Dual — claridad + lecciones episódicas + crítico
         try:
             from cognicion.cognitivo import ciclo_pre_tarea, registrar_correccion

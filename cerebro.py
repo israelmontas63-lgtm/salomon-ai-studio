@@ -385,6 +385,38 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             except Exception:
                 pass
 
+        # Fecha / hora: respuesta local (sin API) — evita Error 49 por timeout del modelo
+        if not imagen_base64:
+            try:
+                from cognicion.tiempo_local import (
+                    es_consulta_fecha_hora,
+                    respuesta_fecha_hora,
+                )
+
+                if es_consulta_fecha_hora(entrada):
+                    pack_t = respuesta_fecha_hora(entrada)
+                    texto_t = str(pack_t.get("texto") or "").strip()
+                    if texto_t:
+                        self._historial.append(Mensaje(rol="usuario", contenido=entrada))
+                        self._historial.append(
+                            Mensaje(rol="asistente", contenido=texto_t)
+                        )
+                        self._recortar_historial()
+                        self._motor.registrar_turno(entrada, texto_t)
+                        tts = _tts_para_respuesta(texto_t)
+                        meta_t = dict(pack_t.get("metadata") or {})
+                        meta_t["tts_async"] = TTS_ASYNC
+                        return RespuestaSalomon(
+                            texto=texto_t,
+                            exito=True,
+                            metadata=meta_t,
+                            audio_base64=tts.audio_base64,
+                            audio_mime=tts.audio_mime,
+                            tts_disponible=tts.tts_disponible,
+                        )
+            except Exception:
+                pass
+
         # Puente voz→visión (standby / analítico / off) — sin imagen aún
         if not imagen_base64:
             try:

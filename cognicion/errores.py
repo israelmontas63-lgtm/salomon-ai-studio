@@ -352,7 +352,7 @@ def clasificar(
     if any(x in blob for x in ("desactivada", "disabled", "tool")):
         return ErrorSalomon(20, _causa_corta(texto, CODIGOS[20]), tipo=tipo, detalle=texto[:240])
 
-    # LLM genérico
+    # LLM genérico / SDKs
     if any(
         x in blob
         for x in (
@@ -363,8 +363,21 @@ def clasificar(
             "generativelanguage",
             "anthropic",
             "cohere",
+            "clienterror",
+            "apierror",
+            "google.genai",
+            "servererror",
+            "internal server",
+            "cancelled",
+            "canceled",
+            "aborted",
+            "remoteprotocol",
+            "httpx",
+            "httpcore",
         )
     ):
+        if any(x in blob for x in ("cancel", "abort", "timeout", "connect")):
+            return ErrorSalomon(41, _causa_corta(texto, CODIGOS[41]), tipo=tipo, detalle=texto[:240])
         return ErrorSalomon(40, _causa_corta(texto, CODIGOS[40]), tipo=tipo, detalle=texto[:240])
 
     # Pista explícita de rango
@@ -373,6 +386,15 @@ def clasificar(
         if p in _DEFAULT_RANGO:
             c = _DEFAULT_RANGO[p]
             return ErrorSalomon(c, _causa_corta(texto, CODIGOS[c]), tipo=tipo, detalle=texto[:240])
+
+    # Último recurso: si hay excepción tipada, tratar como API 40 (no 49 opaco)
+    if tipo and tipo not in ("", "str", "NoneType"):
+        return ErrorSalomon(
+            40,
+            _causa_corta(texto or tipo, CODIGOS[40]),
+            tipo=tipo,
+            detalle=texto[:240],
+        )
 
     return ErrorSalomon(49, _causa_corta(texto, CODIGOS[49]), tipo=tipo, detalle=texto[:240])
 

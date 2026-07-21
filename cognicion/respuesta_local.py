@@ -105,6 +105,15 @@ def respuesta_local_chat(
                 f"Si quieres, profundizo en «{pregunta[:100]}» o busco otro ángulo."
             )
 
+    # Fecha/hora local — sin LLM ni web (evita Error 49)
+    try:
+        from cognicion.tiempo_local import es_consulta_fecha_hora, respuesta_fecha_hora
+
+        if es_consulta_fecha_hora(pregunta):
+            return str(respuesta_fecha_hora(pregunta).get("texto") or "")
+    except Exception:
+        pass
+
     # Saludos: no disparar búsqueda web (evita basura / fugas de contexto).
     if _es_saludo_simple(pregunta):
         return (
