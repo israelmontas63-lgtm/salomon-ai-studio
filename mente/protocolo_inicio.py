@@ -29,28 +29,41 @@ def protocolo_inicio(session_id: str) -> dict[str, Any]:
     guardar_hilo(hilo)
 
     frase = _SALUDO_CANONICO
-    # Intentar frase viva vía LLM (sin web)
+    # Preferir módulo acciones.bienvenida (antes huérfano)
     try:
-        from cognicion.llm import generar_texto, llm_disponible
+        from acciones.bienvenida import generar_frase_bienvenida
 
-        if llm_disponible():
-            cand = (
-                generar_texto(
-                    "Eres Salomón. UNA frase enérgica de saludo a Israel Monta al abrir "
-                    "el estudio: reconoce su identidad, di que estás disponible al 100% "
-                    "(voz/visión/razón). Sin listar capacidades. Sin web. Solo la frase."
-                )
-                or ""
-            ).strip().strip('"').strip("'")
-            baja = cand.lower()
-            if (
-                28 <= len(cand) <= 320
-                and "israel" in baja
-                and not any(x in baja for x in ("wikipedia", "cuota", "película", "pelicula"))
-            ):
-                frase = cand
+        pack = generar_frase_bienvenida()
+        cand = (pack.get("frase") or "").strip()
+        if cand:
+            frase = cand
     except Exception:
         pass
+    # Intentar frase viva vía LLM (sin web) si bienvenida no aportó
+    if frase == _SALUDO_CANONICO:
+        try:
+            from cognicion.llm import generar_texto, llm_disponible
+
+            if llm_disponible():
+                cand = (
+                    generar_texto(
+                        "Eres Salomón. UNA frase enérgica de saludo a Israel Monta al abrir "
+                        "el estudio: reconoce su identidad, di que estás disponible al 100% "
+                        "(voz/visión/razón). Sin listar capacidades. Sin web. Solo la frase."
+                    )
+                    or ""
+                ).strip().strip('"').strip("'")
+                baja = cand.lower()
+                if (
+                    28 <= len(cand) <= 320
+                    and "israel" in baja
+                    and not any(
+                        x in baja for x in ("wikipedia", "cuota", "película", "pelicula")
+                    )
+                ):
+                    frase = cand
+        except Exception:
+            pass
 
     registrar_turno(session_id, rol="asistente", texto=frase, area="razonamiento")
 

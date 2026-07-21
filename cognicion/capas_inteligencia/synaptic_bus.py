@@ -130,6 +130,25 @@ AUTHORIZED_SYNAPSES: list[dict[str, Any]] = [
         "module": "cognicion/capas_inteligencia/layer_08_asalomon/__init__.py",
         "note": "Metaconocimiento interno: formas de razonamiento sin mutar otras capas.",
     },
+    {
+        "from": 0,
+        "to": 3,
+        "channel": "lib_support_tools",
+        "methods": [
+            "ejecutar_herramienta",
+            "listar_herramientas",
+            "consultar_clima",
+            "buscar_web",
+            "systemguard_verify",
+            "emitir_capacidad",
+        ],
+        "payload": {"nombre": str, "args": dict},
+        "module": "lib/neural_bridge.py",
+        "note": (
+            "Capa 0 = librerías internas (lib/). Soporte → razonamiento "
+            "sin tocar UI ni SalomonVisionArchitecture."
+        ),
+    },
 ]
 
 

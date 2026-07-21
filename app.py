@@ -174,6 +174,21 @@ def _iniciar_nucleo_os(app_ref: FastAPI) -> None:
 
         inicializar_capas(app_ref)
 
+        # Puente neuronal de librerías internas (lib/ → core ↔ cognición)
+        try:
+            from lib import conectar_nucleo
+
+            _lib = conectar_nucleo()
+            evento(
+                _log,
+                "lib_neural_bridge",
+                conectado=_lib.get("conectado"),
+                channel=_lib.get("channel"),
+                error=_lib.get("error"),
+            )
+        except Exception as exc:
+            _log.warning("lib_neural_bridge_omitido: %s", exc)
+
         # Orquestador de carga: NO arrancar hilo en Free Tier hasta primer uso
         if not light:
             from cognicion.orquesta.colas import obtener_orquestador_carga
@@ -1646,15 +1661,16 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
     try:
         return _chat_core(body, session_id, salomon)
     except Exception as exc:
+        from cognicion.errores import auditar_excepcion
+
+        # Stack trace completo en consola Render/local + código al usuario
+        err = auditar_excepcion(exc, origen="api.chat", pista="api")
         return ChatResponse(
-            texto=(
-                "Israel, hubo un tropiezo interno al procesar tu mensaje. "
-                "Salomón sigue en línea — reformula o reintenta en un momento."
-            ),
+            texto=err.mensaje_usuario(),
             exito=False,
             session_id=session_id,
             metadata={
-                "fail_soft": True,
+                **err.to_meta(),
                 "error": type(exc).__name__,
                 "detail": str(exc)[:240],
             },

@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T18:40:00Z",
-  "timestamp": 1753123200,
-  "version": "110.20.1",
+  "timestamp_iso": "2026-07-21T19:00:00Z",
+  "timestamp": 1753124400,
+  "version": "110.21.0",
   "channel": "main",
-  "label": "chat-memory-tts-hotfix",
+  "label": "lib-errors-production-sprint",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "CHAT_MEMORY_FIX_2026",
-  "notes": "v110.20.1 — Historial LLM sanitizado (roles/tokens); saludo fast-path; TTS async en Render; logs de payload. Desbloquea chat colgado."
+  "protocol": "LIB_NEURAL_BRIDGE_ERROR_CODES",
+  "notes": "v110.21.0 — lib/ canónico + códigos error 20-49 + stack audit; chat/voz/visión enlazados; shims raíz; sellado capa 0."
 }

@@ -26,6 +26,13 @@ class MainController:
         VoiceCore.enableNoiseGate(True)
         VisionAgent.activate()
         LogicEngine.lockLocalAgents()
+        # Enlaza librerías internas (lib/) al kernel
+        try:
+            from lib import conectar_nucleo
+
+            lib_st = conectar_nucleo()
+        except Exception:
+            lib_st = {"conectado": False}
         greet = MainController.initializeGreeting("enérgetico")
         return {
             "ok": True,
@@ -35,6 +42,7 @@ class MainController:
             "logic": LogicEngine.estado(),
             "voice": VoiceCore.estado(),
             "vision": VisionAgent.estado(),
+            "lib": lib_st,
         }
 
     @staticmethod

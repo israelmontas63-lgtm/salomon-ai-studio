@@ -153,6 +153,33 @@ def verificar_conexion_maestra() -> dict[str, Any]:
         capas["5_sce_30x"] = {"ok": False, "error": type(exc).__name__}
         capas["8_asalomon"] = {"ok": False, "error": type(exc).__name__}
 
+    # Capa 0 — librerías internas (lib/) + puente neuronal
+    try:
+        from lib import VERSION as LIB_VERSION
+        from lib.neural_bridge import conectar_nucleo, estado_puente
+
+        puente = conectar_nucleo()
+        capas["0_lib"] = {
+            "ok": bool(puente.get("conectado") or puente.get("modulos_ok")),
+            "version": LIB_VERSION,
+            "conectado": bool(puente.get("conectado")),
+            "modulos": {
+                k: bool((v or {}).get("ok"))
+                for k, v in (puente.get("modulos_ok") or {}).items()
+            },
+            "channel": puente.get("channel") or "lib_support_tools",
+            "module": "lib.neural_bridge",
+            "estado": estado_puente(),
+        }
+        # Shims rotos sí rompen sellado; voice_orchestrator opcional
+        criticos = ("herramientas", "clima", "system_guard", "shims_raiz")
+        if any(not capas["0_lib"]["modulos"].get(k, False) for k in criticos):
+            ok = False
+            capas["0_lib"]["ok"] = False
+    except Exception as exc:
+        ok = False
+        capas["0_lib"] = {"ok": False, "error": type(exc).__name__}
+
     return {
         "ok": ok,
         "protocol": "MASTER_LAYER_SYNC_2026",

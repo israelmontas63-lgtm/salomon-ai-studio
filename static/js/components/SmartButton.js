@@ -543,11 +543,19 @@
         } catch (_) {}
       }
 
+      meta = (data && data.metadata) || {};
+      var cog = meta.cognicion || {};
       var replyText =
         (data && data.texto) ||
+        (meta.error_codigo
+          ? "Error " +
+            meta.error_codigo +
+            ": " +
+            (meta.error_causa || cog.error_causa || "fallo técnico")
+          : null) ||
         data.detail ||
         (result && result.ok ? "" : null) ||
-        "No pude completar la respuesta. ¿Lo intentamos de nuevo?";
+        "Error 49: no pude completar la respuesta. ¿Lo intentamos de nuevo?";
 
       if (chat) {
         var typingEl = chat.querySelector(".bubble.typing");

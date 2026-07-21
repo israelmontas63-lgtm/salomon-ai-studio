@@ -508,10 +508,16 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         respuesta_texto = sanitizar_salida_chat(respuesta_texto or "")
         if not respuesta_texto.strip():
-            respuesta_texto = (
-                "Israel, procesé tu mensaje pero la respuesta salió incompleta. "
-                "Repítemelo en una frase y te contesto con claridad."
+            from cognicion.errores import formatear_mensaje, ErrorSalomon, adjuntar_meta
+
+            err_vacio = ErrorSalomon(
+                codigo=46,
+                causa="Procesé tu mensaje pero la respuesta salió incompleta. Repítemelo en una frase.",
             )
+            if isinstance(meta_extra, dict):
+                adjuntar_meta(meta_extra, err_vacio)
+            respuesta_texto = formatear_mensaje(46, err_vacio.causa)
+            exito_gemini = False
 
         # Filtro de audición / auditoría estricta (anti-vacío, anti-placeholder)
         try:
@@ -640,32 +646,32 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         return historial
     def _mensaje_error_gemini(self, error: Exception) -> str:
-        texto_error = enmascarar_secreto(str(error)).lower()
+        """Mensaje explícito con código 40–49 (API/conexión)."""
+        from cognicion.errores import clasificar, formatear_mensaje
 
-        if "api key" in texto_error or "api_key" in texto_error:
-            return (
-                "La clave de Gemini no es válida. "
-                "Verifica GEMINI_API_KEY en tu archivo .env y reinicia el servidor."
-            )
-        if "permission" in texto_error or "403" in texto_error:
-            return (
-                "Gemini rechazó la solicitud. "
-                "Confirma que tu clave tiene permisos activos en Google AI Studio."
-            )
-        if "quota" in texto_error or "429" in texto_error:
-            return (
-                "Se alcanzó el límite de uso de Gemini. "
-                "Espera un momento e inténtalo de nuevo."
-            )
-        if "connect" in texto_error or "timeout" in texto_error or "network" in texto_error:
-            return (
-                "No pude conectar con Gemini. "
-                "Revisa tu conexión a internet e inténtalo otra vez."
-            )
-        return (
-            "Hubo un problema al consultar la inteligencia de Salomón. "
-            "Intenta de nuevo en un momento."
+        seguro = enmascarar_secreto(str(error))
+        err = clasificar(error, pista="api")
+        # Causas humanas por código (sin filtrar el número)
+        causas = {
+            42: (
+                "La clave del modelo no es válida. "
+                "Verifica GEMINI_API_KEY u OPENAI_API_KEY en .env y reinicia."
+            ),
+            43: (
+                "El proveedor rechazó la solicitud (permisos). "
+                "Confirma que la clave tiene acceso activo."
+            ),
+            44: "Se alcanzó el límite de uso del modelo. Espera un momento e inténtalo de nuevo.",
+            41: "No pude conectar con el modelo. Revisa tu red e inténtalo otra vez.",
+            45: "El modelo configurado no está disponible. Revisa el nombre del modelo en ajustes.",
+            47: "El proveedor está temporalmente saturado. Reintenta en unos segundos.",
+            48: "El formato de la solicitud fue rechazado. Reformula el mensaje.",
+            46: "El modelo devolvió una respuesta vacía. Reformula tu mensaje.",
+        }
+        causa = causas.get(err.codigo) or (
+            f"{err.causa}" if err.causa else seguro[:160]
         )
+        return formatear_mensaje(err.codigo, causa)
 
     def _respuesta_degradada(
         self,
@@ -725,7 +731,7 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             )
 
         return (
-            "Israel, no pude completar la consulta en la nube ni obtener un resumen web útil. "
+            "Error 41: no pude completar la consulta en la nube ni obtener un resumen web útil. "
             "Reformula la pregunta con un poco más de detalle y lo intento de nuevo."
         )
 
@@ -749,11 +755,15 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
         meta_extra: dict = {}
 
         if not llm_disponible():
-            return (
-                "Salomón no tiene configurada la clave del proveedor LLM activo. "
-                "Añade GEMINI_API_KEY u OPENAI_API_KEY en el archivo .env y reinicia el servidor.",
-                False,
-                meta_extra,
+            from cognicion.errores import respuesta_error
+
+            return respuesta_error(
+                codigo=42,
+                causa=(
+                    "Salomón no tiene configurada la clave del proveedor LLM activo. "
+                    "Añade GEMINI_API_KEY u OPENAI_API_KEY en .env y reinicia el servidor."
+                ),
+                meta=meta_extra,
             )
 
         mensaje_gemini = entrada
@@ -771,9 +781,22 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             )
             meta_extra.update(meta_cognicion)
         except Exception as enrich_exc:
+            from cognicion.errores import clasificar, adjuntar_meta
+
+            err_e = clasificar(enrich_exc, pista="enriquecer")
+            # Enriquecer es 36 (memoria/contexto) salvo que clasifique otro rango
+            if not (30 <= err_e.codigo <= 39):
+                from cognicion.errores import ErrorSalomon, CODIGOS
+
+                err_e = ErrorSalomon(
+                    codigo=36,
+                    causa=CODIGOS[36],
+                    tipo=type(enrich_exc).__name__,
+                    detalle=str(enrich_exc)[:240],
+                )
+            adjuntar_meta(meta_extra, err_e)
             meta_extra.setdefault("cognicion", {})
             meta_extra["cognicion"]["enriquecer_error"] = type(enrich_exc).__name__
-            meta_extra["cognicion"]["fail_soft"] = True
             mensaje_gemini = entrada
 
         try:
@@ -787,6 +810,19 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                 meta_extra.setdefault("cognicion", {})
                 meta_extra["cognicion"]["memoria_personal_actualizada"] = hechos_nuevos
         except Exception as mem_exc:
+            from cognicion.errores import clasificar, adjuntar_meta
+
+            err_m = clasificar(mem_exc, pista="memoria")
+            if err_m.codigo not in (30, 34, 35):
+                from cognicion.errores import ErrorSalomon, CODIGOS
+
+                err_m = ErrorSalomon(
+                    codigo=34,
+                    causa=CODIGOS[34],
+                    tipo=type(mem_exc).__name__,
+                    detalle=str(mem_exc)[:240],
+                )
+            adjuntar_meta(meta_extra, err_m)
             meta_extra.setdefault("cognicion", {})
             meta_extra["cognicion"]["memoria_personal_error"] = type(mem_exc).__name__
 
@@ -835,10 +871,12 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             )
             texto = sanitizar_salida_chat(extraer_respuesta_final(pipeline.texto))
             if not texto:
-                return (
-                    "Gemini respondió vacío. Por favor, reformula tu mensaje.",
-                    False,
-                    meta_extra,
+                from cognicion.errores import respuesta_error
+
+                return respuesta_error(
+                    codigo=46,
+                    causa="El modelo respondió vacío. Reformula tu mensaje.",
+                    meta=meta_extra,
                 )
             # Sandboxing interno de código generado (guardrails)
             try:
@@ -867,52 +905,67 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         except Exception as exc:
             from cognicion.registro import evento, obtener_logger
+            from cognicion.errores import auditar_excepcion, adjuntar_meta
 
+            # Auditoría inmediata: traceback completo en consola del servidor
+            err = auditar_excepcion(exc, origen="cerebro._generar_respuesta", pista="api")
+            adjuntar_meta(meta_extra, err)
             evento(
                 obtener_logger("cerebro.chat"),
                 "chat_llm_exception",
                 session=self._sesion_id,
                 error=type(exc).__name__,
                 detail=str(exc)[:400],
+                error_codigo=err.codigo,
             )
             texto_error = str(exc).lower()
             codigo = getattr(exc, "code", None)
             status = getattr(exc, "status_code", None)
-            recuperable = codigo in (429, "429", 404, "404") or status in (429, 404, 503) or any(
-                x in texto_error
-                for x in (
-                    "quota",
-                    "429",
-                    "404",
-                    "not found",
-                    "resourceexhausted",
-                    "resource_exhausted",
-                    "rate limit",
-                    "too many requests",
-                    "model_not_found",
-                    "does not exist",
-                    "invalid argument",
-                    "please ensure that multiturn",
-                    "must alternate",
+            recuperable = (
+                err.codigo in (44, 45, 47, 39, 48)
+                or codigo in (429, "429", 404, "404")
+                or status in (429, 404, 503)
+                or any(
+                    x in texto_error
+                    for x in (
+                        "quota",
+                        "429",
+                        "404",
+                        "not found",
+                        "resourceexhausted",
+                        "resource_exhausted",
+                        "rate limit",
+                        "too many requests",
+                        "model_not_found",
+                        "does not exist",
+                        "invalid argument",
+                        "please ensure that multiturn",
+                        "must alternate",
+                    )
                 )
             )
             if recuperable:
                 meta_extra.setdefault("cognicion", {})
                 meta_extra["cognicion"]["llm_error"] = type(exc).__name__
                 meta_extra["cognicion"]["llm_nota"] = (
-                    "Proveedor en límite/error; priorizando búsqueda web en vivo."
+                    f"Proveedor E{err.codigo}; priorizando búsqueda web en vivo."
                 )
-                return (
-                    sanitizar_salida_chat(
-                        self._respuesta_degradada(entrada, meta_extra, mensaje_gemini)
-                    ),
-                    True,
-                    meta_extra,
+                degradada = sanitizar_salida_chat(
+                    self._respuesta_degradada(entrada, meta_extra, mensaje_gemini)
                 )
-            meta_extra.setdefault("cognicion", {})
-            meta_extra["cognicion"]["llm_error"] = type(exc).__name__
-            # Aun así devolvemos texto legible (no romper el chat)
-            return self._mensaje_error_gemini(exc), True, meta_extra
+                # Si el respaldo también falla genérico → mensaje con código
+                if "no pude completar" in (degradada or "").lower():
+                    from cognicion.errores import formatear_mensaje
+
+                    degradada = formatear_mensaje(
+                        err.codigo,
+                        "El modelo falló y el respaldo web no aportó un resumen útil. "
+                        "Reformula la pregunta con un poco más de detalle.",
+                    )
+                    return degradada, False, meta_extra
+                return degradada, True, meta_extra
+            # Fallo duro: código explícito al usuario (no genérico)
+            return self._mensaje_error_gemini(exc), False, meta_extra
 
     def _contar_turnos(self) -> int:
         return sum(1 for m in self._historial if m.rol in ("usuario", "asistente"))

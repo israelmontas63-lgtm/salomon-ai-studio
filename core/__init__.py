@@ -9,8 +9,15 @@ from __future__ import annotations
 from core.cortex.main_controller import MainController
 from core.cortex.logic_engine import LogicEngine
 
-__all__ = ["MainController", "LogicEngine", "estado_kernel"]
+__all__ = ["MainController", "LogicEngine", "estado_kernel", "conectar_lib"]
 
 
 def estado_kernel() -> dict:
     return MainController.estado()
+
+
+def conectar_lib() -> dict:
+    """Atajo kernel → puente lib/ (herramientas, clima, SystemGuard)."""
+    from lib import conectar_nucleo
+
+    return conectar_nucleo()

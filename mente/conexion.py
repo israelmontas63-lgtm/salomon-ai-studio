@@ -69,16 +69,33 @@ def procesar_unificado(
         )
 
     # Flujo directo audio/texto/visión → cerebro (misma entidad)
-    respuesta = salomon.procesar_entrada(
-        mensaje,
-        lat=lat,
-        lon=lon,
-        imagen_base64=imagen_base64,
-        imagen_mime=imagen_mime,
-        error_consola=error_consola,
-        autonomo=autonomo,
-        contexto_mente=contexto_extra or None,
-    )
+    try:
+        respuesta = salomon.procesar_entrada(
+            mensaje,
+            lat=lat,
+            lon=lon,
+            imagen_base64=imagen_base64,
+            imagen_mime=imagen_mime,
+            error_consola=error_consola,
+            autonomo=autonomo,
+            contexto_mente=contexto_extra or None,
+        )
+    except Exception as exc:
+        from cognicion.errores import auditar_excepcion
+
+        err = auditar_excepcion(exc, origen="mente.procesar_unificado", pista="api")
+        # Objeto mínimo compatible con ChatResponse / cerebro
+        class _RespErr:
+            texto = err.mensaje_usuario()
+            exito = False
+            metadata = err.to_meta()
+            audio_base64 = None
+            audio_mime = "audio/mpeg"
+
+        respuesta = _RespErr()
+        texto = respuesta.texto
+        registrar_turno(session_id, rol="asistente", texto=texto, area=area)
+        return respuesta
 
     # Si hay contexto de hilo/periférico y el motor lo permite vía metadata
     if hasattr(respuesta, "metadata") and isinstance(respuesta.metadata, dict):

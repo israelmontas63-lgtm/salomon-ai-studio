@@ -79,13 +79,25 @@
     if (!data) {
       if (status === 0 || !status) {
         return (
-          "La conexión con el servidor se cortó (posible timeout). " +
+          "Error 41: la conexión con el servidor se cortó (posible timeout). " +
           "Reintenta: el chat ya no espera la voz para responderte."
         );
       }
-      return "Error " + status + ". ¿Lo intentamos de nuevo?";
+      return "Error 40: HTTP " + status + ". ¿Lo intentamos de nuevo?";
     }
     if (data.texto) return String(data.texto);
+    var meta = data.metadata || {};
+    var cog = meta.cognicion || {};
+    var codigo = meta.error_codigo || cog.error_codigo;
+    var causa =
+      meta.error_causa ||
+      cog.error_causa ||
+      cog.llm_error ||
+      cog.enriquecer_error ||
+      null;
+    if (codigo) {
+      return "Error " + codigo + ": " + (causa || "fallo técnico");
+    }
     var detail = data.detail;
     if (typeof detail === "string" && detail) return detail;
     if (Array.isArray(detail) && detail.length) {
@@ -96,16 +108,14 @@
         .join(" · ");
     }
     if (data.mensaje) return String(data.mensaje);
-    var meta = data.metadata || {};
-    var cog = meta.cognicion || {};
     if (cog.llm_error || cog.enriquecer_error || meta.fail_soft) {
       return (
-        "No pude completar la respuesta (" +
+        "Error 49: " +
         (cog.llm_error || cog.enriquecer_error || "fail_soft") +
-        "). ¿Lo intentamos de nuevo?"
+        ". ¿Lo intentamos de nuevo?"
       );
     }
-    return "No pude completar la respuesta. ¿Lo intentamos de nuevo?";
+    return "Error 49: no pude completar la respuesta. ¿Lo intentamos de nuevo?";
   }
 
   /**

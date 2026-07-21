@@ -334,19 +334,27 @@
             sessionId = data.session_id;
             localStorage.setItem("salomon_session_id", sessionId);
           }
-          if (res.ok && data.texto) {
-            addBubble(data.texto, "bot");
-          } else {
-            addBubble(
-              data.detail
-                ? String(data.detail)
-                : "No pude completar la respuesta. ¿Lo intentamos de nuevo?",
-              "bot"
-            );
-          }
+          const meta = data.metadata || {};
+          const reply =
+            data.texto ||
+            (meta.error_codigo
+              ? "Error " +
+                meta.error_codigo +
+                ": " +
+                (meta.error_causa || "fallo técnico")
+              : null) ||
+            (data.detail ? String(data.detail) : null) ||
+            (!res.ok
+              ? "Error 41: HTTP " + res.status + " al contactar al modelo."
+              : null) ||
+            "Error 49: no pude completar la respuesta. ¿Lo intentamos de nuevo?";
+          addBubble(reply, "bot");
         } catch (err) {
           typing.remove();
-          addBubble("Hubo un problema de conexión. ¿Reintentamos?", "bot");
+          addBubble(
+            "Error 41: problema de conexión con el servidor. ¿Reintentamos?",
+            "bot"
+          );
         } finally {
           busy = false;
           input.focus();
