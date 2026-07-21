@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T01:15:00Z",
-  "timestamp": 1753060500,
-  "version": "110.9.0",
+  "timestamp_iso": "2026-07-21T01:25:00Z",
+  "timestamp": 1753061100,
+  "version": "110.9.1",
   "channel": "main",
-  "label": "synaptic-contracts-strict",
+  "label": "render-deploy-recovery",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "SYNAPTIC_CONTRACTS_STRICT_MODE",
-  "notes": "v110.9.0 - Bus sináptico autorizado + cemento tipado; aislamiento estricto L1/L2/L4."
+  "protocol": "RENDER_DEPLOY_RECOVERY",
+  "notes": "v110.9.1 - Hardened boot/build compileall + layers fail-soft; clean Live redeploy."
 }
