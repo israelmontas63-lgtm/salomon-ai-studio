@@ -423,11 +423,27 @@ class GeminiProvider:
                     )
                 except Exception:
                     pass
-                respuesta = client.models.generate_content(
-                    model=modelo,
-                    contents=contents,
-                    config=types.GenerateContentConfig(**cfg_kwargs),
-                )
+
+                def _call():
+                    return client.models.generate_content(
+                        model=modelo,
+                        contents=contents,
+                        config=types.GenerateContentConfig(**cfg_kwargs),
+                    )
+
+                # Timeout duro en hilo (HttpOptions a veces no corta a tiempo en Render)
+                import concurrent.futures
+
+                hard_s = max(4.0, float(_LLM_HTTP_TIMEOUT_MS) / 1000.0)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    fut = pool.submit(_call)
+                    try:
+                        respuesta = fut.result(timeout=hard_s)
+                    except concurrent.futures.TimeoutError as te:
+                        raise TimeoutError(
+                            f"gemini_hard_timeout_{hard_s:.0f}s model={modelo}"
+                        ) from te
+
                 texto = (respuesta.text or "").strip()
                 if texto:
                     return texto

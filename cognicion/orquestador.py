@@ -122,6 +122,40 @@ class MotorCognicion:
         Clasifica intención, planifica y aplica RAG, conectores, visión,
         auto-corrección y razonamiento según corresponda.
         """
+        # Free Tier: enrich mínimo en chat corto (evita Error 49 por timeout proxy)
+        try:
+            from settings import BOOT_LIGHT, RENDER_FREE_TIER
+
+            light = bool(BOOT_LIGHT or RENDER_FREE_TIER)
+        except Exception:
+            light = True
+        if (
+            light
+            and not imagen_base64
+            and not (error_consola or "").strip()
+            and not autonomo
+            and len((entrada or "").strip()) < 420
+        ):
+            meta_light: dict[str, Any] = {
+                "cognicion": {
+                    "enrich_light": True,
+                    "intencion": "chat",
+                    "modelo_prioridad": "chat",
+                    "memory_cortex": "contexto_local",
+                }
+            }
+            try:
+                from cognicion.tiempo_local import bloque_tiempo_sistema, menciona_fecha_hora
+
+                if menciona_fecha_hora(entrada):
+                    return (
+                        f"{bloque_tiempo_sistema()}\n\nPregunta del usuario:\n{entrada}",
+                        meta_light,
+                    )
+            except Exception:
+                pass
+            return entrada, meta_light
+
         intencion = clasificar_intencion(
             entrada,
             error_consola=error_consola,

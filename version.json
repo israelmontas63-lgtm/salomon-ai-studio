@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T20:50:00Z",
-  "timestamp": 1753131000,
-  "version": "110.21.6",
+  "timestamp_iso": "2026-07-21T20:55:00Z",
+  "timestamp": 1753131300,
+  "version": "110.21.7",
   "channel": "main",
-  "label": "llm-fast-budget-anti-49",
+  "label": "enrich-light-hard-timeout",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "LLM_ROBUST_CONNECT",
-  "notes": "v110.21.6 — Timeout 8s, 1 modelo Gemini lite, presupuesto 16s → local; evita Error 49 por corte del proxy Render."
+  "notes": "v110.21.7 — Enrich light Free Tier + hard timeout 8s en Gemini; corta la causa real del Error 49 (proxy abort)."
 }
