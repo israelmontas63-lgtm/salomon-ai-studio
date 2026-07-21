@@ -19,11 +19,8 @@ VOICE_KEYWORDS = (
     "modo vision",
     "ojos activos",
     "activa el modo visión",
-    "activa el modo vision",
-    "activa visión",
-    "activa vision",
-    "visión activa",
-    "vision activa",
+    "puedes ver lo que está frente a mí",
+    "desactiva el modo visual",
 )
 
 _RE_GATILLO = re.compile(
@@ -39,9 +36,24 @@ _RE_GATILLO = re.compile(
     r")\b"
 )
 
+# Streaming analítico por voz (ojos ya en standby o a abrir)
+_RE_VER_FRENTE = re.compile(
+    r"(?i)\bpuedes\s+ver\b.*\b(frente\s+a\s+m[ií]|delante\s+de\s+m[ií])\b|"
+    r"(?i)\bmira\s+lo\s+que\s+tengo\s+delante\b"
+)
+
+_RE_DESACTIVAR_VISUAL = re.compile(
+    r"(?i)\b("
+    r"desactiva(r)?\s+(el\s+)?modo\s+visual|"
+    r"apaga\s+(el\s+)?modo\s+visual|"
+    r"desactiva(r)?\s+(la\s+)?visi[oó]n|"
+    r"okay,?\s*salom[oó]n,?\s*desactiva"
+    r")\b"
+)
+
 ACTIVATION_REPLY = (
-    "Modo visión activo. Mis ojos están encendidos — "
-    "puedes decir «mira» o «qué ves» cuando quieras que analice la escena."
+    "Cámara en reposo (standby). Los fotogramas se capturan en silencio — "
+    "di «Salomón, ¿puedes ver lo que está frente a mí?» para que analice y te responda."
 )
 
 
@@ -113,8 +125,52 @@ def es_gatillo_modo_vision(mensaje: str) -> bool:
     return bool(_RE_GATILLO.search(mensaje or ""))
 
 
+def es_comando_ver_frente(mensaje: str) -> bool:
+    return bool(_RE_VER_FRENTE.search(mensaje or ""))
+
+
+def es_comando_desactivar_visual(mensaje: str) -> bool:
+    return bool(_RE_DESACTIVAR_VISUAL.search(mensaje or ""))
+
+
 def respuesta_activacion_vision(mensaje: str = "") -> dict[str, Any]:
     return VisionModeTriggerEngine().activation_payload(mensaje)
+
+
+def respuesta_ver_frente(mensaje: str = "") -> dict[str, Any]:
+    return {
+        "activar_modo_vision": True,
+        "vision_requerida": True,
+        "vision_analytical": True,
+        "ui_action": "engage_analytical_streaming",
+        "texto": (
+            "Sí — activo el análisis de lo que tienes frente a ti "
+            "y te respondo con lo que veo."
+        ),
+        "cognicion": {
+            "voice_triggered_vision": True,
+            "analytical_streaming": True,
+            "gatillo": (mensaje or "").strip()[:120],
+            "protocolo": "VOICE_TRIGGERED_VISION",
+        },
+    }
+
+
+def respuesta_desactivar_visual(mensaje: str = "") -> dict[str, Any]:
+    return {
+        "activar_modo_vision": False,
+        "vision_requerida": False,
+        "ui_action": "disengage_visual_mode",
+        "texto": (
+            "Modo visual desactivado. Libero la cámara y vuelvo al chat."
+        ),
+        "cognicion": {
+            "voice_triggered_vision": False,
+            "analytical_streaming": False,
+            "gatillo": (mensaje or "").strip()[:120],
+            "protocolo": "VOICE_TRIGGERED_VISION_OFF",
+        },
+    }
 
 
 def obtener_vision_mode_trigger() -> VisionModeTriggerEngine:

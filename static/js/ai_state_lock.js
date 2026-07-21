@@ -36,7 +36,7 @@
   }
 
   function looksVisualMessage(mensaje) {
-    return /\b(mira|qu[eé]\s+ves|macro|micro|modo\s+visi[oó]n|ojos\s+activos|enfoque\s+(cerca|lejano)|foto|imagen|c[aá]mara)\b/i.test(
+    return /\b(mira|qu[eé]\s+ves|macro|micro|modo\s+visi[oó]n|ojos\s+activos|enfoque\s+(cerca|lejano)|foto|imagen|c[aá]mara|puedes\s+ver|modo\s+visual|desactiva(r)?\s+(el\s+)?modo\s+visual)\b/i.test(
       mensaje || ""
     );
   }

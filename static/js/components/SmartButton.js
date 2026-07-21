@@ -397,6 +397,27 @@
       if (!keepMic) this._setState(States.PROCESSING);
 
       var VT = window.SalomonVisionModeTrigger;
+      // Puente voz→visión: comandos locales (standby / analítico / off)
+      var Veng = window.SalomonVision || null;
+      if (Veng && Veng.parseCommand) {
+        var vcmd = Veng.parseCommand(text);
+        if (
+          vcmd &&
+          vcmd.handled &&
+          (vcmd.type === "ver_frente" ||
+            vcmd.type === "desactivar_visual" ||
+            vcmd.type === "mira")
+        ) {
+          document.body.classList.add("salomon-processing");
+          try {
+            await Veng.handleChatCommand(text);
+          } catch (_) {}
+          document.body.classList.remove("salomon-processing");
+          if (!keepMic) this.neutralize("voice_vision_bridge");
+          return;
+        }
+      }
+
       if (VT && VT.matches && VT.matches(text)) {
         document.body.classList.add("salomon-processing");
         var engaged = await VT.engage({ source: "smart_button_voice" });
@@ -408,7 +429,7 @@
           botVis.className = "bubble bot";
           botVis.textContent =
             (engaged && engaged.texto) ||
-            "Modo visión activo. Mis ojos están encendidos.";
+            "Cámara en reposo. Di «¿puedes ver lo que está frente a mí?» para analizar.";
           chat.appendChild(botVis);
           chat.scrollTop = chat.scrollHeight;
         }
@@ -437,7 +458,15 @@
 
       var data = (result && result.data) || {};
       var meta = data.metadata || {};
-      if (meta.activar_modo_vision && VT && VT.engage) {
+      if (meta.ui_action === "engage_analytical_streaming" && Veng) {
+        try {
+          await Veng.engageAnalyticalStreaming(text);
+        } catch (_) {}
+      } else if (meta.ui_action === "disengage_visual_mode" && Veng) {
+        try {
+          await Veng.disengageVisualMode();
+        } catch (_) {}
+      } else if (meta.activar_modo_vision && VT && VT.engage) {
         await VT.engage({ source: "brain_meta" });
       }
 

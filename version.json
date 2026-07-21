@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T00:55:00Z",
-  "timestamp": 1753059300,
-  "version": "110.7.0",
+  "timestamp_iso": "2026-07-21T01:05:00Z",
+  "timestamp": 1753059900,
+  "version": "110.8.0",
   "channel": "main",
-  "label": "root-cause-vision-voice-memory",
-  "stability": "EMERGENCY_STABLE",
-  "protocol": "ROOT_CAUSE_API_MEMORY_FIX",
-  "notes": "v110.7.0 - Vision always on image bytes; Adam default TTS; SQLite WAL; voice unlock replay."
+  "label": "neural-isolation-voice-vision",
+  "stability": "STABLE_PRODUCTION_READY",
+  "protocol": "NEURAL_ISOLATION_VOICE_VISION_BRIDGE",
+  "notes": "v110.8.0 - Contratos de capas + visión standby/analítica por voz; guard pre-commit."
 }

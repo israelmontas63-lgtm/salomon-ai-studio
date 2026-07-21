@@ -9,7 +9,10 @@
     /** Session State — privacidad */
     session: {
       active: false,
+      /** standby: frames en buffer, cerebro en silencio cognitivo */
+      mode: "off", // off | standby | analytical
       visionChannel: false,
+      analyticalStreaming: false,
       lastFrameDataUrl: null,
       lastFacing: "environment",
       channelTimer: null,
@@ -33,13 +36,10 @@
         if (!this.session.active) return;
         const dataUrl = ev.detail && ev.detail.dataUrl;
         if (!dataUrl) return;
+        // Standby: solo buffer — NO llamar al modelo hasta comando de voz
         this.session.lastFrameDataUrl = dataUrl;
-        this.session.lastFacing = (ev.detail && ev.detail.facingMode) || this.session.lastFacing;
-        // Gatillo de Visión: envía captura al cerebro
-        this.sendFrameToBrain(
-          "Analiza esta captura de mis ojos (cámara). Describe con precisión lo que ves.",
-          dataUrl
-        );
+        this.session.lastFacing =
+          (ev.detail && ev.detail.facingMode) || this.session.lastFacing;
       });
     },
 
@@ -49,17 +49,89 @@
 
     _onVisionOpen(facingMode) {
       this.session.active = true;
+      this.session.mode = "standby";
+      this.session.analyticalStreaming = false;
       this.session.visionChannel = true;
       this.session.lastFacing = facingMode || "environment";
       this._startVisionChannel();
+      try {
+        document.body.classList.add("vision-standby");
+        document.body.classList.remove("vision-analytical");
+      } catch (_) {}
     },
 
     _onVisionClose() {
       // Corte inmediato de flujo visual (batería + privacidad)
       this.session.active = false;
+      this.session.mode = "off";
+      this.session.analyticalStreaming = false;
       this.session.visionChannel = false;
       this.session.lastFrameDataUrl = null;
       this._stopVisionChannel();
+      try {
+        document.body.classList.remove("vision-standby", "vision-analytical");
+      } catch (_) {}
+    },
+
+    /**
+     * Comando voz: "Salomón, ¿puedes ver lo que está frente a mí?"
+     * Activa streaming analítico + una mirada + TTS (Adam vía brain).
+     */
+    async engageAnalyticalStreaming(prompt) {
+      const cam = window.SalomonCamera;
+      if (!this.session.active) {
+        if (cam && cam.openCamera) {
+          try {
+            await cam.openCamera();
+          } catch (_) {}
+        }
+        await new Promise(function (r) {
+          setTimeout(r, 350);
+        });
+      }
+      if (!this.session.active) {
+        this._bubble(
+          "bot",
+          "No pude abrir la cámara. Activa el botón Cámara y repite el comando."
+        );
+        return null;
+      }
+      this.session.mode = "analytical";
+      this.session.analyticalStreaming = true;
+      try {
+        document.body.classList.add("vision-analytical");
+        document.body.classList.remove("vision-standby");
+      } catch (_) {}
+      const texto =
+        prompt ||
+        "Salomón, ¿puedes ver lo que está frente a mí? Describe con precisión la escena.";
+      this._bubble("bot", "Sí — estoy mirando lo que tienes frente a ti…");
+      return this.lookNow(texto);
+    },
+
+    /**
+     * "Okay, Salomón, desactiva el modo visual"
+     */
+    async disengageVisualMode() {
+      this.session.analyticalStreaming = false;
+      this.session.mode = this.session.active ? "standby" : "off";
+      this.session.lastFrameDataUrl = null;
+      this._stopVisionChannel();
+      try {
+        document.body.classList.remove("vision-analytical");
+        if (this.session.active) document.body.classList.add("vision-standby");
+      } catch (_) {}
+      const cam = window.SalomonCamera;
+      if (cam && cam.isActive && cam.isActive() && cam.closeCamera) {
+        try {
+          await cam.closeCamera();
+        } catch (_) {}
+      }
+      this._bubble(
+        "bot",
+        "Modo visual desactivado. Vuelvo al chat — puedes enviarme una foto cuando quieras."
+      );
+      return true;
     },
 
     _startVisionChannel() {
@@ -175,11 +247,18 @@
           // TTS del brain-bridge (misma vía que el botón inteligente)
           if (data.audio_base64) {
             try {
-              var mime = data.audio_mime || "audio/mpeg";
-              var audio = new Audio(
-                "data:" + mime + ";base64," + data.audio_base64
-              );
-              audio.play().catch(function () {});
+              if (
+                window.SalomonVoiceLayer &&
+                window.SalomonVoiceLayer.playFromResponse
+              ) {
+                window.SalomonVoiceLayer.playFromResponse(data);
+              } else {
+                var mime = data.audio_mime || "audio/mpeg";
+                var audio = new Audio(
+                  "data:" + mime + ";base64," + data.audio_base64
+                );
+                audio.play().catch(function () {});
+              }
             } catch (_) {}
           }
           return data.texto;
@@ -206,6 +285,30 @@
       const t = (mensaje || "").trim();
       const low = t.toLowerCase();
       if (!low) return { handled: false };
+
+      // Desactivar modo visual (voz)
+      if (
+        /\b(desactiva(r)?\s+(el\s+)?modo\s+visual|apaga\s+(el\s+)?modo\s+visual|desactiva(r)?\s+(la\s+)?visi[oó]n|okay,?\s*salom[oó]n,?\s*desactiva)\b/.test(
+          low
+        )
+      ) {
+        return { handled: true, type: "desactivar_visual", rest: t };
+      }
+
+      // Activar streaming analítico: "¿puedes ver lo que está frente a mí?"
+      if (
+        /\bpuedes\s+ver\b/.test(low) &&
+        /\b(frente\s+a\s+m[ií]|delante\s+de\s+m[ií]|lo\s+que\s+est[aá])\b/.test(low)
+      ) {
+        return { handled: true, type: "ver_frente", rest: t };
+      }
+      if (
+        /\b(salom[oó]n,?\s*)?(mira\s+lo\s+que\s+tengo\s+delante|observa\s+lo\s+que\s+est[aá]\s+frente)\b/.test(
+          low
+        )
+      ) {
+        return { handled: true, type: "ver_frente", rest: t };
+      }
 
       if (
         window.SalomonVisionModeTrigger &&
@@ -241,21 +344,43 @@
       const cmd = this.parseCommand(mensaje);
       if (!cmd.handled) return false;
 
+      if (cmd.type === "desactivar_visual") {
+        await this.disengageVisualMode();
+        return true;
+      }
+
+      if (cmd.type === "ver_frente") {
+        await this.engageAnalyticalStreaming(cmd.rest);
+        return true;
+      }
+
       if (cmd.type === "modo_vision") {
+        // Abrir cámara en standby (silencio cognitivo hasta comando de análisis)
         if (window.SalomonVisionModeTrigger) {
           const r = await window.SalomonVisionModeTrigger.handleCommand(mensaje, {
             source: "vision_engine",
           });
-          this._bubble("bot", (r && r.texto) || "Modo visión activo.");
+          this._bubble(
+            "bot",
+            (r && r.texto) ||
+              "Cámara en reposo. Di «Salomón, ¿puedes ver lo que está frente a mí?» cuando quieras que analice."
+          );
           return true;
         }
         const cam = window.SalomonCamera;
         if (cam && cam.openCamera) await cam.openCamera();
-        this._bubble("bot", "Modo visión activo.");
+        this._bubble(
+          "bot",
+          "Cámara en reposo. Di «¿puedes ver lo que está frente a mí?» para activar el análisis."
+        );
         return true;
       }
 
       if (cmd.type === "mira") {
+        if (!this.session.analyticalStreaming) {
+          this.session.analyticalStreaming = true;
+          this.session.mode = "analytical";
+        }
         await this.lookNow(cmd.rest);
         return true;
       }
