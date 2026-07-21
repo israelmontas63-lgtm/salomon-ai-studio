@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T16:35:00Z",
-  "timestamp": 1753115700,
-  "version": "110.19.0",
+  "timestamp_iso": "2026-07-21T16:50:00Z",
+  "timestamp": 1753116600,
+  "version": "110.20.0",
   "channel": "main",
-  "label": "master-layer-sync",
+  "label": "layer-08-asalomon",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "MASTER_LAYER_SYNC_2026",
-  "notes": "v110.19.0 — Blindaje absoluto Capas 1–5: ContextVar, hot-plug, pipeline LLM fallback, búsqueda en cascada, SCE/30-X. Tuerquita muestra master_sync. SW v71."
+  "protocol": "ASALOMON_L8_2026",
+  "notes": "v110.20.0 — Capa 8 Asalomón: metaconocimiento, formas de razonamiento e identidad post-L7. Capas 1–8 selladas. SW v72."
 }

@@ -422,6 +422,25 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                 meta_extra.setdefault("cognicion", {})
                 meta_extra["cognicion"]["layer_07_error"] = type(exc).__name__
 
+        # Capa 8: Asalomón — metaconocimiento, identidad y forma de razonamiento
+        try:
+            from cognicion.capas_inteligencia.layer_08_asalomon import (
+                apply_asalomon_seal,
+            )
+
+            respuesta_texto, _l8 = apply_asalomon_seal(
+                respuesta_texto or "",
+                user_message=entrada,
+                meta=meta_extra if isinstance(meta_extra, dict) else None,
+            )
+            if isinstance(meta_extra, dict):
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["layer_08"] = _l8
+        except Exception as exc:
+            if isinstance(meta_extra, dict):
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["layer_08_error"] = type(exc).__name__
+
         respuesta_texto = sanitizar_salida_chat(respuesta_texto or "")
         if not respuesta_texto.strip():
             respuesta_texto = (

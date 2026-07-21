@@ -83,6 +83,26 @@ AUTHORIZED_SYNAPSES: list[dict[str, Any]] = [
     },
     {
         "from": 7,
+        "to": 8,
+        "channel": "draft_for_asalomon",
+        "methods": ["apply_asalomon_seal"],
+        "payload": {"draft": str, "user_message": str},
+        "module": "cognicion/capas_inteligencia/layer_08_asalomon/__init__.py",
+        "note": (
+            "L7 entrega borrador supervisado a Asalomón (metaconocimiento + identidad). "
+            "L8 no re-lanza enjambres ni escribe SQLite."
+        ),
+    },
+    {
+        "from": 8,
+        "to": 4,
+        "channel": "emit_asalomon_sealed",
+        "methods": ["sanitizar_salida_chat", "apply_asalomon_seal"],
+        "payload": {"texto": str},
+        "note": "Salida con sello de identidad Asalomón hacia NLP/voz.",
+    },
+    {
+        "from": 7,
         "to": 7,
         "channel": "law_of_one_lens",
         "methods": [
@@ -94,16 +114,21 @@ AUTHORIZED_SYNAPSES: list[dict[str, Any]] = [
         "module": "cognicion/law_of_one.py",
         "note": (
             "Filtro axiologico Ley del Uno: unidad, servicio y libre albedrío. "
-            "Se aplica en L7 antes de emit_sanitized; no escribe SQLite ni lanza enjambres."
+            "Se aplica en L7 antes de Asalomón; no escribe SQLite ni lanza enjambres."
         ),
     },
     {
         "from": 8,
-        "to": 3,
-        "channel": "supervisor_web_intelligence",
-        "methods": ["supervise_turn", "fetch_web_intelligence"],
-        "payload": {"mensaje": str, "session_id": (str, type(None))},
-        "note": "Supervisor inyecta bloque web; no escribe SQLite ni cierra camara.",
+        "to": 8,
+        "channel": "asalomon_reasoning_forms",
+        "methods": [
+            "detect_reasoning_forms",
+            "enrich_reasoning_hint",
+            "bloque_metaconocimiento",
+        ],
+        "payload": {"user_message": str},
+        "module": "cognicion/capas_inteligencia/layer_08_asalomon/__init__.py",
+        "note": "Metaconocimiento interno: formas de razonamiento sin mutar otras capas.",
     },
 ]
 

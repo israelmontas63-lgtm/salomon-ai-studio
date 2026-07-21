@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Contratos estrictos entre las 7 capas — aislamiento neuronal (cero efecto dominó).
+Contratos estrictos entre las 8 capas — aislamiento neuronal (cero efecto dominó).
 Created by Israel Monta - Salomón AI Studio
 """
 
@@ -140,6 +140,35 @@ LAYER_CONTRACTS: list[dict[str, Any]] = [
                 "deploy_agent_swarm(",
                 "schedule_background_verification(",
                 "enrich_turn(",
+            ],
+        },
+    },
+    {
+        "id": 8,
+        "name": "asalomon_metaknowledge",
+        "owns": [
+            "cognicion/capas_inteligencia/layer_08_asalomon/__init__.py",
+            "cognicion/core_identity_engine.py",
+        ],
+        "must_contain": {
+            "cognicion/capas_inteligencia/layer_08_asalomon/__init__.py": [
+                "apply_asalomon_seal",
+                "detect_reasoning_forms",
+                "REASONING_FORMS",
+                "bloque_metaconocimiento",
+            ],
+            "cerebro.py": [
+                "apply_asalomon_seal",
+                "layer_08",
+            ],
+        },
+        "must_not_contain": {
+            "cognicion/capas_inteligencia/layer_08_asalomon/__init__.py": [
+                "getUserMedia(",
+                "closeCamera(",
+                "deploy_agent_swarm(",
+                "enrich_turn(",
+                "guardar_mensaje(",
             ],
         },
     },

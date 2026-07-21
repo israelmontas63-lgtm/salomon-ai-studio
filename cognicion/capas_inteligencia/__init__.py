@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Registro formal de las 7 Capas de Inteligencia de Salomón AI.
+Registro formal de las 8 Capas de Inteligencia de Salomón AI.
 Conecta módulos existentes sin duplicar lógica.
-Capa 7 sella la metacognición (evaluación pre-emisión) sin interferir con L3/L6.
+Capa 7 sella metacognición; Capa 8 Asalomón amplía metaconocimiento e identidad.
 Created by Israel Monta - Salomón AI Studio
 """
 
@@ -124,15 +124,37 @@ LAYER_CATALOG: list[dict[str, Any]] = [
             ],
         },
     },
+    {
+        "id": 8,
+        "name": "asalomon_metaknowledge",
+        "title": "Layer 8: Asalomón — Metaknowledge & Reasoning Identity",
+        "assets": [
+            "cognicion/capas_inteligencia/layer_08_asalomon/__init__.py",
+            "cognicion/core_identity_engine.py",
+            "cognicion/law_of_one.py",
+            "cerebro.py",
+        ],
+        "apis": ["/api/intelligence/layers", "/api/identidad", "/api/version"],
+        "boundaries": {
+            "owns": "identity_seal_reasoning_forms_metaknowledge",
+            "must_not": [
+                "getUserMedia",
+                "closeCamera",
+                "deploy_agent_swarm",
+                "enrich_turn",
+                "guardar_mensaje",
+            ],
+        },
+    },
 ]
 
 
 def catalog() -> list[dict[str, Any]]:
-    return [dict(x) for x in LAYER_CATALOG]
+    return list(LAYER_CATALOG)
 
 
 def layer_by_id(layer_id: int) -> dict[str, Any] | None:
     for layer in LAYER_CATALOG:
-        if layer["id"] == layer_id:
+        if layer.get("id") == layer_id:
             return dict(layer)
     return None

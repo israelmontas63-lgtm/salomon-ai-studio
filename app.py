@@ -636,7 +636,8 @@ def api_version() -> dict:
     # Sello neuronal para la tuerquita (fail-soft honesto)
     sistema: dict = {
         "sce": "102.0.0",
-        "capas": "1-7",
+        "capas": "1-8",
+        "asalomon": True,
         "vision_cross_modal": True,
         "busqueda_circuit_breaker": True,
         "law_of_one": True,

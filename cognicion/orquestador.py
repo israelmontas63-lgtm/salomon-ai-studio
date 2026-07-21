@@ -451,6 +451,26 @@ class MotorCognicion:
                 meta["cognicion"]["identidad"] = True
         except Exception:
             pass
+
+        # Capa 8 Asalomón — metaconocimiento / forma de razonamiento (fail-soft)
+        try:
+            from cognicion.capas_inteligencia.layer_08_asalomon import (
+                detect_reasoning_forms,
+                enrich_reasoning_hint,
+            )
+
+            forms = detect_reasoning_forms(entrada)
+            hint = enrich_reasoning_hint(entrada)
+            if hint:
+                bloques.append(hint)
+            meta["cognicion"]["layer_08"] = {
+                "active": True,
+                "reasoning_forms": forms,
+                "via": "asalomon_pre_llm",
+            }
+        except Exception as exc:
+            meta["cognicion"]["layer_08_error"] = type(exc).__name__
+
         try:
             from cognicion.web import bloque_contexto_web, es_peticion_web
 

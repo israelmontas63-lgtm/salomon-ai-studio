@@ -101,8 +101,12 @@ def verificar_conexion_maestra() -> dict[str, Any]:
         ok = False
         capas["4_busqueda"] = {"ok": False, "error": type(exc).__name__}
 
-    # Capa 5 — SCE / 30-X
+    # Capa 5 — SCE / 30-X + L8 Asalomón
     try:
+        from cognicion.capas_inteligencia.layer_08_asalomon import (
+            apply_asalomon_seal,
+            estado_layer_08,
+        )
         from cognicion.evolucion.habilidades_30x import (
             HABILIDADES_30X,
             estado_30x,
@@ -117,6 +121,11 @@ def verificar_conexion_maestra() -> dict[str, Any]:
         sce = estado_sce()
         pack30 = integrar_30x_via_sce(registrar_ledger=False)
         st30 = estado_30x()
+        l8 = estado_layer_08()
+        sealed_txt, seal_rep = apply_asalomon_seal(
+            "Como modelo de lenguaje genérico no tengo creador.",
+            user_message="¿quién eres?",
+        )
         capas["5_sce_30x"] = {
             "ok": True,
             "sce_version": SCE_VERSION,
@@ -127,13 +136,22 @@ def verificar_conexion_maestra() -> dict[str, Any]:
             "comic_engine": bool(st30.get("comic_engine_activo") or pack30.get("comic_engine")),
             "module": "cognicion.evolucion",
         }
+        capas["8_asalomon"] = {
+            "ok": bool(l8.get("ok")) and bool(seal_rep.get("ok")),
+            "active": bool(l8.get("active")),
+            "rewrote_cold_identity": bool(seal_rep.get("rewritten")),
+            "module": "cognicion.capas_inteligencia.layer_08_asalomon",
+        }
         if bloqueo.get("decision") != "bloquear":
             ok = False
             capas["5_sce_30x"]["ok"] = False
             capas["5_sce_30x"]["error"] = "torch_cuda_no_bloqueado"
+        if not capas["8_asalomon"]["ok"]:
+            ok = False
     except Exception as exc:
         ok = False
         capas["5_sce_30x"] = {"ok": False, "error": type(exc).__name__}
+        capas["8_asalomon"] = {"ok": False, "error": type(exc).__name__}
 
     return {
         "ok": ok,

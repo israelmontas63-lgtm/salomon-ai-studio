@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Puente neuronal: mapeo estricto de las 7 capas al núcleo cognitivo.
+Puente neuronal: mapeo estricto de las 8 capas al núcleo cognitivo.
 Sella fronteras para evitar choques de conocimiento entre módulos.
 Created by Israel Monta - Salomón AI Studio
 """
@@ -119,6 +119,28 @@ NEURAL_CORE_MAP: list[dict[str, Any]] = [
             "enrich_turn(",
         ],
     },
+    {
+        "id": 8,
+        "name": "asalomon_metaknowledge",
+        "core_hooks": [
+            "cognicion/capas_inteligencia/layer_08_asalomon/__init__.py",
+            "cognicion/core_identity_engine.py",
+            "cerebro.py",
+        ],
+        "bridge_markers": [
+            "apply_asalomon_seal",
+            "detect_reasoning_forms",
+            "REASONING_FORMS",
+            "layer_08",
+        ],
+        "must_not_own": [
+            "getUserMedia(",
+            "closeCamera(",
+            "deploy_agent_swarm(",
+            "enrich_turn(",
+            "guardar_mensaje(",
+        ],
+    },
 ]
 
 
@@ -148,11 +170,14 @@ def verify_layer_bridge(layer: dict[str, Any]) -> dict[str, Any]:
         # Solo en el módulo principal de la capa (primer hook tipicamente)
         primary = layer["core_hooks"][0]
         body = _read(primary)
-        if forbidden in body and lid != 7:
+        if forbidden in body and lid not in (7, 8):
             # Capas 1-6 no deben poseer la puerta L7
             if forbidden in ("apply_supervision",) and "layer_07" not in primary:
                 collision = True
         if lid == 7 and forbidden in body:
+            collision = True
+        # L8: solo llamadas reales (needle con '('), no el catálogo de prohibidos
+        if lid == 8 and forbidden.endswith("(") and forbidden in body:
             collision = True
 
     ok = hooks_ok and markers_ok and not collision
@@ -167,21 +192,23 @@ def verify_layer_bridge(layer: dict[str, Any]) -> dict[str, Any]:
 
 
 def harmonize_all_layers() -> dict[str, Any]:
-    """Verifica conexión en orden estricto 1→7 al núcleo."""
+    """Verifica conexión en orden estricto 1→8 al núcleo."""
     results = [verify_layer_bridge(layer) for layer in NEURAL_CORE_MAP]
     # Puente L4↔L7: cerebro debe llamar apply_supervision
     cerebro = _read("cerebro.py")
     l7_in_core = "apply_supervision" in cerebro and "layer_07" in cerebro
+    l8_in_core = "apply_asalomon_seal" in cerebro and "layer_08" in cerebro
     # Puente L3/L6 en orquestador
     orch = _read("cognicion/orquestador.py")
     l3_l6 = "enrich_turn" in orch and "schedule_background_verification" in orch
-    sealed = l7_in_core and l3_l6 and all(r["ok"] for r in results)
+    sealed = l7_in_core and l8_in_core and l3_l6 and all(r["ok"] for r in results)
     return {
         "ok": sealed,
         "order": [r["id"] for r in results],
         "layer_bridges": results,
         "core_links": {
             "cerebro_l7": l7_in_core,
+            "cerebro_l8": l8_in_core,
             "orquestador_l3_l6": l3_l6,
         },
         "sealed": sealed,

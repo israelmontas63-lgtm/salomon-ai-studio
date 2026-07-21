@@ -164,7 +164,7 @@
       line2.textContent =
         "SCE " +
         sce +
-        " · Capas 1–7 " +
+        " · Capas 1–8 " +
         sealed +
         " · " +
         master +
@@ -177,6 +177,12 @@
           : "Actualización pendiente";
       this.metaEl.appendChild(line1);
       this.metaEl.appendChild(line2);
+      if (sis.asalomon) {
+        var lineAsa = document.createElement("div");
+        lineAsa.className = "control-layer__meta-sub";
+        lineAsa.textContent = "L8 Asalomón · metaconocimiento activo";
+        this.metaEl.appendChild(lineAsa);
+      }
       this.metaEl.appendChild(line3);
     },
 
