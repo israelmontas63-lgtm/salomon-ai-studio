@@ -219,7 +219,9 @@
       }
     }
 
-    neutralize(reason) {
+    neutralize(reason, opts) {
+      opts = opts || {};
+      var keepVision = !!opts.keepVision || !!opts.keep_vision;
       haptic(10);
       clearTimeout(this._tapTimer);
       this._tapTimer = null;
@@ -227,15 +229,17 @@
       this._stopMic(false);
       var L = lock();
       if (L && L.isActive()) L.release(reason || "gesture_neutralize");
-      // Apagar visión / streaming analítico si estaba activo
-      try {
-        var V = window.SalomonVision;
-        if (V && (V.session && (V.session.analyticalStreaming || V.session.active))) {
-          if (V.disengageVisualMode) {
-            V.disengageVisualMode();
+      // Apagar visión solo si no pedimos mantener ojos (cross-modal follow-ups)
+      if (!keepVision) {
+        try {
+          var V = window.SalomonVision;
+          if (V && (V.session && (V.session.analyticalStreaming || V.session.active))) {
+            if (V.disengageVisualMode) {
+              V.disengageVisualMode();
+            }
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
       this.root.classList.remove(
         "is-active",
         "is-listening",
@@ -249,7 +253,7 @@
       this._setState(States.IDLE);
       window.dispatchEvent(
         new CustomEvent("salomon:gesture-neutralized", {
-          detail: { reason: reason || "tap" },
+          detail: { reason: reason || "tap", keepVision: keepVision },
         })
       );
     }
@@ -477,7 +481,14 @@
               await window.SalomonVoiceLayer.ensureSpeak({ texto: vTexto });
             }
           } catch (_) {}
-          if (!keepMic) this.neutralize("voice_vision_bridge");
+          if (!keepMic) {
+            // Mantener cámara abierta tras modo visión / mira (sigue escuchando lo que ve)
+            if (vcmd.type === "desactivar_visual") {
+              this.neutralize("voice_vision_bridge");
+            } else {
+              this.neutralize("voice_vision_bridge", { keepVision: true });
+            }
+          }
           return;
         }
       }
@@ -631,10 +642,25 @@
 
     async _fallbackFetch(text) {
       try {
+        var payload = { mensaje: text };
+        try {
+          var L = lock();
+          var prep =
+            (L && L.prepareVisionPayload) ||
+            (window.SalomonAILock && window.SalomonAILock.prepareVisionPayload);
+          if (prep) {
+            var vis = await prep(text);
+            if (vis && vis.imagen_base64) {
+              payload.imagen_base64 = vis.imagen_base64;
+              payload.image_frame = vis.image_frame || vis.imagen_base64;
+              payload.imagen_mime = vis.imagen_mime || "image/jpeg";
+            }
+          }
+        } catch (_) {}
         var res = await fetch("/api/ai/central-button", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mensaje: text }),
+          body: JSON.stringify(payload),
           credentials: "same-origin",
         });
         var pack = await res.json().catch(function () {
@@ -645,8 +671,8 @@
       } catch (_) {
         return { ok: false, data: {} };
       } finally {
-        var L = lock();
-        if (L) L.release("fallback_done");
+        var L2 = lock();
+        if (L2) L2.release("fallback_done");
       }
     }
 

@@ -167,7 +167,7 @@
       }
     },
 
-    /** Captura frame actual del video sin cortar el stream */
+    /** Captura frame actual del video sin cortar el stream (JPEG/WebP comprimido). */
     captureCurrentFrame(quality) {
       if (!this.session.active) return null;
       const cam = window.SalomonCamera;
@@ -177,20 +177,58 @@
       try {
         const w = video.videoWidth;
         const h = video.videoHeight;
+        let tw = w;
+        let th = h;
+        const maxSide = 1280;
+        if (Math.max(w, h) > maxSide) {
+          const scale = maxSide / Math.max(w, h);
+          tw = Math.round(w * scale);
+          th = Math.round(h * scale);
+        }
         const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
+        canvas.width = tw;
+        canvas.height = th;
         const ctx = canvas.getContext("2d");
         const facing = cam.facingMode || this.session.lastFacing;
         if (facing === "user") {
-          ctx.translate(w, 0);
+          ctx.translate(tw, 0);
           ctx.scale(-1, 1);
         }
-        ctx.drawImage(video, 0, 0, w, h);
-        return canvas.toDataURL("image/jpeg", quality == null ? 0.85 : quality);
+        ctx.drawImage(video, 0, 0, tw, th);
+        const q = quality == null ? 0.82 : quality;
+        let dataUrl = null;
+        try {
+          dataUrl = canvas.toDataURL("image/webp", q);
+          if (!dataUrl || dataUrl.indexOf("image/webp") === -1) {
+            dataUrl = canvas.toDataURL("image/jpeg", q);
+          }
+        } catch (_) {
+          dataUrl = canvas.toDataURL("image/jpeg", q);
+        }
+        return dataUrl;
       } catch (_) {
         return null;
       }
+    },
+
+    /** Payload cross-modal: consulta + frame fresco para Flask. */
+    async buildCrossModalPayload(mensaje) {
+      const lock = window.SalomonAILock;
+      if (lock && lock.prepareVisionPayload) {
+        return lock.prepareVisionPayload(mensaje || "");
+      }
+      const frame = this.captureCurrentFrame(0.82);
+      if (!frame) return null;
+      const mimeMatch = String(frame).match(/^data:(image\/[\w.+-]+);base64,/i);
+      const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+      const raw = String(frame).replace(/^data:image\/[\w.+-]+;base64,/i, "");
+      this.session.lastFrameDataUrl = frame;
+      return {
+        imagen_base64: raw,
+        image_frame: raw,
+        imagen_mime: mime,
+        vision_active: true,
+      };
     },
 
     /**
@@ -449,6 +487,15 @@
   function boot() {
     VisionEngine.init();
     window.SalomonVision = VisionEngine;
+    try {
+      window.addEventListener("salomon:camera-error", function (ev) {
+        var detail = (ev && ev.detail) || {};
+        var msg =
+          detail.message ||
+          "No pude usar la cámara. Revisa permisos — puedes seguir por texto.";
+        VisionEngine._bubble("bot", msg);
+      });
+    } catch (_) {}
   }
 
   if (document.readyState === "loading") {

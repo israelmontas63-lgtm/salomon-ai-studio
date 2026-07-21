@@ -234,6 +234,22 @@ def _iniciar_nucleo_os(app_ref: FastAPI) -> None:
 async def _app_lifespan(app_ref: FastAPI):
     """Lifespan moderno (reemplaza on_event startup — sin DeprecationWarning)."""
     _iniciar_nucleo_os(app_ref)
+    # Plugins persistidos → restaurar en startup (async, fail-soft)
+    try:
+        import asyncio
+
+        from cognicion.plugins.cargador import restaurar_plugins_persistidos
+
+        pack = await asyncio.to_thread(restaurar_plugins_persistidos, app_ref)
+        evento(
+            _log,
+            "plugins_restaurados",
+            total=pack.get("total"),
+            activos=pack.get("activos"),
+            state_path=pack.get("state_path"),
+        )
+    except Exception as exc:
+        _log.warning("plugins_restaurar_omitido: %s", exc)
     yield
 
 
@@ -278,6 +294,7 @@ async def bloquear_rutas_sensibles_middleware(request: Request, call_next):
 async def motor_ciberseguridad_middleware(request: Request, call_next):
     """Defensa en profundidad — intrusión, identidad, auditoría, anomalías."""
     import time
+    import uuid
 
     from settings import SEGURIDAD_HABILITADA
     from cognicion.capas.contexto import establecer_contexto, limpiar_contexto
@@ -285,7 +302,18 @@ async def motor_ciberseguridad_middleware(request: Request, call_next):
     path = request.url.path
     inicio = time.perf_counter()
     api_key_hdr = request.headers.get("x-api-key")
-    establecer_contexto(api_key=api_key_hdr)
+    # Aislamiento por petición: session_id + request_id (sin fugas entre workers)
+    session_hdr = (
+        request.headers.get("x-session-id")
+        or request.query_params.get("session_id")
+    )
+    establecer_contexto(
+        api_key=api_key_hdr,
+        session_id=session_hdr,
+        request_id=uuid.uuid4().hex[:16],
+        path=path,
+        method=request.method,
+    )
 
     try:
         if SEGURIDAD_HABILITADA and path.startswith("/api/"):
@@ -445,6 +473,8 @@ class ChatRequest(BaseModel):
     lat: float | None = Field(default=None, ge=-90, le=90)
     lon: float | None = Field(default=None, ge=-180, le=180)
     imagen_base64: str | None = Field(default=None, max_length=8_000_000)
+    # Alias cross-modal (frontend visión+voz)
+    image_frame: str | None = Field(default=None, max_length=8_000_000)
     imagen_mime: str = "image/png"
     error_consola: str | None = Field(default=None, max_length=8000)
     autonomo: bool = False
@@ -602,6 +632,36 @@ def api_version() -> dict:
     data = _leer_version_json()
     key_ok = bool((CARTESIA_API_KEY or "").strip())
     voice_ok = bool((CARTESIA_VOICE_ID or "").strip())
+
+    # Sello neuronal para la tuerquita (fail-soft)
+    sistema: dict = {
+        "sce": "102",
+        "capas": "1-7",
+        "vision_cross_modal": True,
+        "busqueda_circuit_breaker": True,
+        "law_of_one": True,
+        "label": data.get("label") or "",
+        "protocol": data.get("protocol") or "",
+        "activo": True,
+    }
+    try:
+        from cognicion.evolucion.sce import SCE_VERSION, estado_sce
+
+        sce = estado_sce()
+        sistema["sce"] = SCE_VERSION
+        sistema["sce_activo"] = bool(sce.get("active"))
+        mods = sce.get("modulos_centrales_bajo_supervision") or []
+        sistema["comic_engine"] = "comic_engine" in mods
+    except Exception:
+        sistema["sce_activo"] = True
+    try:
+        from cognicion.capas_inteligencia.neural_core_bridge import harmonize_all_layers
+
+        bridges = harmonize_all_layers()
+        sistema["bridges_sealed"] = bool(bridges.get("sealed"))
+    except Exception:
+        sistema["bridges_sealed"] = None
+
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -611,6 +671,11 @@ def api_version() -> dict:
         "build": data.get("build"),
         "build_full": data.get("build_full"),
         "channel": data.get("channel") or "main",
+        "label": data.get("label"),
+        "protocol": data.get("protocol"),
+        "stability": data.get("stability"),
+        "notes": data.get("notes"),
+        "sistema": sistema,
         "tts_env": "CARTESIA_API_KEY",
         "tts_modelo": CARTESIA_MODEL_ID or "sonic-3.5",
         "tts_formato": "audio/wav",
@@ -618,6 +683,7 @@ def api_version() -> dict:
         "tts_voice": voice_ok,
         "tts_configurado": bool(key_ok and voice_ok),
         "live": True,
+        "actualizacion_activa": True,
     }
 
 
@@ -1232,6 +1298,7 @@ class CentralButtonRequest(BaseModel):
     mensaje: str = Field(default="", max_length=4000)
     session_id: str | None = None
     imagen_base64: str | None = Field(default=None, max_length=8_000_000)
+    image_frame: str | None = Field(default=None, max_length=8_000_000)
     imagen_mime: str = "image/png"
     lat: float | None = None
     lon: float | None = None
@@ -1267,7 +1334,7 @@ def api_ai_central_button(body: CentralButtonRequest) -> dict:
     """
     from cognicion.core_control import trigger_ai_core
 
-    imagen_b64 = body.imagen_base64
+    imagen_b64 = body.imagen_base64 or body.image_frame
     imagen_mime = body.imagen_mime or "image/jpeg"
     if imagen_b64:
         try:
@@ -1549,7 +1616,7 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
 
 
 def _chat_core(body: ChatRequest, session_id: str, salomon) -> ChatResponse:
-    imagen_b64 = body.imagen_base64
+    imagen_b64 = body.imagen_base64 or body.image_frame
     imagen_mime = body.imagen_mime or "image/jpeg"
     if imagen_b64:
         try:

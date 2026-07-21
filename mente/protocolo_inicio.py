@@ -55,15 +55,17 @@ def protocolo_inicio(session_id: str) -> dict[str, Any]:
     registrar_turno(session_id, rol="asistente", texto=frase, area="razonamiento")
 
     audio_base64 = None
-    audio_mime = "audio/wav"
+    audio_mime = "audio/mpeg"
     tts_ok = False
+    tts_motor = None
     try:
         from acciones.hablar import hablar
 
         voz = hablar(frase)
         audio_base64 = voz.get("audio_base64")
-        audio_mime = voz.get("audio_mime") or "audio/wav"
+        audio_mime = voz.get("audio_mime") or "audio/mpeg"
         tts_ok = bool(voz.get("tts_disponible") or audio_base64)
+        tts_motor = voz.get("motor")
     except Exception:
         pass
 
@@ -77,5 +79,8 @@ def protocolo_inicio(session_id: str) -> dict[str, Any]:
         "audio_base64": audio_base64,
         "audio_mime": audio_mime,
         "tts_disponible": tts_ok,
+        "tts_motor": tts_motor,
+        "tts_via": "api/tts",
+        "runtime": "pwa",
         "areas": ["voz", "vision", "razonamiento", "memoria", "hilos"],
     }

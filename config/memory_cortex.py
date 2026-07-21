@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-Memory Cortex — contexto local / conversación.
-Web SOLO con: «Busca en la web sobre …»
+Memory Cortex — contexto local / conversación (PWA).
+
+Web SOLO con:
+  • frase canónica «Busca en la web sobre …», o
+  • origen=agente cuando SBI + MODO_EJECUCION.
+
+Prohíbe alucinación web sin fuente. Alineado con config.providers (estado).
 """
 
 from __future__ import annotations
 
 import re
+from typing import Any
 
 # Única familia permitida (pedido explícito de Israel Monta)
 _RE_BUSCA_WEB_SOBRE = re.compile(
@@ -58,7 +64,7 @@ def es_saludo_o_charla_simple(mensaje: str) -> bool:
 
 def web_agentes_autorizados() -> bool:
     """
-    En modo ejecución + SBI_ENABLED, los agentes usan APIs web (Tavily/etc.).
+    En modo ejecución + SBI_ENABLED, los agentes pueden usar APIs web.
     El usuario casual sigue pudiendo forzar con «Busca en la web sobre…».
     """
     try:
@@ -69,13 +75,67 @@ def web_agentes_autorizados() -> bool:
         return False
 
 
-def cortex_status() -> dict:
+def autoriza_web(consulta: str, *, origen: str = "usuario") -> bool:
+    """
+    Única puerta de web para orquestador, motor neuronal y periféricos.
+
+    Política absoluta (PWA / identidad Israel):
+    - Usuario / chat: SOLO frase canónica «Busca en la web sobre…».
+    - Agente: frase canónica, o (origen agente + SBI + MODO_EJECUCION
+      + BUSQUEDA_WEB_AUTO) para herramientas deliberadas — nunca heurística
+      factual suelta desde el orquestador de chat.
+    """
+    q = (consulta or "").strip()
+    if not q:
+        return False
+    if pedido_busqueda_explicito(q):
+        return True
+    origen_l = (origen or "usuario").strip().lower()
+    if origen_l not in ("agente", "agent", "swarm", "supervisor", "forzar"):
+        return False
+    if not web_agentes_autorizados():
+        return False
+    try:
+        from settings import BUSQUEDA_WEB_AUTO
+
+        return bool(BUSQUEDA_WEB_AUTO)
+    except Exception:
+        return False
+
+
+def cortex_status() -> dict[str, Any]:
     agentes = web_agentes_autorizados()
+    auto = False
+    try:
+        from settings import BUSQUEDA_WEB_AUTO
+
+        auto = bool(BUSQUEDA_WEB_AUTO)
+    except Exception:
+        auto = False
+    proveedores: dict[str, Any] = {}
+    try:
+        from config.providers import estado_proveedores
+
+        rep = estado_proveedores()
+        proveedores = {
+            "llm_disponible": bool(rep.get("llm_disponible")),
+            "activo": rep.get("activo") or {},
+            "tts": (rep.get("activo") or {}).get("tts"),
+            "stt": (rep.get("activo") or {}).get("stt"),
+        }
+    except Exception as exc:
+        proveedores = {"error": type(exc).__name__}
+
     return {
-        "externo_bloqueado": not agentes,
+        "externo_bloqueado": not (agentes and auto),
         "modo": "ejecucion_neuronal" if agentes else "contexto_usuario_y_hilo",
-        "web_solo_si": "Busca en la web sobre..." if not agentes else "agentes_autorizados+frase_explicita",
+        "web_solo_si": "Busca en la web sobre... (frase_canonica)",
         "web_agentes": agentes,
+        "busqueda_web_auto": auto,
+        "gate": "autoriza_web",
+        "politica": "cortex_absoluto_memoria_antes_que_web",
         "identidad_primaria": "Israel Monta",
         "alucinacion_web": "prohibida_sin_fuente",
+        "runtime": "pwa",
+        "proveedores": proveedores,
     }

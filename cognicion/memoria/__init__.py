@@ -1,7 +1,15 @@
 from cognicion.memoria.gestor import GestorMemoria
 from cognicion.memoria.memory_controller import MemoryController, obtener_memory_controller
+from cognicion.memoria.orquestador_memoria import (
+    OrquestadorMemoriaUnificado,
+    obtener_orquestador_memoria,
+)
 from cognicion.memoria.tipos import TipoMemoria, CAPAS_RAG
-from cognicion.memoria.vectorial import MemoriaVectorial, obtener_memoria
+from cognicion.memoria.vectorial import (
+    MemoriaVectorial,
+    obtener_memoria,
+    sanitize_metadata,
+)
 from cognicion.memoria.contexto_personal import (
     bloque_contexto,
     extraer_y_aprender,
@@ -14,9 +22,12 @@ __all__ = [
     "GestorMemoria",
     "MemoryController",
     "obtener_memory_controller",
+    "OrquestadorMemoriaUnificado",
+    "obtener_orquestador_memoria",
     "TipoMemoria",
     "CAPAS_RAG",
     "obtener_memoria",
+    "sanitize_metadata",
     "bloque_contexto",
     "extraer_y_aprender",
     "registrar_hecho",

@@ -27,7 +27,7 @@ def test_activar_perifericas_level9():
     # Reset loader flag
     import cognicion.capas.loader as loader
 
-    loader._inicializado = False
+    loader.reiniciar_flag_loader()
     res = inicializar_capas(None, force=True)
     assert res.get("voice_core") is True
     assert res.get("home_gateway") is True

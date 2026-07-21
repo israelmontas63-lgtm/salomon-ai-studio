@@ -1,14 +1,34 @@
 """
-Persistencia de sesiones de chat en SQLite.
-Sobrevive reinicios del servidor.
+Persistencia de sesiones de chat en SQLite (Capa 2 — fuente de verdad).
+WAL + busy_timeout + transacciones IMMEDIATE para concurrencia segura.
+session_id tipado estricto (str|None) vía cemento sináptico — sin cruces entre chats.
 """
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from datetime import datetime, timezone
+from typing import Any
 
 from settings import SESIONES_DB
+
+_log = logging.getLogger("salomon.persistencia.sesiones")
+
+
+def _cement_sid(session_id: Any) -> str | None:
+    """Cemento session_id: str no vacío o None (bloquea cruces / basura tipada)."""
+    try:
+        from cognicion.capas_inteligencia.synaptic_bus import cement_session_id
+
+        return cement_session_id(session_id)
+    except TypeError:
+        return None
+    except Exception:
+        if isinstance(session_id, str):
+            sid = session_id.strip()
+            return sid or None
+        return None
 
 
 def _conexion() -> sqlite3.Connection:
@@ -19,8 +39,8 @@ def _conexion() -> sqlite3.Connection:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=30000")
         conn.execute("PRAGMA synchronous=NORMAL")
-    except Exception:
-        pass
+    except Exception as exc:
+        _log.warning("PRAGMA WAL/busy_timeout: %s", type(exc).__name__)
     return conn
 
 
@@ -65,29 +85,43 @@ def _migrate_sesiones_columns(conn: sqlite3.Connection) -> None:
             "ALTER TABLE sesiones ADD COLUMN titulo TEXT NOT NULL DEFAULT ''"
         )
 
-def sesion_existe(session_id: str) -> bool:
-    with _conexion() as conn:
-        row = conn.execute(
-            "SELECT 1 FROM sesiones WHERE id = ?",
-            (session_id,),
-        ).fetchone()
-    return row is not None
+def sesion_existe(session_id: str | None) -> bool:
+    sid = _cement_sid(session_id)
+    if not sid:
+        return False
+    try:
+        with _conexion() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM sesiones WHERE id = ?",
+                (sid,),
+            ).fetchone()
+        return row is not None
+    except Exception as exc:
+        _log.warning("sesion_existe falló: %s", type(exc).__name__)
+        return False
 
 
-def asegurar_sesion(session_id: str) -> None:
+def asegurar_sesion(session_id: str | None) -> None:
+    sid = _cement_sid(session_id)
+    if not sid:
+        return
     ahora = datetime.now(timezone.utc).isoformat()
-    with _conexion() as conn:
-        conn.execute(
-            """
-            INSERT INTO sesiones (id, creada_en, actualizada_en)
-            VALUES (?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET actualizada_en = excluded.actualizada_en
-            """,
-            (session_id, ahora, ahora),
-        )
+    try:
+        with _conexion() as conn:
+            conn.execute(
+                """
+                INSERT INTO sesiones (id, creada_en, actualizada_en)
+                VALUES (?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET actualizada_en = excluded.actualizada_en
+                """,
+                (sid, ahora, ahora),
+            )
+    except Exception as exc:
+        _log.warning("asegurar_sesion falló session=%s: %s", sid, type(exc).__name__)
+        raise
 
 
-def guardar_mensaje(session_id: str, rol: str, contenido: str) -> None:
+def guardar_mensaje(session_id: str | None, rol: str, contenido: str) -> None:
     # Cemento sináptico: tipado seguro antes de tocar SQLite (Capa 2 aislada)
     try:
         from cognicion.capas_inteligencia.synaptic_bus import (
@@ -137,51 +171,105 @@ def guardar_mensaje(session_id: str, rol: str, contenido: str) -> None:
                 pass
             raise
 
+    # Espejo RAM (Capa 2) — fail-soft, no bloquea persistencia
+    try:
+        from cognicion.capas_inteligencia.layer_02_memory import cache_push_message
 
-def cargar_mensajes(session_id: str) -> list[dict[str, str]]:
-    with _conexion() as conn:
-        rows = conn.execute(
-            """
-            SELECT rol, contenido FROM mensajes
-            WHERE session_id = ?
-            ORDER BY id ASC
-            """,
-            (session_id,),
-        ).fetchall()
-    return [{"rol": row["rol"], "contenido": row["contenido"]} for row in rows]
+        cache_push_message(session_id, rol, contenido, timestamp=ahora)
+    except Exception:
+        pass
 
 
-def ultimos_mensajes(session_id: str, limite: int = 6) -> list[dict[str, str]]:
-    """Devuelve los últimos N mensajes de una sesión (memoria inmediata)."""
-    if limite <= 0:
+def cargar_mensajes(session_id: str | None) -> list[dict[str, str]]:
+    """Historial completo de UNA session_id. Sin sid válido → []."""
+    sid = _cement_sid(session_id)
+    if not sid:
         return []
+    try:
+        with _conexion() as conn:
+            rows = conn.execute(
+                """
+                SELECT rol, contenido FROM mensajes
+                WHERE session_id = ?
+                ORDER BY id ASC
+                """,
+                (sid,),
+            ).fetchall()
+        msgs = [{"rol": row["rol"], "contenido": row["contenido"]} for row in rows]
+        try:
+            from cognicion.capas_inteligencia.layer_02_memory import cache_replace_session
 
-    with _conexion() as conn:
-        rows = conn.execute(
-            """
-            SELECT rol, contenido FROM mensajes
-            WHERE session_id = ?
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (session_id, limite),
-        ).fetchall()
+            cache_replace_session(sid, msgs)
+        except Exception:
+            pass
+        return msgs
+    except Exception as exc:
+        _log.warning(
+            "cargar_mensajes SQLite falló session=%s (%s) — intentando caché RAM",
+            sid,
+            type(exc).__name__,
+        )
+        try:
+            from cognicion.capas_inteligencia.layer_02_memory import cache_load_messages
 
-    mensajes = [{"rol": row["rol"], "contenido": row["contenido"]} for row in rows]
-    mensajes.reverse()
-    return mensajes
+            return cache_load_messages(sid)
+        except Exception:
+            return []
 
 
-def cargar_proyecto(session_id: str) -> dict[str, str] | None:
+def ultimos_mensajes(session_id: str | None, limite: int = 6) -> list[dict[str, str]]:
+    """Devuelve los últimos N mensajes de una sesión (memoria inmediata)."""
+    sid = _cement_sid(session_id)
+    if not sid or limite <= 0:
+        return []
+    lim = max(1, min(int(limite), 64))
+
+    try:
+        with _conexion() as conn:
+            rows = conn.execute(
+                """
+                SELECT rol, contenido FROM mensajes
+                WHERE session_id = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (sid, lim),
+            ).fetchall()
+
+        mensajes = [{"rol": row["rol"], "contenido": row["contenido"]} for row in rows]
+        mensajes.reverse()
+        return mensajes
+    except Exception as exc:
+        _log.warning(
+            "ultimos_mensajes SQLite falló session=%s (%s) — caché RAM",
+            sid,
+            type(exc).__name__,
+        )
+        try:
+            from cognicion.capas_inteligencia.layer_02_memory import cache_load_messages
+
+            return cache_load_messages(sid)[-lim:]
+        except Exception:
+            return []
+
+
+def cargar_proyecto(session_id: str | None) -> dict[str, str] | None:
     """Memoria de proyecto explícita por sesión."""
-    with _conexion() as conn:
-        row = conn.execute(
-            """
-            SELECT nombre, contexto, actualizada_en
-            FROM proyecto_sesion WHERE session_id = ?
-            """,
-            (session_id,),
-        ).fetchone()
+    sid = _cement_sid(session_id)
+    if not sid:
+        return None
+    try:
+        with _conexion() as conn:
+            row = conn.execute(
+                """
+                SELECT nombre, contexto, actualizada_en
+                FROM proyecto_sesion WHERE session_id = ?
+                """,
+                (sid,),
+            ).fetchone()
+    except Exception as exc:
+        _log.warning("cargar_proyecto falló: %s", type(exc).__name__)
+        return None
 
     if not row:
         return None
@@ -194,16 +282,20 @@ def cargar_proyecto(session_id: str) -> dict[str, str] | None:
 
 
 def guardar_proyecto(
-    session_id: str,
+    session_id: str | None,
     *,
     nombre: str | None = None,
     nota: str | None = None,
 ) -> dict[str, str]:
     """Actualiza nombre y/o acumula notas de contexto del proyecto."""
-    ahora = datetime.now(timezone.utc).isoformat()
-    asegurar_sesion(session_id)
+    sid = _cement_sid(session_id)
+    if not sid:
+        return {"nombre": "", "contexto": "", "actualizada_en": ""}
 
-    actual = cargar_proyecto(session_id)
+    ahora = datetime.now(timezone.utc).isoformat()
+    asegurar_sesion(sid)
+
+    actual = cargar_proyecto(sid)
     nombre_final = (nombre or (actual or {}).get("nombre") or "").strip()
     contexto_prev = (actual or {}).get("contexto") or ""
 
@@ -222,7 +314,7 @@ def guardar_proyecto(
                 contexto = excluded.contexto,
                 actualizada_en = excluded.actualizada_en
             """,
-            (session_id, nombre_final, contexto_prev, ahora),
+            (sid, nombre_final, contexto_prev, ahora),
         )
 
     return {
@@ -232,18 +324,24 @@ def guardar_proyecto(
     }
 
 
-def limpiar_proyecto(session_id: str) -> None:
+def limpiar_proyecto(session_id: str | None) -> None:
+    sid = _cement_sid(session_id)
+    if not sid:
+        return
     with _conexion() as conn:
-        conn.execute("DELETE FROM proyecto_sesion WHERE session_id = ?", (session_id,))
+        conn.execute("DELETE FROM proyecto_sesion WHERE session_id = ?", (sid,))
 
 
-def limpiar_sesion(session_id: str) -> None:
+def limpiar_sesion(session_id: str | None) -> None:
+    sid = _cement_sid(session_id)
+    if not sid:
+        return
     with _conexion() as conn:
-        conn.execute("DELETE FROM mensajes WHERE session_id = ?", (session_id,))
-        conn.execute("DELETE FROM proyecto_sesion WHERE session_id = ?", (session_id,))
+        conn.execute("DELETE FROM mensajes WHERE session_id = ?", (sid,))
+        conn.execute("DELETE FROM proyecto_sesion WHERE session_id = ?", (sid,))
         conn.execute(
             "UPDATE sesiones SET actualizada_en = ? WHERE id = ?",
-            (datetime.now(timezone.utc).isoformat(), session_id),
+            (datetime.now(timezone.utc).isoformat(), sid),
         )
 
 
@@ -309,13 +407,22 @@ def listar_sesiones(
 
 
 def marcar_sesion_guardada(
-    session_id: str,
+    session_id: str | None,
     *,
     guardada: bool = True,
     titulo: str | None = None,
 ) -> dict:
     """Marca una sesión como conversación guardada (carpeta persistente)."""
-    asegurar_sesion(session_id)
+    sid = _cement_sid(session_id)
+    if not sid:
+        return {
+            "session_id": None,
+            "guardada": False,
+            "titulo": "",
+            "actualizada_en": "",
+            "error": "session_id_invalido",
+        }
+    asegurar_sesion(sid)
     ahora = datetime.now(timezone.utc).isoformat()
     titulo_clean = (titulo or "").strip()[:120]
     with _conexion() as conn:
@@ -326,7 +433,7 @@ def marcar_sesion_guardada(
                 SET guardada = ?, titulo = ?, actualizada_en = ?
                 WHERE id = ?
                 """,
-                (1 if guardada else 0, titulo_clean, ahora, session_id),
+                (1 if guardada else 0, titulo_clean, ahora, sid),
             )
         else:
             conn.execute(
@@ -335,7 +442,7 @@ def marcar_sesion_guardada(
                 SET guardada = ?, actualizada_en = ?
                 WHERE id = ?
                 """,
-                (1 if guardada else 0, ahora, session_id),
+                (1 if guardada else 0, ahora, sid),
             )
         # Si no hay título, usar preview del último mensaje
         if not titulo_clean:
@@ -345,18 +452,18 @@ def marcar_sesion_guardada(
                 WHERE session_id = ? AND rol = 'usuario'
                 ORDER BY id DESC LIMIT 1
                 """,
-                (session_id,),
+                (sid,),
             ).fetchone()
             if row and row["contenido"]:
                 auto = str(row["contenido"]).strip()[:48]
                 if auto:
                     conn.execute(
                         "UPDATE sesiones SET titulo = ? WHERE id = ?",
-                        (auto, session_id),
+                        (auto, sid),
                     )
                     titulo_clean = auto
     return {
-        "session_id": session_id,
+        "session_id": sid,
         "guardada": bool(guardada),
         "titulo": titulo_clean,
         "actualizada_en": ahora,

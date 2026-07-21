@@ -39,7 +39,7 @@ class SeamlessSmartButtonEngine:
                 "js": "static/js/components/SmartButton.js",
                 "css": "static/css/boton.css",
                 "id": "smart-button",
-                "controller": "cognicion/core_salomon_smart_button_synaptic_controller.py",
+                "controller": "static/js/components/SmartButton.js",
             },
             "thresholds": {"double_tap_ms": self.double_tap_ms},
             "deployment": (

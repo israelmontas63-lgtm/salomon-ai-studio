@@ -37,9 +37,24 @@
   }
 
   function looksVisualMessage(mensaje) {
-    return /\b(mira|qu[eé]\s+ves|macro|micro|modo\s+visi[oó]n|ojos\s+activos|enfoque\s+(cerca|lejano)|foto|imagen|c[aá]mara|puedes\s+ver|modo\s+visual|desactiva(r)?\s+(el\s+)?modo\s+visual)\b/i.test(
+    return /\b(mira|qu[eé]\s+ves|macro|micro|modo\s+visi[oó]n|ojos\s+activos|enfoque\s+(cerca|lejano)|foto|imagen|c[aá]mara|puedes\s+ver|modo\s+visual|desactiva(r)?\s+(el\s+)?modo\s+visual|qu[eé]\s+(hay|es\s+eso|color|planta|objeto)|eso\s+de\s+ah[ií]|frente\s+a\s+m[ií]|est[aá]s?\s+viendo)\b/i.test(
       mensaje || ""
     );
+  }
+
+  function visionChannelActive() {
+    try {
+      var cam = window.SalomonCamera;
+      var V = window.SalomonVision;
+      if (cam && cam.isActive && cam.isActive()) return true;
+      if (V && V.isActive && V.isActive()) return true;
+      if (V && V.session && (V.session.analyticalStreaming || V.session.visionChannel)) {
+        return true;
+      }
+      if (document.body.classList.contains("vision-mode-active")) return true;
+      if (document.body.classList.contains("vision-analytical")) return true;
+    } catch (_) {}
+    return false;
   }
 
   function emit(detail) {
@@ -196,7 +211,7 @@
 
     // CRÍTICO: capturar frame ANTES de activate() (antes cerraba la cámara)
     var visPack = null;
-    if (!body.imagen_base64) {
+    if (!body.imagen_base64 && !body.image_frame) {
       try {
         visPack = await prepareVisionPayload(mensaje);
       } catch (_) {
@@ -207,8 +222,10 @@
       body.keep_camera ||
       body.keepCamera ||
       body.imagen_base64 ||
+      body.image_frame ||
       (visPack && visPack.imagen_base64) ||
-      looksVisualMessage(mensaje)
+      looksVisualMessage(mensaje) ||
+      visionChannelActive()
     );
     activate(body.reason || "trigger_ai_core", { keepCamera: keepCamera });
 
@@ -229,12 +246,16 @@
         mensaje: mensaje,
         session_id: body.session_id || currentSessionId(),
       };
-      if (body.imagen_base64) {
-        dataOut.imagen_base64 = body.imagen_base64;
-        dataOut.imagen_mime = body.imagen_mime || "image/jpeg";
-      } else if (visPack && visPack.imagen_base64) {
-        dataOut.imagen_base64 = visPack.imagen_base64;
-        dataOut.imagen_mime = visPack.imagen_mime || "image/jpeg";
+      var frameB64 = body.imagen_base64 || body.image_frame || null;
+      var frameMime = body.imagen_mime || "image/jpeg";
+      if (!frameB64 && visPack && visPack.imagen_base64) {
+        frameB64 = visPack.imagen_base64;
+        frameMime = visPack.imagen_mime || "image/jpeg";
+      }
+      if (frameB64) {
+        dataOut.imagen_base64 = frameB64;
+        dataOut.image_frame = frameB64;
+        dataOut.imagen_mime = frameMime;
       }
 
       var res = await fetch(API_BRAIN, {
@@ -316,16 +337,14 @@
   }
 
   /**
-   * Si cámara/visión activa: autofocus por texto + último frame para el núcleo.
+   * Canal visión activo: autofocus + frame fresco (canvas→JPEG/WebP) para el núcleo.
+   * Empareja consulta de voz/texto con image_frame / imagen_base64.
    */
   async function prepareVisionPayload(mensaje) {
+    if (!visionChannelActive()) return null;
+
     var cam = window.SalomonCamera;
     var V = window.SalomonVision;
-    var active =
-      (cam && cam.isActive && cam.isActive()) ||
-      (V && V.isActive && V.isActive()) ||
-      document.body.classList.contains("vision-mode-active");
-    if (!active) return null;
 
     try {
       if (cam && cam.autoFocusFromText) {
@@ -339,7 +358,7 @@
     var dataUrl = null;
     if (V && V.captureCurrentFrame) {
       try {
-        dataUrl = V.captureCurrentFrame(0.85);
+        dataUrl = V.captureCurrentFrame(0.82);
       } catch (_) {}
     }
     if (!dataUrl && V && V.session && V.session.lastFrameDataUrl) {
@@ -350,8 +369,14 @@
     var mimeMatch = String(dataUrl).match(/^data:(image\/[\w.+-]+);base64,/i);
     var mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
     var raw = String(dataUrl).replace(/^data:image\/[\w.+-]+;base64,/i, "");
+    if (!raw) return null;
     if (V && V.session) V.session.lastFrameDataUrl = dataUrl;
-    return { imagen_base64: raw, imagen_mime: mime };
+    return {
+      imagen_base64: raw,
+      image_frame: raw,
+      imagen_mime: mime,
+      vision_active: true,
+    };
   }
 
   /** alias legacy → mismo canal */
@@ -378,6 +403,8 @@
     currentSessionId: currentSessionId,
     setSessionId: setSessionId,
     prepareVisionPayload: prepareVisionPayload,
+    visionChannelActive: visionChannelActive,
+    looksVisualMessage: looksVisualMessage,
   };
 
   // API global explícita (especificación de capas)

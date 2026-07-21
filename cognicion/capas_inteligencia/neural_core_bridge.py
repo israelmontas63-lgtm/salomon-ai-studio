@@ -31,10 +31,17 @@ NEURAL_CORE_MAP: list[dict[str, Any]] = [
         "core_hooks": [
             "persistencia/sesiones.py",
             "cognicion/memoria/memory_controller.py",
+            "cognicion/capas_inteligencia/layer_02_memory/__init__.py",
             "static/js/chat_history_drawer.js",
         ],
-        "bridge_markers": ["listar_sesiones", "MemoryController", "/api/chats"],
-        "must_not_own": ["apply_supervision", "deploy_agent_swarm"],
+        "bridge_markers": [
+            "listar_sesiones",
+            "MemoryController",
+            "/api/chats",
+            "journal_mode=WAL",
+            "cache_push_message",
+        ],
+        "must_not_own": ["apply_supervision", "deploy_agent_swarm", "getUserMedia"],
     },
     {
         "id": 3,
@@ -42,10 +49,17 @@ NEURAL_CORE_MAP: list[dict[str, Any]] = [
         "core_hooks": [
             "cognicion/core_salomon_master_neural_engine.py",
             "cognicion/orquesta/agentes_paralelos.py",
+            "cognicion/capas_inteligencia/layer_03_reasoning/__init__.py",
             "cognicion/orquestador.py",
         ],
-        "bridge_markers": ["enrich_turn", "deploy_agent_swarm"],
-        "must_not_own": ["apply_supervision"],
+        "bridge_markers": [
+            "enrich_turn",
+            "deploy_agent_swarm",
+            "run_logical_swarm",
+            "ConsensusMatrix",
+            "cascade_reason",
+        ],
+        "must_not_own": ["apply_supervision", "getUserMedia", "closeCamera"],
     },
     {
         "id": 4,
@@ -88,10 +102,17 @@ NEURAL_CORE_MAP: list[dict[str, Any]] = [
         "name": "metacognition_supervision",
         "core_hooks": [
             "cognicion/capas_inteligencia/layer_07_metacognition/__init__.py",
+            "cognicion/law_of_one.py",
             "cerebro.py",
             "cognicion/salida_limpia.py",
         ],
-        "bridge_markers": ["apply_supervision", "self_reflection_loop", "CALIBRATION"],
+        "bridge_markers": [
+            "apply_supervision",
+            "self_reflection_loop",
+            "CALIBRATION",
+            "apply_unity_lens",
+            "cross_law_of_one",
+        ],
         "must_not_own": [
             "deploy_agent_swarm(",
             "schedule_background_verification(",

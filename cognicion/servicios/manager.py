@@ -213,25 +213,24 @@ class ServiceManager(ServiceRegistry):
 
     def buscar_web(self, consulta: str, *, origen: str = "agente") -> dict[str, Any]:
         """
-        Flujo directo web → agentes.
-        Autorizado si SBI activo + modo ejecución, o pedido explícito del usuario.
+        Flujo web → agentes. Gate único: config.memory_cortex.autoriza_web.
+        Usuario: solo frase canónica. Agente: frase o SBI+MODO_EJECUCION.
         """
-        from config.memory_cortex import pedido_busqueda_explicito, web_agentes_autorizados
+        from config.memory_cortex import autoriza_web
         from cognicion.busqueda.agente import responder_con_busqueda
 
         q = (consulta or "").strip()
         if not q:
             return {"ok": False, "error": "consulta_vacia"}
 
-        if not (
-            pedido_busqueda_explicito(q)
-            or (origen == "agente" and web_agentes_autorizados())
-            or web_agentes_autorizados()
-        ):
+        if not autoriza_web(q, origen=origen):
             return {
                 "ok": False,
                 "error": "web_no_autorizada",
-                "detalle": "Requiere SBI_ENABLED + MODO_EJECUCION o «Busca en la web sobre…»",
+                "detalle": (
+                    "Gate cortex: «Busca en la web sobre…» "
+                    "o origen=agente con SBI_ENABLED + MODO_EJECUCION"
+                ),
             }
 
         pack = responder_con_busqueda(q)

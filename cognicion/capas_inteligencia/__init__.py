@@ -33,10 +33,17 @@ LAYER_CATALOG: list[dict[str, Any]] = [
         "assets": [
             "persistencia/sesiones.py",
             "cognicion/memoria/memory_controller.py",
+            "cognicion/capas_inteligencia/layer_02_memory/__init__.py",
             "static/js/chat_history_drawer.js",
             "static/css/chat_history_drawer.css",
         ],
         "apis": ["/api/chats", "/api/historial", "/api/chat"],
+        "boundaries": {
+            "source_of_truth": "sqlite_wal",
+            "session_id": "str | None (cemented)",
+            "fallback": "ram_cache_per_session",
+            "must_not": ["getUserMedia", "closeCamera", "deploy_agent_swarm"],
+        },
     },
     {
         "id": 3,
@@ -46,10 +53,15 @@ LAYER_CATALOG: list[dict[str, Any]] = [
             "cognicion/core_salomon_master_neural_engine.py",
             "cognicion/core_master_strict_audit_and_deploy.py",
             "cognicion/orquesta/agentes_paralelos.py",
+            "cognicion/capas_inteligencia/layer_03_reasoning/__init__.py",
             "cognicion/orquestador.py",
             "core/cortex/logic_engine.py",
         ],
         "apis": ["/api/neural/master", "/api/deploy/strict-audit"],
+        "boundaries": {
+            "owns": "logical_swarm_consensus_and_cascade",
+            "must_not": ["getUserMedia", "closeCamera", "apply_supervision"],
+        },
     },
     {
         "id": 4,
@@ -99,8 +111,6 @@ LAYER_CATALOG: list[dict[str, Any]] = [
         "assets": [
             "cognicion/capas_inteligencia/layer_07_metacognition/__init__.py",
             "cognicion/capas_inteligencia/neural_core_bridge.py",
-            "cognicion/core_salomon_metacognition_layer_seven.py",
-            "cognicion/core_salomon_final_layer_seven_support_and_sync.py",
             "cerebro.py",
             "cognicion/salida_limpia.py",
         ],

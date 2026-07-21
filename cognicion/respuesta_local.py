@@ -89,8 +89,6 @@ def respuesta_local_chat(
     system_instruction: str = "",
 ) -> str:
     """Genera respuesta útil sin LLM externo — búsqueda/conectores primero."""
-    from settings import BUSQUEDA_WEB_AUTO
-
     pregunta = _extraer_pregunta(mensaje)
     bloques = [_limpiar_bloque(b) for b in _extraer_bloques(mensaje)]
     bloques = [b for b in bloques if b and "sin resumen instantáneo" not in b.lower()]
@@ -115,14 +113,17 @@ def respuesta_local_chat(
             "dime qué necesitas y lo atendemos."
         )
 
-    # 2) Respaldo: ServiceManager (única ruta web)
-    if BUSQUEDA_WEB_AUTO and pregunta:
+    # 2) Respaldo web: solo si el cortex autoriza (frase canónica)
+    if pregunta:
         try:
             from cognicion.servicios import obtener_manager
+            from config.memory_cortex import autoriza_web
             from core.cortex.logic_engine import LogicEngine
 
-            if LogicEngine.permite_web(pregunta):
-                web = obtener_manager().buscar_web(pregunta, origen="agente")
+            if LogicEngine.permite_web(pregunta, origen="usuario") or autoriza_web(
+                pregunta, origen="usuario"
+            ):
+                web = obtener_manager().buscar_web(pregunta, origen="usuario")
                 if web.get("texto"):
                     return _con_israel(str(web["texto"]))
         except Exception:

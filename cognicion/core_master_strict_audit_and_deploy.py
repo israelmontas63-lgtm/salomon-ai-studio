@@ -148,8 +148,8 @@ class StrictMasterSystemAuditor:
         # Compilación sintáctica de módulos clave
         py_mods = [
             "cognicion/core_seamless_smart_button_engine.py",
-            "cognicion/core_salomon_chat_history_drawer.py",
             "cognicion/core_salomon_master_neural_engine.py",
+            "cognicion/core_salomon_master_arsenal_bridge.py",
             "cognicion/core_neural_link_auditor.py",
             "persistencia/sesiones.py",
             "cerebro.py",
@@ -218,13 +218,13 @@ class StrictMasterSystemAuditor:
             checks = False
 
         try:
-            from cognicion.core_salomon_chat_history_drawer import (
-                SalomonChatHistoryDrawer,
+            from cognicion.core_seamless_smart_button_engine import (
+                SeamlessSmartButtonEngine,
             )
 
-            v = SalomonChatHistoryDrawer().verify()
+            v = SeamlessSmartButtonEngine().verify()
             if v.get("ok"):
-                self._ok("chat_drawer_verify", "ChatHistoryDrawer.verify OK")
+                self._ok("chat_drawer_verify", "UI chat/botón verificado vía SeamlessSmartButtonEngine")
             else:
                 self._fail("chat_drawer_verify", str(v))
                 checks = False

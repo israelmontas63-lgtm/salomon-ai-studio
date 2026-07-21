@@ -67,7 +67,21 @@ body.control-layer-open #btn-settings {
   color: rgba(192, 192, 192, 0.65);
   font-size: 12px;
   margin-bottom: 16px;
-  word-break: break-all;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.control-layer__meta-sub {
+  margin-top: 4px;
+  color: rgba(192, 192, 192, 0.55);
+  font-size: 11px;
+}
+
+.control-layer__meta-ok {
+  margin-top: 6px;
+  color: rgba(212, 175, 55, 0.9);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .control-layer__list {

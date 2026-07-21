@@ -159,18 +159,39 @@
 
     try {
       var payload = { mensaje: msg, session_id: sessionId };
-      if (
-        window.SalomonVision &&
-        window.SalomonVision.isActive() &&
-        window.SalomonVision.session &&
-        window.SalomonVision.session.lastFrameDataUrl
-      ) {
-        payload.imagen_base64 = window.SalomonVision.session.lastFrameDataUrl.replace(
-          /^data:image\/\w+;base64,/,
-          ""
-        );
-        payload.imagen_mime = "image/jpeg";
-      }
+      try {
+        var prep =
+          (window.SalomonAILock && window.SalomonAILock.prepareVisionPayload) ||
+          null;
+        if (prep) {
+          var visPack = await prep(msg);
+          if (visPack && visPack.imagen_base64) {
+            payload.imagen_base64 = visPack.imagen_base64;
+            payload.image_frame = visPack.image_frame || visPack.imagen_base64;
+            payload.imagen_mime = visPack.imagen_mime || "image/jpeg";
+          }
+        } else if (
+          window.SalomonVision &&
+          window.SalomonVision.isActive &&
+          window.SalomonVision.isActive()
+        ) {
+          var fresh =
+            window.SalomonVision.captureCurrentFrame &&
+            window.SalomonVision.captureCurrentFrame(0.82);
+          var dataUrl =
+            fresh ||
+            (window.SalomonVision.session &&
+              window.SalomonVision.session.lastFrameDataUrl);
+          if (dataUrl) {
+            payload.imagen_base64 = String(dataUrl).replace(
+              /^data:image\/[\w.+-]+;base64,/i,
+              ""
+            );
+            payload.image_frame = payload.imagen_base64;
+            payload.imagen_mime = "image/jpeg";
+          }
+        }
+      } catch (_) {}
 
       var res = await fetch(API_CHAT, {
         method: "POST",

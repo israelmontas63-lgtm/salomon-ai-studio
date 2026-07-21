@@ -48,12 +48,21 @@ LAYER_CONTRACTS: list[dict[str, Any]] = [
         "owns": [
             "persistencia/sesiones.py",
             "cognicion/memoria/memory_controller.py",
+            "cognicion/capas_inteligencia/layer_02_memory/__init__.py",
         ],
         "must_contain": {
             "persistencia/sesiones.py": [
                 "guardar_mensaje",
                 "cargar_mensajes",
                 "journal_mode=WAL",
+                "BEGIN IMMEDIATE",
+                "cement_session_id",
+            ],
+            "cognicion/capas_inteligencia/layer_02_memory/__init__.py": [
+                "cache_push_message",
+                "load_messages",
+                "save_message",
+                "verify_sqlite_wal",
             ],
             "app.py": [
                 "cargar_mensajes",
@@ -99,13 +108,25 @@ LAYER_CONTRACTS: list[dict[str, Any]] = [
         "owns": [
             "cognicion/orquestador.py",
             "cognicion/core_salomon_master_neural_engine.py",
+            "cognicion/capas_inteligencia/layer_03_reasoning/__init__.py",
+            "cognicion/orquesta/agentes_paralelos.py",
         ],
         "must_contain": {
-            "cognicion/orquestador.py": ["if imagen_base64:", "enrich_turn"],
+            "cognicion/orquestador.py": ["if imagen_base64:", "enrich_turn", "cascade_reason"],
+            "cognicion/capas_inteligencia/layer_03_reasoning/__init__.py": [
+                "run_logical_swarm",
+                "ConsensusMatrix",
+                "cascade_reason",
+            ],
         },
         "must_not_contain": {
             # Razonamiento no cierra la cámara del cliente
             "cognicion/orquestador.py": ["closeCamera(", "getUserMedia"],
+            "cognicion/capas_inteligencia/layer_03_reasoning/__init__.py": [
+                "closeCamera(",
+                "getUserMedia(",
+                "apply_supervision(",
+            ],
         },
     },
     {

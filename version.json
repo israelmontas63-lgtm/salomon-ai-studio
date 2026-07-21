@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T04:35:00Z",
-  "timestamp": 1753072500,
-  "version": "110.17.3",
+  "timestamp_iso": "2026-07-21T14:50:00Z",
+  "timestamp": 1753109400,
+  "version": "110.18.0",
   "channel": "main",
-  "label": "master-arsenal-bridge",
+  "label": "neural-seal-layers-sce-vision",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "MASTER_BRIDGE_ENGAGED",
-  "notes": "v110.17.3 - Puente maestro de llaves; scrub de negativas de imagen; SW v68."
+  "protocol": "NEURAL_SEAL_2026",
+  "notes": "v110.18.0 — Capas 2/3/7 selladas; SCE v102; enjambre L3; visión cross-modal; búsqueda con circuit breaker; tuerquita refleja sello neuronal. SW v69."
 }

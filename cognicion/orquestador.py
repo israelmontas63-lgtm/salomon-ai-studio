@@ -192,25 +192,32 @@ class MotorCognicion:
                     meta["cognicion"]["rag_usado"] = True
                     meta["cognicion"]["memoria"] = meta_memoria
 
-        # Búsqueda web → ServiceManager (agentes autorizados en modo ejecución + SBI)
+        # Búsqueda web — soberanía del cortex (memoria/razón antes que ruido externo)
+        from config.memory_cortex import autoriza_web
         from core.cortex.logic_engine import LogicEngine
 
         LogicEngine.lockLocalAgents()
         meta["cognicion"]["memory_cortex"] = "contexto_local"
         meta["cognicion"]["identidad_primaria"] = "Israel Monta"
         meta["cognicion"]["logic_engine_locked"] = LogicEngine.locked()
-        if BUSQUEDA_WEB_AUTO and LogicEngine.permite_web(entrada):
+        meta["cognicion"]["web_gate"] = "autoriza_web"
+        meta["cognicion"]["busqueda_web_auto"] = bool(BUSQUEDA_WEB_AUTO)
+
+        # Chat PWA: origen=usuario → SOLO frase canónica (ignora heurísticas AUTO)
+        if LogicEngine.permite_web(entrada, origen="usuario") or autoriza_web(
+            entrada, origen="usuario"
+        ):
             try:
                 from cognicion.servicios import obtener_manager
 
-                web = obtener_manager().buscar_web(entrada, origen="agente")
+                web = obtener_manager().buscar_web(entrada, origen="usuario")
                 texto_busq = (web.get("texto") or "").strip()
                 if texto_busq:
                     bloques.append(
-                        "[Búsqueda web en vivo — flujo neuronal / agentes]\n"
+                        "[Búsqueda web autorizada por Israel — cortex]\n"
                         f"{texto_busq[:2200]}\n"
-                        "Instrucción: Usa estos hechos actuales en tu respuesta. "
-                        "Cita el origen de forma natural si aplica."
+                        "Instrucción: Usa estos hechos verificables. "
+                        "No inventes fuera de la fuente. Cita origen si aplica."
                     )
                     meta["busqueda_web_agente"] = True
                     meta["busqueda_consultada"] = True
@@ -218,14 +225,23 @@ class MotorCognicion:
                     meta["cognicion"]["busqueda_web"] = {
                         "ok": bool(web.get("ok")),
                         "motor": web.get("motor"),
+                        "gate": "autoriza_web",
                     }
-                    meta["cognicion"]["memory_cortex"] = "web_agentes"
+                    meta["cognicion"]["memory_cortex"] = "web_autorizada_cortex"
+                elif web.get("error"):
+                    meta["cognicion"]["busqueda_web"] = {
+                        "ok": False,
+                        "error": web.get("error"),
+                        "gate": "autoriza_web",
+                    }
             except Exception as exc:
                 meta["cognicion"]["busqueda_web_error"] = type(exc).__name__
+        else:
+            meta["cognicion"]["web_bloqueada_cortex"] = True
 
-        # Motor neuronal maestro: enjambre paralelo + imagen multimodal
+        # Capa 3: enjambre lógico (consenso) + motor neuronal maestro (gate web intacto)
         try:
-            from cognicion.core_salomon_master_neural_engine import obtener_master_neural
+            from cognicion.capas_inteligencia.layer_03_reasoning import cascade_reason
 
             hechos = ""
             try:
@@ -236,37 +252,81 @@ class MotorCognicion:
             except Exception:
                 hechos = ""
             rag_empty = not bool((meta.get("cognicion") or {}).get("rag_usado"))
-            neural = obtener_master_neural().enrich_turn(
+            cascade = cascade_reason(
                 entrada,
                 session_id=self.session_id,
                 hechos_personales=hechos,
                 rag_empty=rag_empty,
+                include_neural_enrich=True,
             )
-            for bloque_n in neural.get("bloques") or []:
+            for bloque_n in cascade.get("bloques") or []:
                 if bloque_n:
                     bloques.append(bloque_n)
-            if neural.get("ok"):
+            logical = cascade.get("logical") or {}
+            meta["cognicion"]["layer_03"] = {
+                "consensus_score": logical.get("consensus_score"),
+                "coherent": logical.get("coherent"),
+                "recommended_action": logical.get("recommended_action"),
+                "fallacies": logical.get("fallacies") or [],
+                "contradictions": logical.get("contradictions") or [],
+                "elapsed_ms": logical.get("elapsed_ms"),
+                "via": "layer_03_reasoning",
+            }
+            neural_meta = cascade.get("neural") or {}
+            if neural_meta.get("ok") or neural_meta.get("swarm") or neural_meta.get("image"):
                 meta["cognicion"]["master_neural"] = {
-                    "swarm": bool((neural.get("swarm") or {}).get("ok")),
-                    "image": bool((neural.get("image") or {}).get("ok")),
+                    "swarm": bool(neural_meta.get("swarm")),
+                    "image": bool(neural_meta.get("image")),
                     "via": "core_salomon_master_neural_engine",
                 }
-                if (neural.get("swarm") or {}).get("ok"):
+                if neural_meta.get("swarm"):
                     meta["busqueda_consultada"] = True
                     meta["cognicion"]["memory_cortex"] = "master_neural_swarm"
-                if (neural.get("image") or {}).get("url") or (
-                    (neural.get("image") or {}).get("pack") or {}
-                ).get("url_relativa"):
+                if neural_meta.get("image_url"):
+                    meta["cognicion"]["imagen_generada"] = {
+                        "url": neural_meta.get("image_url"),
+                        "via": neural_meta.get("image_via"),
+                    }
+            if logical.get("recommended_action") == "hedge":
+                meta["cognicion"]["layer_03_hedge"] = True
+            elif logical.get("recommended_action") == "revise":
+                meta["cognicion"]["layer_03_revise"] = True
+        except Exception as exc:
+            meta.setdefault("cognicion", {})
+            meta["cognicion"]["layer_03_error"] = type(exc).__name__
+            try:
+                from cognicion.core_salomon_master_neural_engine import obtener_master_neural
+
+                hechos = ""
+                rag_empty = not bool((meta.get("cognicion") or {}).get("rag_usado"))
+                neural = obtener_master_neural().enrich_turn(
+                    entrada,
+                    session_id=self.session_id,
+                    hechos_personales=hechos,
+                    rag_empty=rag_empty,
+                )
+                for bloque_n in neural.get("bloques") or []:
+                    if bloque_n:
+                        bloques.append(bloque_n)
+                if neural.get("ok"):
+                    meta["cognicion"]["master_neural"] = {
+                        "swarm": bool((neural.get("swarm") or {}).get("ok")),
+                        "image": bool((neural.get("image") or {}).get("ok")),
+                        "via": "core_salomon_master_neural_engine",
+                    }
+                    if (neural.get("swarm") or {}).get("ok"):
+                        meta["busqueda_consultada"] = True
                     img_pack = neural.get("image") or {}
                     url_img = img_pack.get("url") or (
                         (img_pack.get("pack") or {}).get("url_relativa")
                     )
-                    meta["cognicion"]["imagen_generada"] = {
-                        "url": url_img,
-                        "via": img_pack.get("via"),
-                    }
-        except Exception as exc:
-            meta["cognicion"]["master_neural_error"] = type(exc).__name__
+                    if url_img:
+                        meta["cognicion"]["imagen_generada"] = {
+                            "url": url_img,
+                            "via": img_pack.get("via"),
+                        }
+            except Exception as exc2:
+                meta["cognicion"]["master_neural_error"] = type(exc2).__name__
 
         # Supervisor Supremo: audita capas + web intelligence si falta contexto
         try:
@@ -557,11 +617,36 @@ class MotorCognicion:
         return mensaje_final, meta
 
     def registrar_turno(self, usuario: str, asistente: str) -> None:
-        """Persiste el turno en memoria (vectorial + JSON de sesión)."""
+        """Persiste el turno vía orquestador unificado (SQLite+hilos+vectorial)."""
         try:
-            self._memory.recordar_turno(usuario, asistente)
+            from cognicion.memoria.orquestador_memoria import (
+                obtener_orquestador_memoria,
+            )
+
+            obtener_orquestador_memoria(self.session_id).guardar_turno(
+                usuario, asistente
+            )
         except Exception:
-            self._gestor.guardar_turno(usuario, asistente)
+            import logging
+
+            logging.getLogger("salomon.cognicion.orquestador").warning(
+                "MotorCognicion.registrar_turno: orquestador falló — fallback memory",
+                exc_info=True,
+            )
+            try:
+                self._memory.recordar_turno(usuario, asistente)
+            except Exception:
+                logging.getLogger("salomon.cognicion.orquestador").warning(
+                    "MotorCognicion.registrar_turno: fallback también falló",
+                    exc_info=True,
+                )
+                try:
+                    self._gestor.guardar_turno(usuario, asistente)
+                except Exception:
+                    logging.getLogger("salomon.cognicion.orquestador").warning(
+                        "MotorCognicion.registrar_turno: gestor vectorial falló",
+                        exc_info=True,
+                    )
 
     def aprender_turno(
         self,

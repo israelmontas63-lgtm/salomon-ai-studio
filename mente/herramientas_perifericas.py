@@ -12,11 +12,11 @@ from typing import Any
 
 
 def busqueda_web_si_autorizada(mensaje: str) -> dict[str, Any]:
-    """Solo «Busca en la web sobre…». Nunca películas ni auto-wiki."""
-    from config.memory_cortex import pedido_busqueda_explicito
+    """Gate cortex (usuario): solo frase canónica. Nunca auto-wiki."""
+    from config.memory_cortex import autoriza_web
     from cognicion.busqueda.agente import necesita_busqueda_web, responder_con_busqueda
 
-    if not pedido_busqueda_explicito(mensaje) or not necesita_busqueda_web(mensaje):
+    if not autoriza_web(mensaje, origen="usuario") or not necesita_busqueda_web(mensaje):
         return {"activo": False, "motivo": "cortex_bloqueado"}
     try:
         pack = responder_con_busqueda(mensaje)

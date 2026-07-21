@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "activos": [
+    "audio_stack",
+    "function_calling",
+    "home_gateway",
+    "media_stack",
+    "reconexion_perifericos",
+    "vision_agent",
+    "voice_core"
+  ],
+  "errores": {}
+}

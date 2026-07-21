@@ -6,7 +6,7 @@ Cadena oficial (Render):
   LLM        → GEMINI → GROQ → OPENAI
   MEDIA      → FAL → REPLICATE
   STT        → DEEPGRAM
-  TTS        → ELEVENLABS (Cartesia como respaldo si existe)
+  TTS        → ELEVENLABS → CARTESIA (única cadena; PWA usa /api/tts)
   EMBEDDINGS → COHERE
   SBI        → SBI_ENABLED + SBI_MODE
 """

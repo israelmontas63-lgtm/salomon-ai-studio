@@ -131,10 +131,49 @@
         await this._startStream(this.facingMode);
       } catch (err) {
         await this.closeCamera();
-        this._notify("No se pudo abrir la cámara. Revisa los permisos.");
+        var msg = this._permissionErrorMessage(err);
+        this._notify(msg);
+        try {
+          window.dispatchEvent(
+            new CustomEvent("salomon:camera-error", {
+              detail: {
+                error: String((err && err.name) || err || "camera_error"),
+                message: msg,
+              },
+            })
+          );
+        } catch (_) {}
       } finally {
         this._switching = false;
       }
+    },
+
+    _permissionErrorMessage(err) {
+      var name = (err && err.name) || "";
+      var text = String((err && err.message) || err || "");
+      if (
+        name === "NotAllowedError" ||
+        name === "PermissionDeniedError" ||
+        /permission|denied|notallowed/i.test(text)
+      ) {
+        return (
+          "Permiso de cámara bloqueado. Actívalo en el navegador y vuelve a " +
+          "tocar Cámara — Salomón sigue disponible por texto."
+        );
+      }
+      if (name === "NotFoundError" || /not found|no device/i.test(text)) {
+        return "No encontré una cámara en este dispositivo.";
+      }
+      if (name === "NotReadableError" || /in use|trackstart/i.test(text)) {
+        return "La cámara está en uso por otra app. Ciérrala e inténtalo de nuevo.";
+      }
+      if (/getUserMedia no disponible/i.test(text)) {
+        return "Este navegador no permite cámara. Usa Chrome/Edge o HTTPS.";
+      }
+      if (/camera_blocked_by_ai_priority/i.test(text)) {
+        return "Cámara en espera: la IA está procesando. Reintenta en un momento.";
+      }
+      return "No se pudo abrir la cámara. Revisa los permisos del navegador.";
     },
 
     async closeCamera() {
@@ -498,16 +537,20 @@
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (_) {
+      } catch (err1) {
         // Fallback sin advanced (algunos navegadores rechazan focusMode en gUM)
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: { ideal: facingMode },
-            width: { ideal: wIdeal },
-            height: { ideal: hIdeal },
-          },
-        });
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              facingMode: { ideal: facingMode },
+              width: { ideal: wIdeal },
+              height: { ideal: hIdeal },
+            },
+          });
+        } catch (err2) {
+          throw err2 || err1;
+        }
       }
       this.stream = stream;
 

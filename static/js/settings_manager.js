@@ -97,10 +97,13 @@
         if (this.root) this.root.classList.add("is-open");
       });
 
-      // Pedir meta de build sin tocar cámara/mic/chat
+      // Pedir meta de build + sello neuronal (tuerquita)
+      this._refreshVersionMeta();
       if (window.SalomonUpdate && window.SalomonUpdate.fetchBuild) {
         window.SalomonUpdate.fetchBuild().then((b) => {
-          if (b) this.setBuildMeta(b);
+          if (b && this.metaEl && !this.metaEl.querySelector(".control-layer__meta-ok")) {
+            this.setBuildMeta(b);
+          }
         });
       }
 
@@ -132,6 +135,60 @@
       }
     },
 
+    setSystemMeta(pack) {
+      if (!this.metaEl || !pack) return;
+      var ver = pack.version || "—";
+      var build = pack.build || "—";
+      var proto = (pack.protocol || pack.label || "").toString();
+      var sis = pack.sistema || {};
+      var sce = sis.sce || "102";
+      var sealed =
+        sis.bridges_sealed === true
+          ? "sellado"
+          : sis.bridges_sealed === false
+            ? "pendiente"
+            : "activo";
+      this.metaEl.innerHTML = "";
+      var line1 = document.createElement("div");
+      line1.textContent = "v" + ver + " · Build " + String(build);
+      var line2 = document.createElement("div");
+      line2.className = "control-layer__meta-sub";
+      line2.textContent =
+        "SCE " +
+        sce +
+        " · Capas 1–7 " +
+        sealed +
+        (proto ? " · " + proto : "");
+      var line3 = document.createElement("div");
+      line3.className = "control-layer__meta-ok";
+      line3.textContent =
+        pack.actualizacion_activa !== false
+          ? "Actualización activa en la tuerquita"
+          : "Actualización pendiente";
+      this.metaEl.appendChild(line1);
+      this.metaEl.appendChild(line2);
+      this.metaEl.appendChild(line3);
+    },
+
+    async _refreshVersionMeta() {
+      try {
+        var res = await fetch("/api/version?t=" + Date.now(), {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        var pack = await res.json().catch(function () {
+          return null;
+        });
+        if (pack) this.setSystemMeta(pack);
+      } catch (_) {
+        if (window.SalomonUpdate && window.SalomonUpdate.fetchBuild) {
+          window.SalomonUpdate.fetchBuild().then((b) => {
+            if (b) this.setBuildMeta(b);
+          });
+        }
+      }
+    },
+
     _inject() {
       if (this.root && this.root.parentNode) {
         this.root.parentNode.removeChild(this.root);
@@ -154,7 +211,7 @@
       const meta = document.createElement("div");
       meta.className = "control-layer__meta";
       meta.id = "control-layer-build";
-      meta.textContent = "Build: —";
+      meta.textContent = "Sincronizando sello neuronal…";
       this.metaEl = meta;
 
       const list = document.createElement("ul");
@@ -212,6 +269,7 @@
       document.body.appendChild(layer);
       this.root = layer;
       this.sheet = sheet;
+      this._refreshVersionMeta();
     },
 
     _runTool(tool, btn) {

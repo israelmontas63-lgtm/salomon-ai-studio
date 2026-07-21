@@ -205,39 +205,30 @@ class SalomonMasterNeuralEngine:
         rag_empty: bool = False,
         forzar: bool = False,
     ) -> bool:
-        if forzar:
-            return True
+        """
+        Gate absoluto del enjambre web.
+
+        - Frase canónica del cortex → True.
+        - forzar + autoriza_web(origen=agente) → True (herramienta deliberada).
+        - BUSQUEDA_WEB_AUTO + huecos factuales / orquesta → NO abren web.
+          La memoria interna y el razonamiento prevalecen.
+        """
+        _ = (hechos_personales, rag_empty)  # conservados por firma; no disparan web
         if self.is_greeting(mensaje):
             return False
-        try:
-            from config.memory_cortex import pedido_busqueda_explicito
-
-            if pedido_busqueda_explicito(mensaje):
-                return True
-        except Exception:
-            pass
 
         try:
-            from settings import BUSQUEDA_WEB_AUTO
-
-            if not BUSQUEDA_WEB_AUTO:
-                return False
+            from config.memory_cortex import autoriza_web, pedido_busqueda_explicito
         except Exception:
             return False
 
-        # Auto: orquesta / factual sin memoria / RAG vacío
-        try:
-            from cognicion.orquesta.agentes_paralelos import necesita_orquesta
-
-            if necesita_orquesta(mensaje, hechos_personales=hechos_personales):
-                return True
-        except Exception:
-            pass
-
-        if rag_empty and self.is_factual_gap(mensaje):
+        if pedido_busqueda_explicito(mensaje):
             return True
-        if self.is_factual_gap(mensaje) and len((hechos_personales or "").strip()) < 40:
-            return True
+
+        if forzar:
+            return bool(autoriza_web(mensaje, origen="agente"))
+
+        # Sello: sin frase canónica no hay enjambre automático
         return False
 
     def deploy_agent_swarm(

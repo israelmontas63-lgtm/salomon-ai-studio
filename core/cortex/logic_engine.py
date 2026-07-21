@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""LogicEngine — prioriza razonamiento local; bloquea web no canónica."""
+"""LogicEngine — prioriza razonamiento local; web solo vía Memory Cortex."""
 
 from __future__ import annotations
 
@@ -19,37 +19,28 @@ class LogicEngine:
         return cls._locked
 
     @classmethod
-    def permite_web(cls, mensaje: str) -> bool:
-        from config.memory_cortex import pedido_busqueda_explicito
+    def permite_web(cls, mensaje: str, *, origen: str = "usuario") -> bool:
+        """
+        Gate absoluto: config.memory_cortex.autoriza_web.
+        Nunca abre web por desbloqueo interno ni por heurística factual.
+        """
+        from config.memory_cortex import autoriza_web
 
-        if not cls._locked:
-            return True
-        if pedido_busqueda_explicito(mensaje):
-            return True
-        # Motor neuronal maestro: vacíos factuales → enjambre autónomo
-        try:
-            from cognicion.core_salomon_master_neural_engine import obtener_master_neural
-
-            return obtener_master_neural().should_search_web(mensaje)
-        except Exception:
-            try:
-                from config.memory_cortex import web_agentes_autorizados
-                from cognicion.busqueda.agente import necesita_busqueda_web
-
-                if web_agentes_autorizados():
-                    return necesita_busqueda_web(mensaje)
-            except Exception:
-                pass
-            return False
+        # Incluso si _locked=False, el cortex manda (soberanía del núcleo).
+        return bool(autoriza_web(mensaje or "", origen=origen))
 
     @classmethod
     def estado(cls) -> dict[str, Any]:
-        from config.memory_cortex import web_agentes_autorizados
+        from config.memory_cortex import cortex_status, web_agentes_autorizados
 
+        c = cortex_status()
         return {
             "locked": cls._locked,
-            "web_policy": "master_neural_auto_swarm+Busca en la web sobre…",
+            "web_policy": "autoriza_web+frase_canonica",
             "web_agentes": web_agentes_autorizados(),
+            "busqueda_web_auto": c.get("busqueda_web_auto"),
             "razonamiento_primero": True,
             "master_neural": True,
+            "cortex_gate": c.get("gate"),
+            "politica": c.get("politica"),
         }

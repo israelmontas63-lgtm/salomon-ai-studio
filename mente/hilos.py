@@ -6,11 +6,14 @@ Hilos de conversación — cada session_id = un contexto propio.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from mente.arquitectura import HILOS_DIR, asegurar_estructura
+
+_log = logging.getLogger("salomon.mente.hilos")
 
 
 def _utc() -> str:
@@ -19,7 +22,9 @@ def _utc() -> str:
 
 def _path(session_id: str) -> Path:
     asegurar_estructura()
-    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in (session_id or "default"))
+    safe = "".join(
+        c if c.isalnum() or c in "-_" else "_" for c in (session_id or "default")
+    )
     return HILOS_DIR / f"{safe}.json"
 
 
@@ -36,23 +41,42 @@ def cargar_hilo(session_id: str) -> dict[str, Any]:
             "estado": "nuevo",
         }
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return data
+        _log.warning("mente.hilos: JSON no-dict en %s — reiniciando hilo", path)
     except Exception:
-        return {
-            "session_id": session_id or "default",
-            "creado_at": _utc(),
-            "actualizado_at": _utc(),
-            "area_activa": "razonamiento",
-            "turnos": [],
-            "hechos": [],
-            "estado": "recuperado",
-        }
+        _log.warning(
+            "mente.hilos: lectura falló path=%s session=%s",
+            path,
+            session_id,
+            exc_info=True,
+        )
+    return {
+        "session_id": session_id or "default",
+        "creado_at": _utc(),
+        "actualizado_at": _utc(),
+        "area_activa": "razonamiento",
+        "turnos": [],
+        "hechos": [],
+        "estado": "recuperado",
+    }
 
 
 def guardar_hilo(hilo: dict[str, Any]) -> None:
     path = _path(str(hilo.get("session_id") or "default"))
     hilo["actualizado_at"] = _utc()
-    path.write_text(json.dumps(hilo, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    try:
+        path.write_text(
+            json.dumps(hilo, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except Exception:
+        _log.warning(
+            "mente.hilos: escritura falló path=%s",
+            path,
+            exc_info=True,
+        )
 
 
 def registrar_turno(
@@ -72,7 +96,6 @@ def registrar_turno(
             "area": area,
         }
     )
-    # Mantener hilo liviano (Free Tier)
     if len(hilo["turnos"]) > 80:
         hilo["turnos"] = hilo["turnos"][-80:]
     hilo["estado"] = "activo"
@@ -107,5 +130,5 @@ def clasificar_area(mensaje: str, *, tiene_imagen: bool = False) -> str:
     if any(x in t for x in ("micrófono", "microfono", "dictado", "escucha", "voz")):
         return "voz"
     if pedido_busqueda_explicito(mensaje):
-        return "razonamiento"  # búsqueda encapsulada; el hilo sigue en razón
+        return "razonamiento"
     return "razonamiento"

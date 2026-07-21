@@ -173,9 +173,10 @@ else:
     )
 
 # ── Búsqueda web (Tavily preferido; DDG/noticias como respaldo) ────────────
-# Memory Cortex: aunque AUTO=true, solo dispara con «Busca en la web sobre…»
+# Cortex absoluto: por defecto OFF. La web solo entra con frase canónica
+# («Busca en la web sobre…») vía autoriza_web — nunca por heurística factual.
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "").strip()
-BUSQUEDA_WEB_AUTO = os.getenv("BUSQUEDA_WEB_AUTO", "true").strip().lower() in (
+BUSQUEDA_WEB_AUTO = os.getenv("BUSQUEDA_WEB_AUTO", "false").strip().lower() in (
     "1",
     "true",
     "yes",

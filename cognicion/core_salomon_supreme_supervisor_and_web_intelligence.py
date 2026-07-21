@@ -149,18 +149,23 @@ class SalomonSupremeSupervisorEngine:
         }
 
     def needs_web_intelligence(self, mensaje: str) -> bool:
-        """Web cuando falta contexto técnico/arquitectónico o hay vacío factual."""
+        """Web solo si el cortex / motor neuronal autorizan (frase canónica)."""
         text = (mensaje or "").strip()
         if not text:
             return False
-        if _RE_ARCH_WEB.search(text):
-            return True
+        try:
+            from config.memory_cortex import autoriza_web
+
+            if autoriza_web(text, origen="usuario"):
+                return True
+        except Exception:
+            pass
         try:
             from cognicion.core_salomon_master_neural_engine import obtener_master_neural
 
-            return bool(obtener_master_neural().should_search_web(text, rag_empty=True))
+            return bool(obtener_master_neural().should_search_web(text))
         except Exception:
-            return bool(_RE_ARCH_WEB.search(text))
+            return False
 
     def fetch_web_intelligence(self, mensaje: str) -> dict[str, Any]:
         """
