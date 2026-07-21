@@ -161,16 +161,14 @@
         })
         .then(function () {
           LogicEngine.lockLocalAgents();
-        })
-        .then(function () {
-          return global.SalomonCore.MainController.initializeGreeting("enérgetico");
         });
+      // Sin saludo automático: silencio operativo hasta que el usuario escriba.
 
       return chain
         .then(function () {
           booted = true;
           global.__SalomonKernelBooted = true;
-          console.info("[MainController] init() COMPLETO");
+          console.info("[MainController] init() COMPLETO (sin saludo auto)");
           return { ok: true };
         })
         .catch(function (err) {

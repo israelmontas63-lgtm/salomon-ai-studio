@@ -253,9 +253,10 @@
       "transition:opacity .25s ease;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}" +
       "#salomon-fase1-status.is-visible{opacity:1}" +
       ".salomon-fase1-bubble{margin:8px 16px;padding:10px 14px;border-radius:14px;" +
-      "border:1px solid rgba(212,175,55,.35);background:rgba(0,0,0,.35);color:rgba(240,215,140,.92);" +
+      "border:1px solid rgba(212,175,55,.55);background:linear-gradient(135deg,#e8c547,#d4af37);" +
+      "color:#111;-webkit-text-fill-color:#111;" +
       "font:500 13px/1.4 Inter,system-ui,sans-serif;animation:fase1Pulse 1.6s ease-in-out infinite}" +
-      "@keyframes fase1Pulse{0%,100%{opacity:.7}50%{opacity:1}}";
+      "@keyframes fase1Pulse{0%,100%{opacity:.85}50%{opacity:1}}";
     document.head.appendChild(s);
   }
 

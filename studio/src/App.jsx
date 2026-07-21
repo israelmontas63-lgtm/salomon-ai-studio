@@ -7,8 +7,8 @@ import CameraV13 from "./features/camera_v13/CameraV13.jsx";
 import MediaPanel from "./components/MediaPanel";
 import { useDayNight } from "./hooks/useTypewriter";
 import { useSalomonOrchestrator } from "./hooks/useSalomonOrchestrator";
-import { WELCOME_MESSAGES, TOOLS_MENU, ACCOUNT_MENU } from "./data/constants";
-import { pickRandom, skeletonAlert, hapticPulse } from "./utils/helpers";
+import { TOOLS_MENU, ACCOUNT_MENU } from "./data/constants";
+import { skeletonAlert, hapticPulse } from "./utils/helpers";
 import { playSalomonAudio } from "./utils/audio";
 import { getCachedGeo, initGeo } from "./utils/geo";
 import { checkSalud, iniciarSesion, obtenerHistorial, sintetizarVoz, herramientaAyuda, herramientaAnaliticas, herramientaPlanes, herramientaSolar, herramientaOptimizar, herramientaSeguridad, herramientaCorregir, herramientaTraducir, herramientaCli, herramientaBackupExport } from "./api/salomon";
@@ -265,48 +265,19 @@ export default function App() {
           }
         }
 
-        // Kernel /core MainController.init() puede haber disparado saludo enérgico
-        const coreG = window.__SalomonCoreGreeting;
+        // Silencio operativo: crear sesión sin saludo automático ni TTS de bienvenida.
         const data = await iniciarSesion(stored);
         persistSession(data.session_id);
-        const welcomeText =
-          (coreG?.frase && Date.now() - (coreG.at || 0) < 12000
-            ? coreG.frase
-            : null) ||
-          data.mensaje ||
-          "";
-
-        const welcomeId = nextId();
-        setMessages([
-          {
-            id: welcomeId,
-            role: "ai",
-            text: welcomeText,
-            typing: true,
-            saved: false,
-            audioBase64: null,
-            audioMime: "audio/wav",
-          },
-        ]);
-        setAppStatus("speaking");
-        attachAudioInBackground(welcomeId, {
-          texto: welcomeText,
-          audio_base64: data.audio_base64,
-          audio_mime: data.audio_mime,
-          metadata: { kernel: !!coreG?.frase },
-        });
+        setMessages([]);
+        setAppStatus("ready");
+        try {
+          window.__SalomonCoreGreeting = null;
+        } catch {
+          /* ignore */
+        }
       } catch {
         setAppStatus("offline");
-        const fallback = pickRandom(WELCOME_MESSAGES);
-        setMessages([
-          {
-            id: nextId(),
-            role: "ai",
-            text: `${fallback} (Modo sin conexión — el backend aún no responde. Espera el arranque en Render.)`,
-            typing: true,
-            saved: false,
-          },
-        ]);
+        setMessages([]);
       }
 
       window.setTimeout(() => setShowWelcomeFlash(false), 1600);
@@ -421,25 +392,9 @@ export default function App() {
         try {
           const data = await iniciarSesion(sessionId);
           persistSession(data.session_id);
-          const welcomeId = nextId();
-          setMessages([
-            {
-              id: welcomeId,
-              role: "ai",
-              text: data.mensaje || "",
-              typing: true,
-              saved: false,
-              audioBase64: null,
-              audioMime: "audio/wav",
-            },
-          ]);
+          setMessages([]);
+          setAppStatus("ready");
           setToolsOpen(false);
-          attachAudioInBackground(welcomeId, {
-            texto: data.mensaje,
-            audio_base64: data.audio_base64,
-            audio_mime: data.audio_mime,
-            metadata: {},
-          });
         } catch {
           showVoiceHint("No pude iniciar un chat nuevo.");
         }
@@ -621,6 +576,7 @@ export default function App() {
         isDay ? "app-shell--day" : "app-shell--night",
         accessibilityMode ? "app-shell--a11y" : "",
       ].join(" ")}
+      data-app-status={appStatus}
     >
       <Header
         appStatus={appStatus}

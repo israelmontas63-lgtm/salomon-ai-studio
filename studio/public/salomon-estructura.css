@@ -412,9 +412,11 @@ html.salomon-ui-shield .bubble {
 
 .burbuja-mensaje.salomon,
 html.salomon-ui-shield .bubble--ai,
-html.salomon-ui-shield .bubble.bubble--ai {
+html.salomon-ui-shield .bubble.bubble--ai,
+html.salomon-ui-shield .bubble--ai .bubble__text {
   background: linear-gradient(135deg, var(--dorado-claro), var(--dorado)) !important;
   color: #111 !important;
+  -webkit-text-fill-color: #111 !important;
   align-self: flex-start;
 }
 

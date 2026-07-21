@@ -24,6 +24,7 @@ export default function ChatBody({
             className={[
               "bubble",
               m.role === "user" ? "bubble--user" : "bubble--ai",
+              m.typing ? "is-typing" : "",
               accessibilityMode ? "bubble--a11y" : "",
             ].join(" ")}
           >

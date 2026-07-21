@@ -84,12 +84,7 @@
             (err && err.message ? err.message : String(err)) +
             " — revisar HomeGateway.startSession → /api/chat/nuevo";
           console.error("[MainController]", lastError);
-          // Fallback local para no dejar UI muda
-          dispatchGreetingUi(
-            "¡Israel! Aquí estoy — Salomón listo (saludo local). Conectando núcleo…",
-            null,
-            null
-          );
+          // No forzar saludo local: silencio operativo.
           throw err;
         });
     },
@@ -138,16 +133,14 @@
         LogicEngine.lockLocalAgents();
       });
 
-      // 4) MainController.initializeGreeting("enérgetico")
-      chain = chain.then(function () {
-        return MainController.initializeGreeting("enérgetico");
-      });
+      // Sin saludo automático al cargar: silencio operativo.
+      // initializeGreeting queda disponible solo si la UI lo pide explícitamente.
 
       return chain
         .then(function () {
           booted = true;
           global.__SalomonKernelBooted = true;
-          console.info("[MainController] init() COMPLETO — kernel conectado");
+          console.info("[MainController] init() COMPLETO — kernel listo (sin saludo auto)");
           return { ok: true, booted: true };
         })
         .catch(function (err) {

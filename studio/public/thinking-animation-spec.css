@@ -43,6 +43,29 @@
   animation: thinkingPulse 2s ease-in-out infinite !important;
 }
 
+/*
+ * Contraste crítico: texto sobre burbuja/bloque dorado NUNCA blanco
+ * mientras el sistema está pensando / procesando.
+ */
+.bubble--ai,
+.bubble--ai .bubble__text,
+.bubble.bot,
+.bubble.bot.typing,
+.salomon-fase1-bubble,
+html.salomon-ui-shield .bubble--ai,
+html.salomon-ui-shield .bubble--ai .bubble__text {
+  color: #111 !important;
+  -webkit-text-fill-color: #111 !important;
+}
+
+html.salomon-ui-shield .studio-header[data-ss-state="thinking"] ~ * .bubble--ai,
+html.salomon-ui-shield .studio-header[data-ss-state="thinking"] ~ * .bubble--ai .bubble__text,
+.app-shell[data-app-status="thinking"] .bubble--ai,
+.app-shell[data-app-status="thinking"] .bubble--ai .bubble__text {
+  color: #111 !important;
+  -webkit-text-fill-color: #111 !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .status-dot--thinking,
   .voice-ring--thinking,

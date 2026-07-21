@@ -41,14 +41,27 @@ html.salomon-ui-shield .chat-scroll {
 }
 
 html.salomon-ui-shield .bubble--ai,
-html.salomon-ui-shield .bubble.bubble--ai {
+html.salomon-ui-shield .bubble.bubble--ai,
+html.salomon-ui-shield .bubble--ai .bubble__text {
   background: linear-gradient(135deg, var(--dorado-claro), var(--dorado)) !important;
   color: #111 !important;
+  -webkit-text-fill-color: #111 !important;
   border-radius: 18px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
   max-width: 78% !important;
   padding: 14px 18px !important;
   margin: 6px 12px !important;
+}
+
+/* Contraste fijo en estado pensando / processing (nunca blanco sobre oro) */
+html.salomon-ui-shield .studio-header[data-ss-state="thinking"] ~ * .bubble--ai,
+html.salomon-ui-shield .studio-header[data-ss-state="thinking"] ~ * .bubble--ai .bubble__text,
+html.salomon-ui-shield body.salomon-thinking .bubble--ai,
+html.salomon-ui-shield .bubble--ai.is-typing,
+html.salomon-ui-shield .bubble--ai.is-typing .bubble__text,
+.salomon-fase1-bubble {
+  color: #111 !important;
+  -webkit-text-fill-color: #111 !important;
 }
 
 html.salomon-ui-shield .bubble--user,

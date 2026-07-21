@@ -52,6 +52,24 @@ body {
 .bubble--ai {
   background: linear-gradient(145deg, #E8C547, #D4AF37) !important;
   color: #1A1A1A !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+}
+
+.bubble--ai .bubble__text {
+  color: #1A1A1A !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+}
+
+/* Mientras piensa / procesa: contraste oscuro sobre bloque dorado */
+.app-shell[data-app-status="thinking"] .bubble--ai,
+.app-shell[data-app-status="thinking"] .bubble--ai .bubble__text,
+.app-shell[data-app-status="speaking"] .bubble--ai,
+.app-shell[data-app-status="speaking"] .bubble--ai .bubble__text,
+.status-dot--thinking ~ .bubble--ai,
+.bubble--ai.is-typing,
+.bubble--ai.is-typing .bubble__text {
+  color: #1A1A1A !important;
+  -webkit-text-fill-color: #1A1A1A !important;
 }
 
 .bubble--user {

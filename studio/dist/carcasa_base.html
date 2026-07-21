@@ -132,11 +132,13 @@
       word-break: break-word;
     }
 
-    /* IA: mostaza/dorado + texto negro */
-    .bubble.bot {
+    /* IA: mostaza/dorado + texto negro (también en estado pensando/typing) */
+    .bubble.bot,
+    .bubble.bot.typing {
       align-self: flex-start;
       background: linear-gradient(160deg, #e0c15a 0%, #D4AF37 55%, #b8922a 100%);
-      color: #000000;
+      color: #000000 !important;
+      -webkit-text-fill-color: #000000 !important;
       border: 1px solid rgba(212, 175, 55, 0.85);
       box-shadow: 0 4px 14px rgba(212, 175, 55, 0.25);
     }
@@ -152,7 +154,7 @@
     }
 
     .bubble.typing {
-      opacity: 0.75;
+      opacity: 0.9;
       font-style: italic;
     }
 
@@ -274,9 +276,7 @@
     </header>
 
     <main class="chat" id="chat" aria-label="Chat">
-      <div class="bubble bot">Hola. Soy Salomón AI — precisión enciclopédica con gusto por el cine, la TV y la música.
-
-¿Sobre qué obra quieres que profundice?</div>
+      <!-- Silencio operativo: sin saludo automático al cargar -->
     </main>
 
     <div class="control-bar">
