@@ -394,7 +394,19 @@ def _obtener_o_crear_sesion(session_id: str | None) -> tuple[str, SalomonAI]:
             _sesiones.pop(next(iter(_sesiones)), None)
 
     if session_id and session_id in _sesiones:
-        return session_id, _sesiones[session_id]
+        salomon = _sesiones[session_id]
+        # Rehidratar desde SQLite si la DB tiene más turnos que la RAM truncada
+        try:
+            if sesion_existe(session_id):
+                db_msgs = cargar_mensajes(session_id)
+                ram_n = sum(
+                    1 for m in salomon.historial if m.rol in ("usuario", "asistente")
+                )
+                if len(db_msgs) > ram_n:
+                    salomon.cargar_historial(db_msgs)
+        except Exception:
+            pass
+        return session_id, salomon
 
     if session_id and sesion_existe(session_id):
         salomon = _restaurar_sesion(session_id)
@@ -1410,18 +1422,31 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
 
 
 def _chat_core(body: ChatRequest, session_id: str, salomon) -> ChatResponse:
+    imagen_b64 = body.imagen_base64
+    imagen_mime = body.imagen_mime or "image/jpeg"
+    if imagen_b64:
+        try:
+            from views.capture import normalize_frame_payload
+
+            frame = normalize_frame_payload(imagen_b64, mime=imagen_mime)
+            if frame.get("ok"):
+                imagen_b64 = frame.get("imagen_base64") or imagen_b64
+                imagen_mime = frame.get("imagen_mime") or imagen_mime
+        except Exception:
+            pass
+
     if body.fase1:
         from cognicion.autonoma.fase1 import ejecutar_fase1
 
         pack = ejecutar_fase1(
             body.mensaje,
-            imagen_base64=body.imagen_base64,
-            imagen_mime=body.imagen_mime,
+            imagen_base64=imagen_b64,
+            imagen_mime=imagen_mime,
         )
         texto = pack.get("texto") or ""
         meta = dict(pack.get("metadata") or {})
         meta["fase1"] = True
-        if body.mensaje.strip() or body.imagen_base64:
+        if body.mensaje.strip() or imagen_b64:
             _persistir_turno(
                 session_id,
                 (body.mensaje or "").strip() or "[foto]",
@@ -1446,14 +1471,19 @@ def _chat_core(body: ChatRequest, session_id: str, salomon) -> ChatResponse:
         salomon=salomon,
         lat=body.lat,
         lon=body.lon,
-        imagen_base64=body.imagen_base64,
-        imagen_mime=body.imagen_mime,
+        imagen_base64=imagen_b64,
+        imagen_mime=imagen_mime,
         error_consola=body.error_consola,
         autonomo=body.autonomo,
     )
 
-    if body.mensaje.strip():
-        _persistir_turno(session_id, body.mensaje.strip(), respuesta.texto)
+    # Persistir también turnos solo-imagen (antes se perdían si mensaje vacío)
+    if body.mensaje.strip() or imagen_b64:
+        _persistir_turno(
+            session_id,
+            body.mensaje.strip() or "[foto]",
+            respuesta.texto,
+        )
 
     return ChatResponse(
         texto=respuesta.texto,
@@ -1615,6 +1645,18 @@ def nuevo_chat(session_id: str | None = None, reiniciar: bool = False) -> JSONRe
 
 @app.get("/api/historial", response_model=HistorialResponse)
 def historial(session_id: str) -> HistorialResponse:
+    # SQLite = fuente de verdad (la RAM se recorta; el drawer no debe perder turnos)
+    if sesion_existe(session_id):
+        mensajes_db = cargar_mensajes(session_id)
+        if mensajes_db:
+            return HistorialResponse(
+                session_id=session_id,
+                mensajes=[
+                    HistorialItem(rol=m["rol"], contenido=m["contenido"])
+                    for m in mensajes_db
+                ],
+            )
+
     if session_id in _sesiones:
         salomon = _sesiones[session_id]
         mensajes = [
@@ -1622,17 +1664,8 @@ def historial(session_id: str) -> HistorialResponse:
             for m in salomon.historial
             if m.rol in ("usuario", "asistente")
         ]
-        return HistorialResponse(session_id=session_id, mensajes=mensajes)
-
-    if sesion_existe(session_id):
-        mensajes_db = cargar_mensajes(session_id)
-        return HistorialResponse(
-            session_id=session_id,
-            mensajes=[
-                HistorialItem(rol=m["rol"], contenido=m["contenido"])
-                for m in mensajes_db
-            ],
-        )
+        if mensajes:
+            return HistorialResponse(session_id=session_id, mensajes=mensajes)
 
     raise HTTPException(status_code=404, detail="Sesión no encontrada")
 

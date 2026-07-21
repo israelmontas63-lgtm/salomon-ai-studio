@@ -295,6 +295,17 @@
     async openSession(sessionId) {
       if (!sessionId) return;
       localStorage.setItem(SESSION_KEY, sessionId);
+      // Sincronizar session_id en todos los módulos (voz/visión/chat)
+      try {
+        if (window.SalomonAILock && window.SalomonAILock.setSessionId) {
+          window.SalomonAILock.setSessionId(sessionId);
+        }
+      } catch (_) {}
+      try {
+        if (window.SalomonVision && window.SalomonVision.session) {
+          window.SalomonVision.session.sessionId = sessionId;
+        }
+      } catch (_) {}
       try {
         var res = await fetch(
           "/api/historial?session_id=" + encodeURIComponent(sessionId) + "&t=" + Date.now(),

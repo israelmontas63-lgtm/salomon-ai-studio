@@ -240,7 +240,8 @@
 
     _enterDictation() {
       var L = lock();
-      if (L) L.activate("gesture_dictation");
+      // Mantener ojos activos: antes closeCamera mataba el frame de visión
+      if (L) L.activate("gesture_dictation", { keepCamera: true });
       this._setState(States.DICTATION);
       this.root.classList.add("is-ai-locked", "is-active", "is-listening");
       this.root.classList.remove("is-holographic", "is-conversational");
@@ -250,7 +251,7 @@
 
     _enterConversational() {
       var L = lock();
-      if (L) L.activate("gesture_conversational");
+      if (L) L.activate("gesture_conversational", { keepCamera: true });
       this._setState(States.CONVERSATIONAL);
       this.root.classList.add(
         "is-ai-locked",

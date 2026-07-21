@@ -22,7 +22,10 @@ services:
       - key: MEDIA_HTTP_TIMEOUT
         value: "45"
       - key: MAX_SESIONES_RAM
-        value: "2"
+        value: "4"
+      # Opcional: montar disco persistente y apuntar aquí (Free sin disco = efímero)
+      - key: DATA_DIR
+        value: "data"
       - key: COLSUB_MAX_AGENTES
         value: "2"
       - key: COLSUB_MAX_WORKERS

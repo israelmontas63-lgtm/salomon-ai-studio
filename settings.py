@@ -16,11 +16,18 @@ load_dotenv(ROOT_DIR / ".env")
 load_dotenv(ROOT_DIR.parent / ".env")
 load_dotenv(ROOT_DIR / "security" / "credentials" / "sbi.env", override=True)
 
-DATA_DIR = ROOT_DIR / "data"
+# Persistencia: DATA_DIR / SESIONES_DB via env (disco Render o ruta externa)
+_data_env = os.getenv("DATA_DIR", "").strip()
+DATA_DIR = Path(_data_env) if _data_env else (ROOT_DIR / "data")
 CREDENTIALS_DIR = ROOT_DIR / "security" / "credentials"
-MEMORIA_DIR = DATA_DIR / "memoria_chroma"
-SESIONES_DB = DATA_DIR / "sesiones.db"
+MEMORIA_DIR = Path(os.getenv("MEMORIA_DIR", "").strip() or (DATA_DIR / "memoria_chroma"))
+_sesiones_db_env = os.getenv("SESIONES_DB", "").strip()
+SESIONES_DB = Path(_sesiones_db_env) if _sesiones_db_env else (DATA_DIR / "sesiones.db")
 AGENTE_BACKUP_DIR = DATA_DIR / "agente_backups"
+try:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
 
 # ── Google Gemini ──────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()

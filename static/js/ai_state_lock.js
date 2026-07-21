@@ -13,6 +13,34 @@
   var reason = "";
   var sessionId = localStorage.getItem("salomon_session_id") || null;
 
+  /** Siempre leer session_id fresco (evita desync tras cambiar chat en el drawer). */
+  function currentSessionId() {
+    try {
+      var live = localStorage.getItem("salomon_session_id");
+      if (live) sessionId = live;
+    } catch (_) {}
+    return sessionId || null;
+  }
+
+  function setSessionId(id) {
+    if (!id) return;
+    sessionId = String(id);
+    try {
+      localStorage.setItem("salomon_session_id", sessionId);
+    } catch (_) {}
+    try {
+      if (window.SalomonVision && window.SalomonVision.session) {
+        window.SalomonVision.session.sessionId = sessionId;
+      }
+    } catch (_) {}
+  }
+
+  function looksVisualMessage(mensaje) {
+    return /\b(mira|qu[eé]\s+ves|macro|micro|modo\s+visi[oó]n|ojos\s+activos|enfoque\s+(cerca|lejano)|foto|imagen|c[aá]mara)\b/i.test(
+      mensaje || ""
+    );
+  }
+
   function emit(detail) {
     window.dispatchEvent(
       new CustomEvent("salomon:ai-lock", {
@@ -34,7 +62,7 @@
         body: JSON.stringify({
           activo: !!activo,
           reason: why || reason || "smart_button",
-          session_id: sessionId,
+          session_id: currentSessionId(),
         }),
         credentials: "same-origin",
         keepalive: true,
@@ -42,8 +70,10 @@
     } catch (_) {}
   }
 
-  function activate(why) {
+  function activate(why, opts) {
     if (is_ai_active) return true;
+    var options = opts && typeof opts === "object" ? opts : {};
+    var keepCamera = !!options.keepCamera || !!options.keep_camera;
     is_ai_active = true;
     reason = why || "smart_button";
     setBodyLock(true);
@@ -54,14 +84,24 @@
       if (window.SalomonSettings && window.SalomonSettings.close) {
         window.SalomonSettings.close();
       }
-      if (window.SalomonCamera && window.SalomonCamera.isActive && window.SalomonCamera.isActive()) {
+      // Emergencia visión: no apagar ojos si este turno necesita frame / mira
+      if (
+        !keepCamera &&
+        window.SalomonCamera &&
+        window.SalomonCamera.isActive &&
+        window.SalomonCamera.isActive()
+      ) {
         if (window.SalomonCamera.closeCamera) {
           window.SalomonCamera.closeCamera();
         }
       }
     } catch (_) {}
     syncServer(true, reason);
-    emit({ action: "activate", reason: reason, hardware: "camera_forced_off" });
+    emit({
+      action: "activate",
+      reason: reason,
+      hardware: keepCamera ? "camera_kept_for_vision" : "camera_forced_off",
+    });
     return true;
   }
 
@@ -135,7 +175,23 @@
       return { ok: false, error: "mensaje_vacio" };
     }
 
-    activate(body.reason || "trigger_ai_core");
+    // CRÍTICO: capturar frame ANTES de activate() (antes cerraba la cámara)
+    var visPack = null;
+    if (!body.imagen_base64) {
+      try {
+        visPack = await prepareVisionPayload(mensaje);
+      } catch (_) {
+        visPack = null;
+      }
+    }
+    var keepCamera = !!(
+      body.keep_camera ||
+      body.keepCamera ||
+      body.imagen_base64 ||
+      (visPack && visPack.imagen_base64) ||
+      looksVisualMessage(mensaje)
+    );
+    activate(body.reason || "trigger_ai_core", { keepCamera: keepCamera });
 
     try {
       // Paridad chat↔voz: comandos de visión locales (sin romper gestos del botón)
@@ -152,18 +208,14 @@
 
       var dataOut = {
         mensaje: mensaje,
-        session_id: body.session_id || sessionId,
+        session_id: body.session_id || currentSessionId(),
       };
       if (body.imagen_base64) {
         dataOut.imagen_base64 = body.imagen_base64;
         dataOut.imagen_mime = body.imagen_mime || "image/jpeg";
-      } else {
-        // Si los ojos están activos, adjuntar frame + autofocus contextual
-        var visPack = await prepareVisionPayload(mensaje);
-        if (visPack && visPack.imagen_base64) {
-          dataOut.imagen_base64 = visPack.imagen_base64;
-          dataOut.imagen_mime = visPack.imagen_mime || "image/jpeg";
-        }
+      } else if (visPack && visPack.imagen_base64) {
+        dataOut.imagen_base64 = visPack.imagen_base64;
+        dataOut.imagen_mime = visPack.imagen_mime || "image/jpeg";
       }
 
       var res = await fetch(API_BRAIN, {
@@ -181,8 +233,7 @@
       }
 
       if (data.session_id) {
-        sessionId = data.session_id;
-        localStorage.setItem("salomon_session_id", sessionId);
+        setSessionId(data.session_id);
       }
 
       emit({
@@ -212,10 +263,7 @@
 
   /** Comandos explícitos de visión (mira / macro / micro / modo visión). */
   async function tryHandleVisionCommand(mensaje) {
-    var looksVisual =
-      /\b(mira|qu[eé]\s+ves|macro|micro|modo\s+visi[oó]n|ojos\s+activos|enfoque\s+(cerca|lejano))\b/i.test(
-        mensaje || ""
-      );
+    var looksVisual = looksVisualMessage(mensaje);
     if (
       looksVisual &&
       !window.SalomonVision &&
@@ -277,9 +325,11 @@
     }
     if (!dataUrl) return null;
 
-    var raw = String(dataUrl).replace(/^data:image\/\w+;base64,/, "");
+    var mimeMatch = String(dataUrl).match(/^data:(image\/[\w.+-]+);base64,/i);
+    var mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+    var raw = String(dataUrl).replace(/^data:image\/[\w.+-]+;base64,/i, "");
     if (V && V.session) V.session.lastFrameDataUrl = dataUrl;
-    return { imagen_base64: raw, imagen_mime: "image/jpeg" };
+    return { imagen_base64: raw, imagen_mime: mime };
   }
 
   /** alias legacy → mismo canal */
@@ -302,6 +352,9 @@
     isAiActive: isActive,
     handleCentralButtonClick: trigger_ai_core,
     executeSalomonBrainProcess: trigger_ai_core,
+    currentSessionId: currentSessionId,
+    setSessionId: setSessionId,
+    prepareVisionPayload: prepareVisionPayload,
   };
 
   // API global explícita (especificación de capas)
