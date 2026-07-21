@@ -38,8 +38,9 @@ _RE_GATILLO = re.compile(
 
 # Streaming analítico por voz (ojos ya en standby o a abrir)
 _RE_VER_FRENTE = re.compile(
-    r"(?i)\bpuedes\s+ver\b.*\b(frente\s+a\s+m[ií]|delante\s+de\s+m[ií])\b|"
-    r"(?i)\bmira\s+lo\s+que\s+tengo\s+delante\b"
+    r"\bpuedes\s+ver\b.*\b(frente\s+a\s+m[ií]|delante\s+de\s+m[ií])\b|"
+    r"\bmira\s+lo\s+que\s+tengo\s+delante\b",
+    re.IGNORECASE,
 )
 
 _RE_DESACTIVAR_VISUAL = re.compile(
@@ -52,8 +53,7 @@ _RE_DESACTIVAR_VISUAL = re.compile(
 )
 
 ACTIVATION_REPLY = (
-    "Cámara en reposo (standby). Los fotogramas se capturan en silencio — "
-    "di «Salomón, ¿puedes ver lo que está frente a mí?» para que analice y te responda."
+    "Sí, Israel — activo el modo visión y te digo exactamente lo que veo frente a la cámara."
 )
 
 
@@ -97,14 +97,16 @@ class VisionModeTriggerEngine:
         return {
             "activar_modo_vision": True,
             "vision_requerida": True,
-            "ui_action": "open_camera_with_elevation",
+            "vision_analytical": True,
+            "ui_action": "engage_analytical_streaming",
             "texto": ACTIVATION_REPLY,
             "cognicion": {
                 "vision_mode_trigger": True,
                 "vision_en_flujo": True,
                 "vision_requerida": True,
+                "analytical_streaming": True,
                 "gatillo": (mensaje or "").strip()[:120],
-                "protocolo": "VISION_MODE_TRIGGER",
+                "protocolo": "MULTIMODAL_INTENT_ROUTER_VISION",
             },
         }
 

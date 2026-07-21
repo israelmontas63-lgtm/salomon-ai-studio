@@ -428,6 +428,31 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                 "Israel, procesé tu mensaje pero la respuesta salió incompleta. "
                 "Repítemelo en una frase y te contesto con claridad."
             )
+
+        # Filtro de audición / auditoría estricta (anti-vacío, anti-placeholder)
+        try:
+            from cognicion.core_salomon_audit_filter_and_instant_render_sync import (
+                audit_hearing_filter,
+            )
+
+            _aud = audit_hearing_filter(
+                respuesta_texto,
+                user_message=entrada,
+                has_image=bool(imagen_base64),
+                require_voice=True,
+                meta=meta_extra if isinstance(meta_extra, dict) else None,
+            )
+            respuesta_texto = str(_aud.get("texto") or respuesta_texto)
+            if isinstance(meta_extra, dict):
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["audit_hearing"] = _aud.get("report")
+                if _aud.get("force_client_tts"):
+                    meta_extra["force_client_tts"] = True
+        except Exception as exc_aud:
+            if isinstance(meta_extra, dict):
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["audit_hearing_error"] = type(exc_aud).__name__
+
         self._historial.append(Mensaje(rol="asistente", contenido=respuesta_texto))
         self._recortar_historial()
 

@@ -464,8 +464,13 @@
 
     async _startStream(facingMode, opts) {
       opts = opts || {};
-      // Bloqueo físico: no pedir getUserMedia si la IA manda
-      if (window.SalomonAILock && window.SalomonAILock.isActive()) {
+      // Bloqueo físico: no pedir getUserMedia si la IA manda (salvo keepCamera visión+voz)
+      var lock = window.SalomonAILock;
+      var allowVisionCam =
+        lock &&
+        typeof lock.allowsCameraDuringAi === "function" &&
+        lock.allowsCameraDuringAi();
+      if (lock && lock.isActive && lock.isActive() && !allowVisionCam) {
         throw new Error("camera_blocked_by_ai_priority");
       }
       this._stopStream();

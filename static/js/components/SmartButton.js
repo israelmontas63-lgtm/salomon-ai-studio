@@ -423,7 +423,7 @@
       if (!keepMic) this._setState(States.PROCESSING);
 
       var VT = window.SalomonVisionModeTrigger;
-      // Puente voz→visión: comandos locales (standby / analítico / off)
+      // Puente voz→visión: "activa el modo visión" / mira / frente → análisis + Adam
       var Veng = window.SalomonVision || null;
       if (Veng && Veng.parseCommand) {
         var vcmd = Veng.parseCommand(text);
@@ -431,53 +431,55 @@
           vcmd &&
           vcmd.handled &&
           (vcmd.type === "ver_frente" ||
+            vcmd.type === "modo_vision" ||
             vcmd.type === "desactivar_visual" ||
             vcmd.type === "mira")
         ) {
           document.body.classList.add("salomon-processing");
+          var visionPack = null;
           try {
-            await Veng.handleChatCommand(text);
+            if (vcmd.type === "modo_vision" && VT && VT.handleCommand) {
+              visionPack = await VT.handleCommand(text, {
+                source: "smart_button_voice",
+                analyze: true,
+              });
+            } else {
+              await Veng.handleChatCommand(text);
+            }
           } catch (_) {}
           document.body.classList.remove("salomon-processing");
+          if (chat) {
+            var typingV = chat.querySelector(".bubble.typing");
+            if (typingV) typingV.remove();
+          }
+          // Texto+voz ya los emite vision_engine / brain-bridge (Adam).
+          // Solo refuerzo TTS si el pack trae texto y aún no hubo audio.
           try {
-            if (window.SalomonVoiceLayer && window.SalomonVoiceLayer.speakViaApi) {
-              await window.SalomonVoiceLayer.speakViaApi(
-                "Listo. Modo visual actualizado."
-              );
+            var vTexto =
+              (visionPack && visionPack.texto) ||
+              (visionPack &&
+                visionPack.result &&
+                visionPack.result.texto) ||
+              "";
+            var hadAudio = !!(
+              (visionPack && visionPack.audio_base64) ||
+              (visionPack &&
+                visionPack.result &&
+                visionPack.result.audio_base64)
+            );
+            if (
+              vTexto &&
+              !hadAudio &&
+              vcmd.type === "desactivar_visual" &&
+              window.SalomonVoiceLayer &&
+              window.SalomonVoiceLayer.ensureSpeak
+            ) {
+              await window.SalomonVoiceLayer.ensureSpeak({ texto: vTexto });
             }
           } catch (_) {}
           if (!keepMic) this.neutralize("voice_vision_bridge");
           return;
         }
-      }
-
-      if (VT && VT.matches && VT.matches(text)) {
-        document.body.classList.add("salomon-processing");
-        var engaged = await VT.engage({ source: "smart_button_voice" });
-        document.body.classList.remove("salomon-processing");
-        if (chat) {
-          var typingVis = chat.querySelector(".bubble.typing");
-          if (typingVis) typingVis.remove();
-          var botVis = document.createElement("div");
-          botVis.className = "bubble bot";
-          var visTexto =
-            (engaged && engaged.texto) ||
-            "Cámara en reposo. Di «¿puedes ver lo que está frente a mí?» para analizar.";
-          botVis.textContent = visTexto;
-          chat.appendChild(botVis);
-          chat.scrollTop = chat.scrollHeight;
-          try {
-            if (window.SalomonVoiceLayer && window.SalomonVoiceLayer.ensureSpeak) {
-              await window.SalomonVoiceLayer.ensureSpeak({
-                texto: visTexto,
-                audio_base64: engaged && engaged.audio_base64,
-                audio_mime: engaged && engaged.audio_mime,
-              });
-            }
-          } catch (_) {}
-        }
-        if (!keepMic) this.neutralize("vision_mode_trigger");
-        return;
       }
 
       document.body.classList.add("salomon-processing");
@@ -505,33 +507,51 @@
       var meta = data.metadata || {};
       if (meta.ui_action === "engage_analytical_streaming" && Veng) {
         try {
-          await Veng.engageAnalyticalStreaming(text);
+          var analytical = await Veng.engageAnalyticalStreaming(text);
+          if (analytical && analytical.texto) {
+            data = Object.assign({}, data, analytical);
+          }
         } catch (_) {}
       } else if (meta.ui_action === "disengage_visual_mode" && Veng) {
         try {
           await Veng.disengageVisualMode();
         } catch (_) {}
-      } else if (meta.activar_modo_vision && VT && VT.engage) {
-        await VT.engage({ source: "brain_meta" });
+      } else if (
+        (meta.activar_modo_vision || meta.ui_action === "open_camera_with_elevation") &&
+        VT &&
+        VT.engage
+      ) {
+        try {
+          var engMeta = await VT.engage({
+            source: "brain_meta",
+            analyze: true,
+          });
+          if (engMeta && engMeta.texto) {
+            data = Object.assign({}, data, engMeta);
+          }
+        } catch (_) {}
       }
+
+      var replyText =
+        (data && data.texto) ||
+        data.detail ||
+        (result && result.ok ? "" : null) ||
+        "No pude completar la respuesta. ¿Lo intentamos de nuevo?";
 
       if (chat) {
         var typingEl = chat.querySelector(".bubble.typing");
         if (typingEl) typingEl.remove();
         // vision_local: vision_engine ya escribió la burbuja (sin eco duplicado)
-        if (!(meta && meta.vision_local)) {
+        if (!(meta && meta.vision_local) && replyText) {
           var bot = document.createElement("div");
           bot.className = "bubble bot";
-          bot.textContent =
-            (result && result.ok && data.texto) ||
-            data.detail ||
-            "No pude completar la respuesta. ¿Lo intentamos de nuevo?";
+          bot.textContent = replyText;
           chat.appendChild(bot);
           chat.scrollTop = chat.scrollHeight;
         }
       }
 
-      if (result && result.ok && data.session_id) {
+      if (data.session_id) {
         localStorage.setItem("salomon_session_id", data.session_id);
       }
       if (result && result.ok) {
@@ -547,18 +567,17 @@
         );
       }
 
-      // Obligatorio en dictado/voz: Adam TTS (audio del cerebro o /api/tts)
+      // Obligatorio en dictado (1 toque): Adam TTS + texto simultáneos
       try {
-        var speakPayload =
-          (result && result.data) ||
-          (data && (data.texto || data.audio_base64) ? data : null);
+        var speakPayload = Object.assign({}, data, {
+          texto: (data && data.texto) || replyText,
+        });
         if (
-          speakPayload &&
           window.SalomonVoiceLayer &&
           window.SalomonVoiceLayer.ensureSpeak
         ) {
           await window.SalomonVoiceLayer.ensureSpeak(speakPayload);
-        } else if (speakPayload && speakPayload.audio_base64) {
+        } else if (speakPayload.audio_base64) {
           var mime = speakPayload.audio_mime || "audio/mpeg";
           var audio = new Audio(
             "data:" + mime + ";base64," + speakPayload.audio_base64

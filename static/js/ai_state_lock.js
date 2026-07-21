@@ -11,6 +11,7 @@
   var API_UI = "/api/ai/secondary";
   var is_ai_active = false;
   var reason = "";
+  var keepCameraAllowed = false;
   var sessionId = localStorage.getItem("salomon_session_id") || null;
 
   /** Siempre leer session_id fresco (evita desync tras cambiar chat en el drawer). */
@@ -71,10 +72,18 @@
   }
 
   function activate(why, opts) {
-    if (is_ai_active) return true;
+    if (is_ai_active) {
+      // Refuerzo: si un turno posterior pide ojos, no apagarlos
+      var optionsAlready = opts && typeof opts === "object" ? opts : {};
+      if (optionsAlready.keepCamera || optionsAlready.keep_camera) {
+        keepCameraAllowed = true;
+      }
+      return true;
+    }
     var options = opts && typeof opts === "object" ? opts : {};
     var keepCamera = !!options.keepCamera || !!options.keep_camera;
     is_ai_active = true;
+    keepCameraAllowed = keepCamera;
     reason = why || "smart_button";
     setBodyLock(true);
     try {
@@ -110,6 +119,7 @@
   function release(why) {
     if (!is_ai_active) return false;
     is_ai_active = false;
+    keepCameraAllowed = false;
     var prev = reason;
     reason = "";
     setBodyLock(false);
@@ -122,6 +132,10 @@
     return !!is_ai_active;
   }
 
+  function allowsCameraDuringAi() {
+    return !!keepCameraAllowed;
+  }
+
   function canUseSecondary() {
     return !is_ai_active;
   }
@@ -129,9 +143,12 @@
   /**
    * request_ui_action(action_id) — portero de hardware/menús.
    * return false si AI_PROCESSING (la cámara no recibe encendido).
+   * Excepción: cámara/flip permitidos si el lock de voz pidió keepCamera (visión+dictado).
    */
   function request_ui_action(actionId) {
-    if (is_ai_active) {
+    var id = (actionId || "secondary").toLowerCase();
+    var visionHw = id === "camera" || id === "flip" || id === "vision";
+    if (is_ai_active && !(visionHw && keepCameraAllowed)) {
       try {
         console.info(
           "[SalomonAILock] request_ui_action BLOCKED:",
@@ -347,6 +364,7 @@
     activate: activate,
     release: release,
     isActive: isActive,
+    allowsCameraDuringAi: allowsCameraDuringAi,
     canUseSecondary: canUseSecondary,
     request_ui_action: request_ui_action,
     requestUiAction: request_ui_action,

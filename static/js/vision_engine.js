@@ -74,11 +74,16 @@
     },
 
     /**
-     * Comando voz: "Salomón, ¿puedes ver lo que está frente a mí?"
+     * Comando voz: "Activa el modo visión" / "¿puedes ver lo que está frente a mí?"
      * Activa streaming analítico + una mirada + TTS (Adam vía brain).
      */
     async engageAnalyticalStreaming(prompt) {
       const cam = window.SalomonCamera;
+      if (window.SalomonAILock && window.SalomonAILock.activate) {
+        try {
+          window.SalomonAILock.activate("vision_analytical", { keepCamera: true });
+        } catch (_) {}
+      }
       if (!this.session.active) {
         if (cam && cam.openCamera) {
           try {
@@ -94,18 +99,29 @@
           "bot",
           "No pude abrir la cámara. Activa el botón Cámara y repite el comando."
         );
-        return null;
+        return {
+          texto:
+            "No pude abrir la cámara. Activa el botón Cámara y repite el comando.",
+          exito: false,
+        };
       }
       this.session.mode = "analytical";
       this.session.analyticalStreaming = true;
+      this.session.visionChannel = true;
+      this._startVisionChannel();
       try {
-        document.body.classList.add("vision-analytical");
+        document.body.classList.add("vision-analytical", "vision-mode-active");
         document.body.classList.remove("vision-standby");
       } catch (_) {}
+      if (cam && cam.ensureSharpFocus) {
+        try {
+          await cam.ensureSharpFocus();
+        } catch (_) {}
+      }
       const texto =
         prompt ||
-        "Salomón, ¿puedes ver lo que está frente a mí? Describe con precisión la escena.";
-      this._bubble("bot", "Sí — estoy mirando lo que tienes frente a ti…");
+        "Salomón, ¿puedes ver lo que está frente a mí? Describe con precisión la escena " +
+          "en primera persona («Sí, Israel, estoy viendo…»). Sé exacto; no inventes.";
       return this.lookNow(texto);
     },
 
@@ -193,19 +209,27 @@
       if (cam && cam.autoFocusFromText) {
         await cam.autoFocusFromText(prompt || "");
       }
+      if (cam && cam.ensureSharpFocus) {
+        try {
+          await cam.ensureSharpFocus();
+        } catch (_) {}
+      }
       // Breve estabilización del zoom antes de capturar
       await new Promise(function (r) {
         setTimeout(r, 180);
       });
       const frame = this.captureCurrentFrame(0.9) || this.session.lastFrameDataUrl;
       if (!frame) {
-        this._bubble("bot", "Aún no tengo un frame claro. Espera un instante e inténtalo de nuevo.");
-        return null;
+        var failMsg =
+          "Aún no tengo un frame claro. Espera un instante e inténtalo de nuevo.";
+        this._bubble("bot", failMsg);
+        return { texto: failMsg, exito: false };
       }
       this.session.lastFrameDataUrl = frame;
       const texto =
         prompt ||
-        "Salomón, mira: describe con detalle lo que ves ahora mismo con tus ojos (cámara).";
+        "Salomón, mira: describe con detalle lo que ves ahora mismo con tus ojos (cámara). " +
+          "Responde en primera persona («Sí, Israel, estoy viendo…»).";
       return this.sendFrameToBrain(texto, frame);
     },
 
@@ -244,9 +268,14 @@
         }
         if (res.ok && data.texto) {
           this._bubble("bot", data.texto);
-          // TTS del brain-bridge (misma vía que el botón inteligente)
-          if (data.audio_base64) {
-            try {
+          // Dual: texto + Adam TTS (audio del bridge o /api/tts)
+          try {
+            if (
+              window.SalomonVoiceLayer &&
+              window.SalomonVoiceLayer.ensureSpeak
+            ) {
+              await window.SalomonVoiceLayer.ensureSpeak(data);
+            } else if (data.audio_base64) {
               if (
                 window.SalomonVoiceLayer &&
                 window.SalomonVoiceLayer.playFromResponse
@@ -259,19 +288,21 @@
                 );
                 audio.play().catch(function () {});
               }
-            } catch (_) {}
-          }
-          return data.texto;
+            }
+          } catch (_) {}
+          return data;
         }
-        this._bubble(
-          "bot",
-          data.detail ? String(data.detail) : "No pude interpretar la imagen. ¿Reintentamos?"
-        );
-        return null;
+        var fail =
+          data.detail
+            ? String(data.detail)
+            : "No pude interpretar la imagen. ¿Reintentamos?";
+        this._bubble("bot", fail);
+        return { texto: fail, exito: false };
       } catch (_) {
         if (typing) typing.remove();
-        this._bubble("bot", "Error de visión. Revisa la conexión.");
-        return null;
+        var errMsg = "Error de visión. Revisa la conexión.";
+        this._bubble("bot", errMsg);
+        return { texto: errMsg, exito: false };
       } finally {
         this.session.busy = false;
       }
@@ -355,24 +386,15 @@
       }
 
       if (cmd.type === "modo_vision") {
-        // Abrir cámara en standby (silencio cognitivo hasta comando de análisis)
+        // "Activa el modo visión" → canal de fotogramas + descripción inmediata + Adam
         if (window.SalomonVisionModeTrigger) {
-          const r = await window.SalomonVisionModeTrigger.handleCommand(mensaje, {
+          await window.SalomonVisionModeTrigger.handleCommand(mensaje, {
             source: "vision_engine",
+            analyze: true,
           });
-          this._bubble(
-            "bot",
-            (r && r.texto) ||
-              "Cámara en reposo. Di «Salomón, ¿puedes ver lo que está frente a mí?» cuando quieras que analice."
-          );
           return true;
         }
-        const cam = window.SalomonCamera;
-        if (cam && cam.openCamera) await cam.openCamera();
-        this._bubble(
-          "bot",
-          "Cámara en reposo. Di «¿puedes ver lo que está frente a mí?» para activar el análisis."
-        );
+        await this.engageAnalyticalStreaming(cmd.rest);
         return true;
       }
 

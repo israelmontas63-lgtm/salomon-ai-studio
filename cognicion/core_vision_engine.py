@@ -115,7 +115,11 @@ class SalomonVisionArchitecture:
         base = (user_context or "").strip()
         ground = (
             "Responde SOLO sobre lo visible en esta imagen; no inventes objetos, "
-            "textos ni contextos que no aparezcan en el fotograma."
+            "textos ni contextos que no aparezcan en el fotograma. "
+            "Habla en primera persona en español natural, como si miraras con ojos: "
+            "empieza con «Sí, Israel, estoy viendo…» o «Sí, Israel, veo…» e identifica "
+            "el sujeto principal y un detalle concreto (por ejemplo especie de árbol "
+            "o forma de una roca) solo si se deduce con claridad del fotograma."
         )
         if mode == "micro":
             hint = (

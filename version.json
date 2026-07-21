@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T02:10:00Z",
-  "timestamp": 1753063800,
-  "version": "110.13.0",
+  "timestamp_iso": "2026-07-21T02:40:00Z",
+  "timestamp": 1753065600,
+  "version": "110.15.0",
   "channel": "main",
-  "label": "camera-focus-voice-tts-fix",
+  "label": "zero-patch-audit-multimodal-sync",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "CAMERA_FOCUS_AND_VOICE_TTS_CRITICAL_FIX",
-  "notes": "v110.13.0 - Autofoco continuo + keepCamera + Adam TTS obligatorio en dictado."
+  "protocol": "ZERO_PATCH_AUDIT_INSTANT_RENDER_SYNC",
+  "notes": "v110.15.0 - Resolver deps cero-parche, filtro audición, visión+Adam dictado, PWA v61."
 }

@@ -1,6 +1,6 @@
 /**
  * Salomón AI — Vision Mode Trigger
- * Gatillo verbal ("modo visión", "ojos activos") + sync táctil con cámara/elevación.
+ * "Activa el modo visión" → canal de fotogramas + análisis inmediato + Adam TTS.
  * AISLAMIENTO: no toca el botón de retroceso ni el neutralizador.
  * Created by Israel Monta - Salomón AI Studio
  */
@@ -10,8 +10,12 @@
   var RE_TRIGGER =
     /\b(activa(r)?\s+(el\s+)?modo\s+visi[oó]n|modo\s+visi[oó]n|ojos\s+activos|activa(r)?\s+(mis\s+)?ojos|activa(r)?\s+visi[oó]n|visi[oó]n\s+activa|enciende\s+(la\s+)?c[aá]mara|abre\s+(la\s+)?c[aá]mara)\b/i;
 
-  var REPLY =
-    "Modo visión activo. Mis ojos están encendidos — puedes decir «mira» o «qué ves» cuando quieras que analice la escena.";
+  var ANALYZE_PROMPT =
+    "Salomón, activa el modo visión. Mira lo que tengo frente a la cámara y " +
+    "responde en primera persona de forma natural y exacta, por ejemplo: " +
+    "«Sí, Israel, estoy viendo…» o «Sí, Israel, veo…». Identifica el objeto " +
+    "principal (roca, árbol, planta, etc.) y un detalle concreto si es visible " +
+    "(especie, color, forma). No inventes nada que no esté en el fotograma.";
 
   var VisionModeTrigger = {
     init() {
@@ -36,7 +40,6 @@
         await window.SalomonMain.ensureCameraStack();
         return;
       }
-      // Fallback mínimo si main aún no exportó
       var load = window.SalomonMain && window.SalomonMain.loadScript;
       if (!load) return;
       await Promise.all([
@@ -48,17 +51,29 @@
     },
 
     /**
-     * Enciende cámara + elevación UI. No toca el neutralizador Back.
+     * Enciende cámara + elevación UI. analyze=true (default) → mira y describe.
      */
     async engage(opts) {
       opts = opts || {};
       var source = opts.source || "unknown";
+      var analyze = opts.analyze !== false;
 
+      // Durante dictado (keepCamera) permitir ojos; si no, respetar el portero
       var gate =
         window.request_ui_action ||
         (window.SalomonAILock && window.SalomonAILock.request_ui_action);
-      if (gate && !gate("camera")) {
+      var lock = window.SalomonAILock;
+      var allowVision =
+        lock &&
+        typeof lock.allowsCameraDuringAi === "function" &&
+        lock.allowsCameraDuringAi();
+      if (gate && !allowVision && !gate("camera")) {
         return { ok: false, blocked: true, reason: "ai_lock" };
+      }
+
+      // Refuerzo keepCamera si la IA ya está en dictado
+      if (lock && lock.activate) {
+        lock.activate(source || "vision_mode_trigger", { keepCamera: true });
       }
 
       await this.ensureCameraStack();
@@ -72,7 +87,6 @@
         await cam.openCamera();
       }
 
-      // Elevación (capa UI aislada)
       if (window.SalomonCameraToggleUI && window.SalomonCameraToggleUI.elevate) {
         window.SalomonCameraToggleUI.elevate();
       } else {
@@ -85,21 +99,54 @@
 
       window.dispatchEvent(
         new CustomEvent("salomon:vision-mode", {
-          detail: { active: true, source: source, via: "vision_mode_trigger" },
+          detail: {
+            active: true,
+            source: source,
+            via: "vision_mode_trigger",
+            analytical: !!analyze,
+          },
         })
       );
 
-      return { ok: true, texto: REPLY, source: source };
+      // Con cámara lista: abrir canal de fotogramas y describir lo que hay enfrente
+      if (analyze && window.SalomonVision && window.SalomonVision.engageAnalyticalStreaming) {
+        var pack = await window.SalomonVision.engageAnalyticalStreaming(
+          opts.prompt || ANALYZE_PROMPT
+        );
+        var texto =
+          (pack && pack.texto) ||
+          (typeof pack === "string" ? pack : "") ||
+          "Sí, Israel — estoy mirando lo que tienes frente a ti.";
+        return {
+          ok: true,
+          texto: texto,
+          audio_base64: pack && pack.audio_base64,
+          audio_mime: pack && pack.audio_mime,
+          source: source,
+          analytical: true,
+        };
+      }
+
+      return {
+        ok: true,
+        texto:
+          "Modo visión activo. Estoy mirando — un momento mientras describo la escena.",
+        source: source,
+        analytical: false,
+      };
     },
 
-    /** Para handlers de chat/voz: engage + mensaje listo */
+    /** Para handlers de chat/voz: engage + análisis + mensaje listo */
     async handleCommand(mensaje, opts) {
       if (!this.matches(mensaje)) return { handled: false };
-      var result = await this.engage(opts || { source: "command" });
+      var o = Object.assign({ source: "command", analyze: true }, opts || {});
+      var result = await this.engage(o);
       return {
         handled: true,
         ok: !!result.ok,
-        texto: result.texto || REPLY,
+        texto: result.texto,
+        audio_base64: result.audio_base64,
+        audio_mime: result.audio_mime,
         result: result,
       };
     },
