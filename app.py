@@ -118,6 +118,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/deploy/strict-audit",
         "/api/intelligence/layers",
         "/api/intelligence/supervisor",
+        "/api/intelligence/challenge",
         "/api/deploy/stream",
         "/api/motor/estado",
         "/api/chat/nuevo",
@@ -1357,6 +1358,26 @@ def api_deploy_strict_audit() -> dict:
     from cognicion.core_master_strict_audit_and_deploy import run_strict_master_audit
 
     return run_strict_master_audit()
+
+
+@app.get("/api/intelligence/challenge")
+def api_intelligence_challenge() -> dict:
+    """Auditoría de reto autónomo — consolida hitos de producción."""
+    try:
+        from cognicion.core_salomon_cursor_challenge_and_autonomous_audit import (
+            run_cursor_challenge_audit,
+        )
+
+        return run_cursor_challenge_audit()
+    except Exception as exc:
+        return {
+            "ok": False,
+            "complete": False,
+            "status": "CHALLENGE_SOFT_FAIL",
+            "error": type(exc).__name__,
+            "detail": str(exc)[:240],
+            "fail_soft": True,
+        }
 
 
 @app.get("/api/intelligence/supervisor")
