@@ -540,11 +540,9 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
         except Exception:
             _skip_agent = not autonomo
         if _skip_agent:
-            class _AgenteSkip:
-                def contexto_para_chat(self) -> str:
-                    return ""
+            from cognicion.agente.autonomo import ResultadoAgente
 
-            resultado_agente = _AgenteSkip()
+            resultado_agente = ResultadoAgente(ejecutado=False, exito=False, resumen="skip_free_tier")
         else:
             resultado_agente = self._motor.ejecutar_agente(
                 entrada,
