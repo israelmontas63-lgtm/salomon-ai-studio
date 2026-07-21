@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T20:55:00Z",
-  "timestamp": 1753131300,
-  "version": "110.21.7",
+  "timestamp_iso": "2026-07-21T20:57:00Z",
+  "timestamp": 1753131420,
+  "version": "110.21.8",
   "channel": "main",
-  "label": "enrich-light-hard-timeout",
+  "label": "skip-agent-free-tier",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "LLM_ROBUST_CONNECT",
-  "notes": "v110.21.7 — Enrich light Free Tier + hard timeout 8s en Gemini; corta la causa real del Error 49 (proxy abort)."
+  "notes": "v110.21.8 — Skip agente autónomo en Free Tier chat; enrich light + hard timeout Gemini."
 }

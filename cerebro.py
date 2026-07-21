@@ -532,11 +532,25 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
         except Exception:
             _vision_evento = bool(imagen_base64)
 
-        resultado_agente = self._motor.ejecutar_agente(
-            entrada,
-            error_consola=error_consola,
-            autonomo=autonomo,
-        )
+        resultado_agente = None
+        try:
+            from settings import BOOT_LIGHT, RENDER_FREE_TIER
+
+            _skip_agent = bool(BOOT_LIGHT or RENDER_FREE_TIER) and not autonomo and not error_consola
+        except Exception:
+            _skip_agent = not autonomo
+        if _skip_agent:
+            class _AgenteSkip:
+                def contexto_para_chat(self) -> str:
+                    return ""
+
+            resultado_agente = _AgenteSkip()
+        else:
+            resultado_agente = self._motor.ejecutar_agente(
+                entrada,
+                error_consola=error_consola,
+                autonomo=autonomo,
+            )
 
         ctx_agente = resultado_agente.contexto_para_chat() or ""
         if (contexto_mente or "").strip():
