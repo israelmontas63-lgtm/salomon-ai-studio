@@ -1661,19 +1661,21 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
     try:
         return _chat_core(body, session_id, salomon)
     except Exception as exc:
-        from cognicion.errores import auditar_excepcion
+        from core.error_codes import format_error_response, get_error_info
 
-        # Stack trace completo en consola Render/local + código al usuario
-        err = auditar_excepcion(exc, origen="api.chat", pista="api")
+        # Blindaje oficial: código 20–49 + estructura estándar (+ audit stack)
+        pack = format_error_response(
+            exc,
+            hint="api",
+            origin="api.chat",
+            audit=True,
+        )
+        info = get_error_info(pack["error_codigo"])
         return ChatResponse(
-            texto=err.mensaje_usuario(),
+            texto=str(pack.get("texto") or f"Error {info['code']}: {info['message']}"),
             exito=False,
             session_id=session_id,
-            metadata={
-                **err.to_meta(),
-                "error": type(exc).__name__,
-                "detail": str(exc)[:240],
-            },
+            metadata=pack,
             audio_base64=None,
             audio_mime="audio/mpeg",
             tts_disponible=False,

@@ -28,6 +28,43 @@ _log = obtener_logger("llm")
 _ultimo_uso: dict[str, object] = {}
 
 
+def _anclar_error_proveedor(exc: Exception, *, provider: str) -> Exception:
+    """
+    Clasifica el fallo con el diccionario oficial (core.error_codes)
+    y ancla la estructura estandarizada en la excepción para el cerebro/chat.
+    """
+    try:
+        from core.error_codes import format_error_response, get_error_info
+
+        pack = format_error_response(
+            exc,
+            hint="api",
+            origin=f"cognicion.llm.{provider}",
+            audit=True,
+            extra_meta={"provider": provider},
+        )
+        info = get_error_info(pack.get("error_codigo", 49))
+        setattr(exc, "salomon_error_pack", pack)
+        setattr(exc, "salomon_error_code", int(info["code"]))
+        evento(
+            _log,
+            "llm_provider_error_coded",
+            provider=provider,
+            error_codigo=info["code"],
+            error_rango=info["range"],
+            error=type(exc).__name__,
+            detail=str(exc)[:240],
+        )
+    except Exception as bridge_exc:
+        evento(
+            _log,
+            "llm_error_codes_bridge_fail",
+            provider=provider,
+            error=type(bridge_exc).__name__,
+        )
+    return exc
+
+
 class ModelProvider(Protocol):
     """Contrato para proveedores de modelos."""
 
@@ -244,7 +281,7 @@ class GeminiProvider:
                 if texto:
                     return texto
             except Exception as exc:
-                ultimo_error = exc
+                ultimo_error = _anclar_error_proveedor(exc, provider="gemini")
                 evento(
                     _log,
                     "llm_gemini_exception",
@@ -252,6 +289,7 @@ class GeminiProvider:
                     error=type(exc).__name__,
                     detail=str(exc)[:400],
                     contents_n=len(contents),
+                    error_codigo=getattr(exc, "salomon_error_code", None),
                 )
                 if _es_error_recuperable(exc):
                     evento(
@@ -281,7 +319,7 @@ class GeminiProvider:
                 if texto:
                     return texto
             except Exception as exc:
-                ultimo_error = exc
+                ultimo_error = _anclar_error_proveedor(exc, provider="gemini")
                 if _es_error_recuperable(exc):
                     continue
                 raise
@@ -660,10 +698,10 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
                 )
             return resultado
         except NotImplementedError as exc:
-            ultimo_error = exc
+            ultimo_error = _anclar_error_proveedor(exc, provider=nombre)
             continue
         except Exception as exc:
-            ultimo_error = exc
+            ultimo_error = _anclar_error_proveedor(exc, provider=nombre)
             if not _es_error_recuperable(exc) and nombre != "local":
                 raise
             evento(
@@ -671,6 +709,7 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
                 "proveedor_fallido",
                 proveedor=nombre,
                 error=type(exc).__name__,
+                error_codigo=getattr(exc, "salomon_error_code", None),
             )
             continue
 

@@ -678,12 +678,18 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         return historial
     def _mensaje_error_gemini(self, error: Exception) -> str:
-        """Mensaje explícito con código 40–49 (API/conexión)."""
-        from cognicion.errores import clasificar, formatear_mensaje
+        """Mensaje explícito con código 40–49 vía diccionario oficial /core."""
+        from core.error_codes import format_error_response, get_error_info
 
-        seguro = enmascarar_secreto(str(error))
-        err = clasificar(error, pista="api")
-        # Causas humanas por código (sin filtrar el número)
+        pack = getattr(error, "salomon_error_pack", None)
+        if not isinstance(pack, dict):
+            pack = format_error_response(
+                error,
+                hint="api",
+                origin="cerebro._mensaje_error_gemini",
+                audit=False,
+            )
+        info = get_error_info(pack.get("error_codigo", 49))
         causas = {
             42: (
                 "La clave del modelo no es válida. "
@@ -699,11 +705,13 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             47: "El proveedor está temporalmente saturado. Reintenta en unos segundos.",
             48: "El formato de la solicitud fue rechazado. Reformula el mensaje.",
             46: "El modelo devolvió una respuesta vacía. Reformula tu mensaje.",
+            49: "El proveedor del modelo falló de forma inesperada. Reintenta en un momento.",
         }
-        causa = causas.get(err.codigo) or (
-            f"{err.causa}" if err.causa else seguro[:160]
+        codigo = int(info["code"])
+        causa = causas.get(codigo) or str(
+            pack.get("error_causa") or enmascarar_secreto(str(error))[:160]
         )
-        return formatear_mensaje(err.codigo, causa)
+        return f"Error {codigo}: {causa}"
 
     def _respuesta_degradada(
         self,
@@ -937,24 +945,55 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         except Exception as exc:
             from cognicion.registro import evento, obtener_logger
-            from cognicion.errores import auditar_excepcion, adjuntar_meta
+            from core.error_codes import format_error_response, get_error_info
 
-            # Auditoría inmediata: traceback completo en consola del servidor
-            err = auditar_excepcion(exc, origen="cerebro._generar_respuesta", pista="api")
-            adjuntar_meta(meta_extra, err)
+            # Estructura oficial (puede venir anclada desde cognicion.llm)
+            pack = getattr(exc, "salomon_error_pack", None)
+            if not isinstance(pack, dict):
+                pack = format_error_response(
+                    exc,
+                    hint="api",
+                    origin="cerebro._generar_respuesta",
+                    audit=True,
+                )
+            info = get_error_info(pack.get("error_codigo", 49))
+            codigo_num = int(info["code"])
+            meta_extra.update(
+                {
+                    k: pack[k]
+                    for k in (
+                        "error_codigo",
+                        "error_causa",
+                        "error_rango",
+                        "error_etiqueta",
+                        "error_tipo",
+                        "fail_soft",
+                        "origin",
+                        "error",
+                        "detail",
+                    )
+                    if k in pack
+                }
+            )
+            meta_extra.setdefault("cognicion", {})
+            if isinstance(pack.get("cognicion"), dict):
+                meta_extra["cognicion"].update(pack["cognicion"])
+            meta_extra["cognicion"]["error_codigo"] = codigo_num
+            meta_extra["cognicion"]["llm_error"] = type(exc).__name__
+
             evento(
                 obtener_logger("cerebro.chat"),
                 "chat_llm_exception",
                 session=self._sesion_id,
                 error=type(exc).__name__,
                 detail=str(exc)[:400],
-                error_codigo=err.codigo,
+                error_codigo=codigo_num,
             )
             texto_error = str(exc).lower()
             codigo = getattr(exc, "code", None)
             status = getattr(exc, "status_code", None)
             recuperable = (
-                err.codigo in (44, 45, 47, 39, 48)
+                codigo_num in (44, 45, 47, 39, 48)
                 or codigo in (429, "429", 404, "404")
                 or status in (429, 404, 503)
                 or any(
@@ -977,26 +1016,23 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                 )
             )
             if recuperable:
-                meta_extra.setdefault("cognicion", {})
-                meta_extra["cognicion"]["llm_error"] = type(exc).__name__
                 meta_extra["cognicion"]["llm_nota"] = (
-                    f"Proveedor E{err.codigo}; priorizando búsqueda web en vivo."
+                    f"Proveedor E{codigo_num}; priorizando búsqueda web en vivo."
                 )
                 degradada = sanitizar_salida_chat(
                     self._respuesta_degradada(entrada, meta_extra, mensaje_gemini)
                 )
-                # Si el respaldo también falla genérico → mensaje con código
-                if "no pude completar" in (degradada or "").lower():
-                    from cognicion.errores import formatear_mensaje
-
-                    degradada = formatear_mensaje(
-                        err.codigo,
+                if "no pude completar" in (degradada or "").lower() or degradada.startswith(
+                    "Error 41:"
+                ):
+                    degradada = (
+                        f"Error {codigo_num}: "
                         "El modelo falló y el respaldo web no aportó un resumen útil. "
-                        "Reformula la pregunta con un poco más de detalle.",
+                        "Reformula la pregunta con un poco más de detalle."
                     )
                     return degradada, False, meta_extra
                 return degradada, True, meta_extra
-            # Fallo duro: código explícito al usuario (no genérico)
+            # Fallo duro: estructura estandarizada al usuario
             return self._mensaje_error_gemini(exc), False, meta_extra
 
     def _contar_turnos(self) -> int:

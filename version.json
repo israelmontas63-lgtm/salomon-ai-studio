@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T20:20:00Z",
-  "timestamp": 1753129200,
-  "version": "110.21.1",
+  "timestamp_iso": "2026-07-21T20:30:00Z",
+  "timestamp": 1753129800,
+  "version": "110.21.2",
   "channel": "main",
-  "label": "datetime-fast-path",
+  "label": "core-error-codes-shield",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "LOCAL_DATETIME_NO_LLM",
-  "notes": "v110.21.1 — Fast-path fecha/hora local (AST RD) sin API; evita Error 49 por timeout del proveedor."
+  "protocol": "CORE_ERROR_CODES",
+  "notes": "v110.21.2 — Blindaje oficial core/error_codes en /api/chat y conectores LLM (format_error_response)."
 }
