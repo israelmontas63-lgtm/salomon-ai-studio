@@ -100,11 +100,13 @@
       // Pedir meta de build + sello neuronal (tuerquita)
       this._refreshVersionMeta();
       if (window.SalomonUpdate && window.SalomonUpdate.fetchBuild) {
-        window.SalomonUpdate.fetchBuild().then((b) => {
-          if (b && this.metaEl && !this.metaEl.querySelector(".control-layer__meta-ok")) {
-            this.setBuildMeta(b);
-          }
-        });
+        window.SalomonUpdate.fetchBuild()
+          .then((b) => {
+            if (b && this.metaEl && !this.metaEl.querySelector(".control-layer__meta-ok")) {
+              this.setBuildMeta(b);
+            }
+          })
+          .catch(function () {});
       }
 
       window.dispatchEvent(new CustomEvent("salomon:control-layer", { detail: { open: true } }));
@@ -184,7 +186,7 @@
         if (window.SalomonUpdate && window.SalomonUpdate.fetchBuild) {
           window.SalomonUpdate.fetchBuild().then((b) => {
             if (b) this.setBuildMeta(b);
-          });
+          }).catch(function () {});
         }
       }
     },
@@ -269,7 +271,6 @@
       document.body.appendChild(layer);
       this.root = layer;
       this.sheet = sheet;
-      this._refreshVersionMeta();
     },
 
     _runTool(tool, btn) {

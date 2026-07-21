@@ -633,16 +633,19 @@ def api_version() -> dict:
     key_ok = bool((CARTESIA_API_KEY or "").strip())
     voice_ok = bool((CARTESIA_VOICE_ID or "").strip())
 
-    # Sello neuronal para la tuerquita (fail-soft)
+    # Sello neuronal para la tuerquita (fail-soft honesto)
     sistema: dict = {
-        "sce": "102",
+        "sce": "102.0.0",
         "capas": "1-7",
         "vision_cross_modal": True,
         "busqueda_circuit_breaker": True,
         "law_of_one": True,
         "label": data.get("label") or "",
         "protocol": data.get("protocol") or "",
-        "activo": True,
+        "activo": False,
+        "sce_activo": False,
+        "bridges_sealed": False,
+        "seal_degraded": False,
     }
     try:
         from cognicion.evolucion.sce import SCE_VERSION, estado_sce
@@ -653,15 +656,25 @@ def api_version() -> dict:
         mods = sce.get("modulos_centrales_bajo_supervision") or []
         sistema["comic_engine"] = "comic_engine" in mods
     except Exception:
-        sistema["sce_activo"] = True
+        sistema["sce_activo"] = False
+        sistema["seal_degraded"] = True
     try:
         from cognicion.capas_inteligencia.neural_core_bridge import harmonize_all_layers
 
         bridges = harmonize_all_layers()
         sistema["bridges_sealed"] = bool(bridges.get("sealed"))
     except Exception:
-        sistema["bridges_sealed"] = None
+        sistema["bridges_sealed"] = False
+        sistema["seal_degraded"] = True
 
+    sistema["activo"] = bool(sistema.get("sce_activo")) and not bool(
+        sistema.get("seal_degraded")
+    )
+    if sistema.get("sce_activo") and sistema.get("bridges_sealed"):
+        sistema["activo"] = True
+    elif sistema.get("sce_activo") and sistema.get("bridges_sealed") is False:
+        sistema["activo"] = False
+        sistema["seal_degraded"] = True
     return {
         "estado": "ok",
         "servicio": "Salomón AI",
@@ -1526,14 +1539,22 @@ def api_intelligence_layers() -> dict:
             run_supreme_supervisor,
         )
 
-        return run_supreme_supervisor()
+        report = run_supreme_supervisor()
+        if isinstance(report, dict):
+            report.setdefault("ok", bool(report.get("complete")))
+            report.setdefault("complete", bool(report.get("ok")))
+        return report
     except Exception as exc:
         try:
             from cognicion.core_salomon_synaptic_contracts_and_layer_isolation import (
                 run_synaptic_architect,
             )
 
-            return run_synaptic_architect()
+            report = run_synaptic_architect()
+            if isinstance(report, dict):
+                report.setdefault("ok", bool(report.get("complete")))
+                report.setdefault("complete", bool(report.get("ok")))
+            return report
         except Exception as exc2:
             return {
                 "ok": False,
@@ -1605,6 +1626,23 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
 
     try:
         return _chat_core(body, session_id, salomon)
+    except Exception as exc:
+        return ChatResponse(
+            texto=(
+                "Israel, hubo un tropiezo interno al procesar tu mensaje. "
+                "Salomón sigue en línea — reformula o reintenta en un momento."
+            ),
+            exito=False,
+            session_id=session_id,
+            metadata={
+                "fail_soft": True,
+                "error": type(exc).__name__,
+                "detail": str(exc)[:240],
+            },
+            audio_base64=None,
+            audio_mime="audio/mpeg",
+            tts_disponible=False,
+        )
     finally:
         if ruta_ai_directa:
             try:
@@ -2446,60 +2484,79 @@ def cognicion_vision(body: VisionRequest) -> ChatResponse:
     arch = obtener_vision_architecture()
     entrada = (body.contexto or "Analiza esta captura y dime qué ves.").strip()
 
-    if body.via_brain_bridge:
-        pack = arch.process_frame_to_brain(
-            body.imagen_base64,
-            contexto=entrada,
-            focus_mode=body.focus_mode,
+    try:
+        if body.via_brain_bridge:
+            pack = arch.process_frame_to_brain(
+                body.imagen_base64,
+                contexto=entrada,
+                focus_mode=body.focus_mode,
+                imagen_mime=body.imagen_mime,
+                session_id=body.session_id,
+                obtener_sesion=_obtener_o_crear_sesion,
+                via_central_button=True,
+            )
+            brain = pack.get("brain") or {}
+            texto = brain.get("texto") or ""
+            session_id = brain.get("session_id") or body.session_id
+            if not session_id:
+                session_id, _ = _obtener_o_crear_sesion(body.session_id)
+            if texto:
+                _persistir_turno(session_id, entrada, texto)
+            meta = dict(brain.get("metadata") or {})
+            meta["vision_architecture"] = {
+                "focus_mode": pack.get("focus_mode"),
+                "via": pack.get("via"),
+                "analysis": pack.get("analysis"),
+                "ok": pack.get("ok"),
+            }
+            return ChatResponse(
+                texto=texto or "No pude interpretar la imagen. ¿Reintentamos?",
+                exito=bool(pack.get("ok") and texto),
+                session_id=session_id,
+                metadata=meta,
+                audio_base64=brain.get("audio_base64"),
+                audio_mime=brain.get("audio_mime") or "audio/mpeg",
+                tts_disponible=bool(brain.get("tts_disponible")),
+            )
+
+        # Fallback legacy (sin puente exclusivo)
+        session_id, salomon = _obtener_o_crear_sesion(body.session_id)
+        prompt = arch.analysis_prompt(body.focus_mode, entrada)
+        respuesta = salomon.procesar_entrada(
+            prompt,
+            imagen_base64=body.imagen_base64,
             imagen_mime=body.imagen_mime,
-            session_id=body.session_id,
-            obtener_sesion=_obtener_o_crear_sesion,
-            via_central_button=True,
         )
-        brain = pack.get("brain") or {}
-        texto = brain.get("texto") or ""
-        session_id = brain.get("session_id") or body.session_id
-        if not session_id:
-            session_id, _ = _obtener_o_crear_sesion(body.session_id)
-        if texto:
-            _persistir_turno(session_id, entrada, texto)
-        meta = dict(brain.get("metadata") or {})
+        _persistir_turno(session_id, entrada, respuesta.texto)
+        meta = dict(respuesta.metadata or {})
         meta["vision_architecture"] = {
-            "focus_mode": pack.get("focus_mode"),
-            "via": pack.get("via"),
-            "analysis": pack.get("analysis"),
-            "ok": pack.get("ok"),
+            "via": "legacy_procesar_entrada",
+            "focus_mode": body.focus_mode,
         }
         return ChatResponse(
-            texto=texto or "No pude interpretar la imagen. ¿Reintentamos?",
-            exito=bool(pack.get("ok") and texto),
+            texto=respuesta.texto,
+            exito=respuesta.exito,
             session_id=session_id,
             metadata=meta,
-            audio_base64=brain.get("audio_base64"),
-            audio_mime=brain.get("audio_mime") or "audio/mpeg",
-            tts_disponible=bool(brain.get("tts_disponible")),
+            audio_base64=respuesta.audio_base64,
+            audio_mime=respuesta.audio_mime or "audio/mpeg",
+            tts_disponible=respuesta.tts_disponible,
         )
-
-    # Fallback legacy (sin puente exclusivo)
-    session_id, salomon = _obtener_o_crear_sesion(body.session_id)
-    prompt = arch.analysis_prompt(body.focus_mode, entrada)
-    respuesta = salomon.procesar_entrada(
-        prompt,
-        imagen_base64=body.imagen_base64,
-        imagen_mime=body.imagen_mime,
-    )
-    _persistir_turno(session_id, entrada, respuesta.texto)
-    meta = dict(respuesta.metadata or {})
-    meta["vision_architecture"] = {"via": "legacy_procesar_entrada", "focus_mode": body.focus_mode}
-    return ChatResponse(
-        texto=respuesta.texto,
-        exito=respuesta.exito,
-        session_id=session_id,
-        metadata=meta,
-        audio_base64=respuesta.audio_base64,
-        audio_mime=respuesta.audio_mime or "audio/mpeg",
-        tts_disponible=respuesta.tts_disponible,
-    )
+    except Exception as exc:
+        session_id, _ = _obtener_o_crear_sesion(body.session_id)
+        return ChatResponse(
+            texto="No pude interpretar la imagen. ¿Reintentamos?",
+            exito=False,
+            session_id=session_id,
+            metadata={
+                "fail_soft": True,
+                "vision_architecture": {"ok": False, "error": type(exc).__name__},
+                "detail": str(exc)[:240],
+            },
+            audio_base64=None,
+            audio_mime="audio/mpeg",
+            tts_disponible=False,
+        )
 
 
 @app.post("/api/cognicion/vdcp")
@@ -3635,7 +3692,7 @@ def api_sellado_final() -> dict:
     import sys
     from pathlib import Path
 
-    script = Path(__file__).resolve().parent / "scripts" / "sellado_final_v103.py"
+    script = Path(__file__).resolve().parent / "plugins" / "scripts" / "sellado_final_v103.py"
     try:
         proc = subprocess.run(
             [sys.executable, str(script)],
@@ -3670,7 +3727,7 @@ def api_auditoria_preflight() -> dict:
     import sys
     from pathlib import Path
 
-    script = Path(__file__).resolve().parent / "scripts" / "preflight_audit_v98.py"
+    script = Path(__file__).resolve().parent / "plugins" / "scripts" / "preflight_audit_v98.py"
     try:
         proc = subprocess.run(
             [sys.executable, str(script)],

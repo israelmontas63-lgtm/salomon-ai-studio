@@ -3,7 +3,7 @@
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v69";
+const CACHE = "salomon-premium-v70";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -103,11 +103,13 @@ self.addEventListener("activate", (event) => {
       .then(() => self.clients.claim())
       .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
       .then((clients) => {
+        // Informativo: NO forzar hot-reload (evita bucles en primer install)
         clients.forEach(function (client) {
           client.postMessage({
-            type: "UPDATE_AVAILABLE",
+            type: "SW_ACTIVATED",
             cache: CACHE,
             event: "SW_ACTIVATED",
+            forceUpdate: false,
           });
         });
       })
@@ -152,7 +154,23 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Capas estáticas: stale-while-revalidate
+  // JS crítico: network-first (evita PWA con módulos viejos tras deploy)
+  if (path.startsWith("/static/js/")) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // CSS/assets: stale-while-revalidate
   if (isStaticLayer(path)) {
     event.respondWith(
       caches.match(req).then((hit) => {

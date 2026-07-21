@@ -1,6 +1,6 @@
 /**
  * Salomón AI — Update Manager (Hot-Loader PWA sin frenos)
- * Poll /api/version + /version.json → badge en tuerquita → hot-patch inmediato.
+ * Poll /api/version + /version.json → badge en tuerquita → hot-patch si build cambia.
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
@@ -24,7 +24,8 @@
           this.currentBuild = remote;
           if (!local) {
             localStorage.setItem(STORAGE_KEY, remote);
-          } else if (local !== remote) {
+          } else if (local !== remote && !this._isLocalDevBuild(remote)) {
+            // Toast + apply (build real cambió)
             this.applyUpdateNow(remote);
             return;
           }
@@ -39,7 +40,6 @@
         if (document.visibilityState === "visible") this.checkForUpdate();
       });
       window.addEventListener("online", () => this.checkForUpdate());
-      // Chequeo agresivo al recuperar foco
       window.addEventListener("focus", () => this.checkForUpdate());
 
       const toastBtn = document.getElementById("update-toast-btn");
@@ -55,23 +55,34 @@
       window.SalomonPWAHotLoader = this;
     },
 
+    _isLocalDevBuild(build) {
+      return /^local-/i.test(String(build || ""));
+    },
+
     _wireSwMessages() {
       if (!("serviceWorker" in navigator)) return;
       navigator.serviceWorker.addEventListener("message", (event) => {
         const data = event.data || {};
-        if (data.type === "UPDATE_AVAILABLE" || data.type === "SW_ACTIVATED") {
-          // Badge instantáneo + hot-load
-          this.applyUpdateNow(data.cache || data.build || "sw");
+        if (data.type === "UPDATE_AVAILABLE" && data.forceUpdate !== false) {
+          // Solo aplicar si el build remoto realmente cambió
+          this.checkForUpdate();
+          return;
+        }
+        if (data.type === "SW_ACTIVATED") {
+          // Informativo — no recargar en bucle
+          this.checkForUpdate();
           return;
         }
         if (data.type === "CACHES_CLEARED" || data.type === "SW_READY") {
-          this._hardReload();
+          // Recarga solo si este manager inició el hotPatch
+          if (applying || window.__salomon_awaiting_sw_claim) {
+            this._hardReload();
+          }
         }
       });
     },
 
     async fetchBuild() {
-      // Paquete de despliegue: /api/version (prioridad) + /version.json (fallback)
       var build = null;
       try {
         const res = await fetch("/api/version?t=" + Date.now(), {
@@ -105,13 +116,17 @@
           new CustomEvent("salomon:build-meta", { detail: { build: remote } })
         );
         const local = localStorage.getItem(STORAGE_KEY) || this.currentBuild;
-        if (local && remote && local !== remote) {
+        if (
+          local &&
+          remote &&
+          local !== remote &&
+          !this._isLocalDevBuild(remote)
+        ) {
           this.currentBuild = remote;
           this.applyUpdateNow(remote);
         } else if (remote) {
           this.currentBuild = remote;
         }
-        // Forzar SW update en paralelo (paquete nuevo en Render)
         if (navigator.serviceWorker) {
           const reg = await navigator.serviceWorker.getRegistration();
           if (reg && reg.update) reg.update().catch(function () {});
@@ -119,9 +134,10 @@
       } catch (_) {}
     },
 
-    /** Badge inmediato en tuerquita + toast + hot-patch (cero fricción) */
+    /** Badge inmediato en tuerquita + toast + hot-patch */
     applyUpdateNow(build) {
       if (applying) return;
+      if (this._isLocalDevBuild(build)) return;
       window.dispatchEvent(
         new CustomEvent("salomon:deploy-notify", {
           detail: {
@@ -159,6 +175,7 @@
     async hotPatch() {
       if (applying) return;
       applying = true;
+      window.__salomon_awaiting_sw_claim = true;
       this.hideToast();
       try {
         const remote = await this.fetchBuild();
@@ -203,6 +220,7 @@
           "/static/js/pwa-register.js",
           "/static/js/script.js",
           "/static/js/input_engine.js",
+          "/static/js/ui_controller.js",
           "/static/js/camera_logic.js",
           "/static/js/vision_engine.js",
           "/static/js/vision_mode_trigger.js",
@@ -212,15 +230,22 @@
         ];
         await Promise.all(
           assets.map((u) =>
-            fetch(u, { cache: "reload", credentials: "same-origin" }).catch(function () {})
+            fetch(u, { cache: "reload", credentials: "same-origin" }).catch(
+              function () {}
+            )
           )
         );
       } catch (_) {}
 
-      this._hardReload();
+      // Una sola recarga (CACHES_CLEARED / controllerchange pueden llegar después)
+      if (!window.__salomon_sw_refreshing) {
+        this._hardReload();
+      }
     },
 
     _hardReload() {
+      if (window.__salomon_sw_refreshing) return;
+      window.__salomon_sw_refreshing = true;
       const url = new URL(window.location.href);
       url.searchParams.set("v", String(Date.now()));
       window.location.replace(url.toString());

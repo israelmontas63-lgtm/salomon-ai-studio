@@ -347,6 +347,19 @@
     var V = window.SalomonVision;
 
     try {
+      if (cam && cam._waitForVideoReady) {
+        await cam._waitForVideoReady(1800);
+      } else if (cam && cam.video) {
+        var start = Date.now();
+        while (
+          (!cam.video.videoWidth || !cam.video.videoHeight) &&
+          Date.now() - start < 1800
+        ) {
+          await new Promise(function (r) {
+            setTimeout(r, 50);
+          });
+        }
+      }
       if (cam && cam.autoFocusFromText) {
         await cam.autoFocusFromText(mensaje);
       }

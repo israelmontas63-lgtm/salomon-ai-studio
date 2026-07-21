@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T14:50:00Z",
-  "timestamp": 1753109400,
-  "version": "110.18.0",
+  "timestamp_iso": "2026-07-21T16:20:00Z",
+  "timestamp": 1753114800,
+  "version": "110.18.1",
   "channel": "main",
-  "label": "neural-seal-layers-sce-vision",
+  "label": "industrial-audit-hotfix",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "NEURAL_SEAL_2026",
-  "notes": "v110.18.0 — Capas 2/3/7 selladas; SCE v102; enjambre L3; visión cross-modal; búsqueda con circuit breaker; tuerquita refleja sello neuronal. SW v69."
+  "protocol": "INDUSTRIAL_AUDIT_2026",
+  "notes": "v110.18.1 — Auditoría industrial: frena bucles SW, cámara lista antes de CAMARA_ACTIVA, chat/visión fail-soft, rutas sellado→plugins/scripts, tuerquita sello honesto. SW v70."
 }

@@ -657,34 +657,51 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                 meta_extra,
             )
 
-        mensaje_gemini, meta_cognicion = self._motor.enriquecer_mensaje(
-            entrada,
-            lat=lat,
-            lon=lon,
-            imagen_base64=imagen_base64,
-            imagen_mime=imagen_mime,
-            error_consola=error_consola,
-            contexto_agente=contexto_agente,
-            autonomo=autonomo,
-        )
-        meta_extra.update(meta_cognicion)
-
-        from cognicion.memoria.contexto_personal import bloque_contexto, extraer_y_aprender
-
-        hechos_nuevos = extraer_y_aprender(entrada)
-        bloque_personal = bloque_contexto()
-        if bloque_personal:
-            mensaje_gemini = f"{bloque_personal}\n\n{mensaje_gemini}"
-        if hechos_nuevos:
+        mensaje_gemini = entrada
+        meta_cognicion: dict = {}
+        try:
+            mensaje_gemini, meta_cognicion = self._motor.enriquecer_mensaje(
+                entrada,
+                lat=lat,
+                lon=lon,
+                imagen_base64=imagen_base64,
+                imagen_mime=imagen_mime,
+                error_consola=error_consola,
+                contexto_agente=contexto_agente,
+                autonomo=autonomo,
+            )
+            meta_extra.update(meta_cognicion)
+        except Exception as enrich_exc:
             meta_extra.setdefault("cognicion", {})
-            meta_extra["cognicion"]["memoria_personal_actualizada"] = hechos_nuevos
+            meta_extra["cognicion"]["enriquecer_error"] = type(enrich_exc).__name__
+            meta_extra["cognicion"]["fail_soft"] = True
+            mensaje_gemini = entrada
 
-        prioridad = (
-            meta_cognicion.get("cognicion", {}).get("modelo_prioridad", "chat")
-        )
-        config_modelo = resolver_modelo(prioridad)
-        meta_extra.setdefault("cognicion", {})
-        meta_extra["cognicion"]["modelo_resuelto"] = config_modelo
+        try:
+            from cognicion.memoria.contexto_personal import bloque_contexto, extraer_y_aprender
+
+            hechos_nuevos = extraer_y_aprender(entrada)
+            bloque_personal = bloque_contexto()
+            if bloque_personal:
+                mensaje_gemini = f"{bloque_personal}\n\n{mensaje_gemini}"
+            if hechos_nuevos:
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["memoria_personal_actualizada"] = hechos_nuevos
+        except Exception as mem_exc:
+            meta_extra.setdefault("cognicion", {})
+            meta_extra["cognicion"]["memoria_personal_error"] = type(mem_exc).__name__
+
+        try:
+            prioridad = (
+                meta_cognicion.get("cognicion", {}).get("modelo_prioridad", "chat")
+            )
+            config_modelo = resolver_modelo(prioridad)
+            meta_extra.setdefault("cognicion", {})
+            meta_extra["cognicion"]["modelo_resuelto"] = config_modelo
+        except Exception:
+            config_modelo = {}
+            meta_extra.setdefault("cognicion", {})
+            meta_extra["cognicion"]["modelo_resuelto"] = config_modelo
 
         try:
             historial = self._historial_para_gemini()

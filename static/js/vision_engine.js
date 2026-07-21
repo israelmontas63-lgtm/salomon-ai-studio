@@ -93,6 +93,11 @@
         await new Promise(function (r) {
           setTimeout(r, 350);
         });
+        if (cam && cam._waitForVideoReady) {
+          try {
+            await cam._waitForVideoReady(2000);
+          } catch (_) {}
+        }
       }
       if (!this.session.active) {
         this._bubble(
@@ -276,7 +281,14 @@
       if (this.session.busy) return null;
       this.session.busy = true;
 
-      const raw = (dataUrl || "").replace(/^data:image\/\w+;base64,/, "");
+      const mimeMatch = String(dataUrl || "").match(
+        /^data:(image\/[\w.+-]+);base64,/i
+      );
+      const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+      const raw = String(dataUrl || "").replace(
+        /^data:image\/[\w.+-]+;base64,/i,
+        ""
+      );
       const typing = this._bubble("bot", "Mirando…");
       if (typing) typing.classList.add("typing");
 
@@ -289,7 +301,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             imagen_base64: raw,
-            imagen_mime: "image/jpeg",
+            imagen_mime: mime,
             contexto: contexto,
             session_id: this.session.sessionId,
             focus_mode: focusMode,

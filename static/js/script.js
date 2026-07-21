@@ -129,7 +129,12 @@
       return;
     }
 
-    // Comandos de visión (si el módulo está cargado)
+    // Comandos de visión (asegurar stack cámara antes de parsear)
+    try {
+      if (window.SalomonMain && window.SalomonMain.ensureCameraStack) {
+        await window.SalomonMain.ensureCameraStack();
+      }
+    } catch (_) {}
     if (window.SalomonVision && window.SalomonVision.parseCommand(msg).handled) {
       addBubble(msg, "user");
       if (input) input.value = "";

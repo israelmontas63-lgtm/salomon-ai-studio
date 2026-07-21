@@ -664,7 +664,7 @@ class MotorCognicion:
         )
         try:
             from cognicion.cognitivo import registrar_exito
-            from cognicion.cognitivo.episodica import es_correccion_usuario
+            from cognicion.episodica import es_correccion_usuario
 
             if not es_correccion_usuario(usuario) and (asistente or "").strip():
                 registrar_exito(

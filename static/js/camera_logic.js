@@ -124,11 +124,12 @@
       this.facingMode = "environment";
       this.focusMode = "continuous";
       try {
-        // UI inmediata — stream en paralelo perceptivo
+        // UI inmediata — emitir CAMARA_ACTIVA solo cuando el video tiene frames
         if (this.camWrap) this.camWrap.classList.add("is-active");
         if (this.stage) this.stage.classList.add("is-visible");
-        this._emit(States.CAMARA_ACTIVA);
         await this._startStream(this.facingMode);
+        await this._waitForVideoReady(2500);
+        this._emit(States.CAMARA_ACTIVA);
       } catch (err) {
         await this.closeCamera();
         var msg = this._permissionErrorMessage(err);
@@ -208,10 +209,11 @@
         this.stage.classList.toggle("is-selfie", this.facingMode === "user");
       }
       this.state = States.CAMARA_ACTIVA;
-      this._emit(States.CAMARA_ACTIVA);
 
       try {
         await this._startStream(this.facingMode, { fast: true, skipFocus: true });
+        await this._waitForVideoReady(2000);
+        this._emit(States.CAMARA_ACTIVA);
         this._notify(
           this.facingMode === "user"
             ? "Modo Selfie activo. El gatillo sigue listo."
@@ -587,6 +589,22 @@
           await this.ensureSharpFocus();
         } catch (_) {}
       }
+    },
+
+    /** Espera a que el <video> tenga dimensiones reales (frames listos). */
+    async _waitForVideoReady(timeoutMs) {
+      timeoutMs = timeoutMs || 2000;
+      var video = this.video;
+      if (!video) return false;
+      if (video.videoWidth > 0 && video.videoHeight > 0) return true;
+      var start = Date.now();
+      while (Date.now() - start < timeoutMs) {
+        if (video.videoWidth > 0 && video.videoHeight > 0) return true;
+        await new Promise(function (r) {
+          setTimeout(r, 50);
+        });
+      }
+      return !!(video.videoWidth && video.videoHeight);
     },
 
     /**
