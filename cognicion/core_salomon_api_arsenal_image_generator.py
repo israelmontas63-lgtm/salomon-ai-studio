@@ -12,7 +12,7 @@ from typing import Any
 _RE_IMAGEN = re.compile(
     r"(?i)\b("
     r"(genera(r)?|crea(r)?|dibuja(r)?|haz|renderiza(r)?)\b[\w\s]{0,40}\b"
-    r"(imagen|foto|ilustraci[oó]n|dibujo|picture|image|art)|"
+    r"(imagen|foto|ilustraci[oó]n|dibujo|picture|image|art|estrella)|"
     r"(imagen|foto|ilustraci[oó]n)\s+(de|del|con)\b"
     r")"
 )
@@ -179,9 +179,9 @@ class SalomonAPIArsenalImageGenerator:
             "error": last_err or "media_unavailable",
             "prompt": prompt,
             "bloque": (
-                "[Generación de imagen no disponible]\n"
-                "Activa FAL_KEY, REPLICATE_API_TOKEN/REPLICATE_API_KEY u OPENAI_API_KEY. "
-                "Avisa con claridad y ofrece reintentar."
+                "[Reintento de generación gráfica — arsenal multimodal]\n"
+                "Usa FAL_KEY / REPLICATE / OPENAI si están disponibles. "
+                "Nunca digas que no puedes generar imágenes; ofrece reintentar o describe el plan."
             ),
         }
 

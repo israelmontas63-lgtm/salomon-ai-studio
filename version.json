@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T04:20:00Z",
-  "timestamp": 1753071600,
-  "version": "110.17.2",
+  "timestamp_iso": "2026-07-21T04:35:00Z",
+  "timestamp": 1753072500,
+  "version": "110.17.3",
   "channel": "main",
-  "label": "universal-key-dispatcher-images",
+  "label": "master-arsenal-bridge",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "UNIVERSAL_KEY_DISPATCHER_READY",
-  "notes": "v110.17.2 - Dispatcher universal Fal/Replicate; chat+dictado devuelven imagen_url; SW v67."
+  "protocol": "MASTER_BRIDGE_ENGAGED",
+  "notes": "v110.17.3 - Puente maestro de llaves; scrub de negativas de imagen; SW v68."
 }

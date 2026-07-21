@@ -206,6 +206,24 @@ def _iniciar_nucleo_os(app_ref: FastAPI) -> None:
             hibernar_agentes()
         except Exception:
             pass
+
+        # Puente maestro: inventaría y enlaza TODAS las llaves (.env / Render)
+        try:
+            from cognicion.core_salomon_master_arsenal_bridge import (
+                engage_master_bridge,
+            )
+
+            snap = engage_master_bridge()
+            evento(
+                _log,
+                "master_bridge_engaged",
+                image=snap.get("image_generation_available"),
+                llm=snap.get("llm_available"),
+                route=snap.get("preferred_image_route"),
+            )
+        except Exception as exc:
+            _log.warning("master_bridge_omitido: %s", exc)
+
         evento(_log, "nucleo_iniciado", boot_light=light)
     except Exception as exc:
         _log.exception("startup_parcial_fallo: %s", exc)
@@ -1279,38 +1297,32 @@ def api_ai_central_button(body: CentralButtonRequest) -> dict:
         only_activate=body.only_activate,
     )
     brain = pack.get("brain") or {}
-    # Dictado / botón: dispatcher universal → FAL/Replicate si pidió imagen
+    # Dictado / botón: puente maestro → Fal/Replicate si pidió imagen
     try:
-        from cognicion.core_salomon_universal_key_dispatcher import (
-            dispatch_image_intent,
-            obtener_dispatcher,
-        )
+        from cognicion.core_salomon_master_arsenal_bridge import obtener_bridge
 
-        if mensaje and obtener_dispatcher().wants_image(mensaje):
+        bridge = obtener_bridge()
+        if mensaje:
             meta_b = dict(brain.get("metadata") or {})
             meta_b.setdefault("cognicion", {})
             gen = (meta_b.get("cognicion") or {}).get("imagen_generada") or {}
             url = gen.get("url") if isinstance(gen, dict) else None
             if not url:
-                pack_img = dispatch_image_intent(mensaje)
+                pack_img = bridge.ensure_image_for_prompt(mensaje)
                 if pack_img.get("ok") and pack_img.get("url"):
                     url = str(pack_img["url"])
                     meta_b["cognicion"]["imagen_generada"] = {
                         "url": url,
-                        "via": pack_img.get("via") or "universal_dispatcher",
+                        "via": pack_img.get("via") or "master_bridge",
                     }
-                    brain = dict(brain)
-                    brain["metadata"] = meta_b
-                    texto_b = str(brain.get("texto") or "")
-                    if url not in texto_b:
-                        brain["texto"] = (
-                            (texto_b.rstrip() + "\n\n") if texto_b.strip() else ""
-                        ) + f"Imagen lista: {url}"
-                    brain["imagen_url"] = url
-                    pack = dict(pack)
-                    pack["brain"] = brain
-            elif url:
+            if url:
                 brain = dict(brain)
+                brain["metadata"] = meta_b
+                texto_b = bridge.scrub_capability_refusals(
+                    str(brain.get("texto") or ""),
+                    imagen_url=url,
+                )
+                brain["texto"] = texto_b
                 brain["imagen_url"] = url
                 pack = dict(pack)
                 pack["brain"] = brain
@@ -1601,49 +1613,35 @@ def _chat_core(body: ChatRequest, session_id: str, salomon) -> ChatResponse:
     except Exception:
         imagen_url = None
 
-    # Garantía: pedido de imagen → dispatcher universal (FAL/Replicate/OpenAI)
+    # Garantía: pedido de imagen → puente maestro (Fal/Replicate/OpenAI)
     try:
-        from cognicion.core_salomon_universal_key_dispatcher import (
-            dispatch_image_intent,
-            obtener_dispatcher,
-        )
+        from cognicion.core_salomon_master_arsenal_bridge import obtener_bridge
 
-        if obtener_dispatcher().wants_image(body.mensaje or "") and not imagen_url:
-            pack_img = dispatch_image_intent(body.mensaje or "")
+        bridge = obtener_bridge()
+        if not imagen_url:
+            pack_img = bridge.ensure_image_for_prompt(body.mensaje or "")
             if pack_img.get("ok") and pack_img.get("url"):
                 imagen_url = str(pack_img["url"])
                 meta["cognicion"]["imagen_generada"] = {
                     "url": imagen_url,
-                    "via": pack_img.get("via") or "universal_dispatcher",
+                    "via": pack_img.get("via") or "master_bridge",
                 }
     except Exception as exc_img:
         meta["cognicion"]["imagen_hook_error"] = type(exc_img).__name__
-        # Fallback arsenal directo
-        try:
-            from cognicion.core_salomon_api_arsenal_image_generator import (
-                generate_from_intent,
-                obtener_arsenal,
-            )
 
-            if obtener_arsenal().wants_image(body.mensaje or "") and not imagen_url:
-                pack_img = generate_from_intent(body.mensaje or "")
-                if pack_img.get("ok") and pack_img.get("url"):
-                    imagen_url = str(pack_img["url"])
-                    meta["cognicion"]["imagen_generada"] = {
-                        "url": imagen_url,
-                        "via": pack_img.get("via") or "arsenal_chat_hook",
-                    }
-        except Exception as exc2:
-            meta["cognicion"]["imagen_hook_error"] = (
-                meta["cognicion"].get("imagen_hook_error")
-                or type(exc2).__name__
-            )
+    try:
+        from cognicion.core_salomon_master_arsenal_bridge import obtener_bridge
 
-    texto_out = respuesta.texto or ""
-    if imagen_url and imagen_url not in texto_out:
-        texto_out = (
-            (texto_out.rstrip() + "\n\n") if texto_out.strip() else ""
-        ) + f"Imagen lista: {imagen_url}"
+        texto_out = obtener_bridge().scrub_capability_refusals(
+            respuesta.texto or "",
+            imagen_url=imagen_url,
+        )
+    except Exception:
+        texto_out = respuesta.texto or ""
+        if imagen_url and imagen_url not in texto_out:
+            texto_out = (
+                (texto_out.rstrip() + "\n\n") if texto_out.strip() else ""
+            ) + f"Imagen lista: {imagen_url}"
 
     # Persistir también turnos solo-imagen (antes se perdían si mensaje vacío)
     if body.mensaje.strip() or imagen_b64:
@@ -2800,6 +2798,15 @@ def api_media_job(job_id: str) -> dict:
 class ArsenalImagenRequest(BaseModel):
     mensaje: str = Field(default="", max_length=4000)
     prompt: str = Field(default="", max_length=4000)
+
+
+@app.get("/api/bridge/status")
+def api_bridge_status() -> dict:
+    """Puente maestro: inventario completo de llaves (.env / Render)."""
+    from cognicion.core_salomon_master_arsenal_bridge import obtener_bridge
+
+    snap = obtener_bridge().verify_and_connect_all()
+    return {"ok": True, "backend": "FastAPI", **snap}
 
 
 @app.get("/api/dispatcher/status")
