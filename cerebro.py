@@ -270,6 +270,9 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             RespuestaSalomon con el texto de respuesta y metadatos.
         """
         entrada = (texto or "").strip()
+        # Raíz visión: foto sin texto no debe abortar el pipeline multimodal
+        if not entrada and imagen_base64:
+            entrada = "Analiza esta captura y dime qué ves con precisión."
 
         if not entrada:
             aviso = "Estoy atento. Escribe tu consulta cuando quieras."
@@ -283,39 +286,40 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                 tts_disponible=tts.tts_disponible,
             )
 
-        # Identidad + Capa Espiritual — consulta memoria antes de improvisar
-        try:
-            from cognicion.core_identity_engine import obtener_identity_engine
+        # Identidad + Capa Espiritual — no cortocircuitar si hay imagen a analizar
+        if not imagen_base64:
+            try:
+                from cognicion.core_identity_engine import obtener_identity_engine
 
-            pack_id = obtener_identity_engine().consultar(entrada)
-            if pack_id and pack_id.get("texto"):
-                texto_id = str(pack_id["texto"])
-                self._historial.append(Mensaje(rol="usuario", contenido=entrada))
-                self._historial.append(Mensaje(rol="asistente", contenido=texto_id))
-                self._recortar_historial()
-                self._motor.registrar_turno(entrada, texto_id)
-                tts = texto_a_voz(texto_id)
-                return RespuestaSalomon(
-                    texto=texto_id,
-                    exito=True,
-                    metadata={
-                        "cognicion": {
-                            "identidad": True,
-                            "spiritual_layer": pack_id.get("layer")
-                            in ("SpiritualLayer", "SalomonConsciousness"),
-                            "layer": pack_id.get("layer"),
-                            "tono": pack_id.get("tono"),
-                            "protocolo": pack_id.get("protocolo")
-                            or "SALOMON_CONSCIOUSNESS",
-                            "version": "103.0.0",
-                        }
-                    },
-                    audio_base64=tts.audio_base64,
-                    audio_mime=tts.audio_mime,
-                    tts_disponible=tts.tts_disponible,
-                )
-        except Exception:
-            pass
+                pack_id = obtener_identity_engine().consultar(entrada)
+                if pack_id and pack_id.get("texto"):
+                    texto_id = str(pack_id["texto"])
+                    self._historial.append(Mensaje(rol="usuario", contenido=entrada))
+                    self._historial.append(Mensaje(rol="asistente", contenido=texto_id))
+                    self._recortar_historial()
+                    self._motor.registrar_turno(entrada, texto_id)
+                    tts = texto_a_voz(texto_id)
+                    return RespuestaSalomon(
+                        texto=texto_id,
+                        exito=True,
+                        metadata={
+                            "cognicion": {
+                                "identidad": True,
+                                "spiritual_layer": pack_id.get("layer")
+                                in ("SpiritualLayer", "SalomonConsciousness"),
+                                "layer": pack_id.get("layer"),
+                                "tono": pack_id.get("tono"),
+                                "protocolo": pack_id.get("protocolo")
+                                or "SALOMON_CONSCIOUSNESS",
+                                "version": "103.0.0",
+                            }
+                        },
+                        audio_base64=tts.audio_base64,
+                        audio_mime=tts.audio_mime,
+                        tts_disponible=tts.tts_disponible,
+                    )
+            except Exception:
+                pass
 
         # Gatillo Modo Visión — enciende pipeline visual (cliente abre cámara + elevación)
         try:

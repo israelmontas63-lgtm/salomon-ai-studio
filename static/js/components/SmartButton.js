@@ -475,9 +475,18 @@
 
       if (result && result.data && result.data.audio_base64) {
         try {
-          var mime = result.data.audio_mime || "audio/mpeg";
-          var audio = new Audio("data:" + mime + ";base64," + result.data.audio_base64);
-          audio.play().catch(function () {});
+          if (
+            window.SalomonVoiceLayer &&
+            window.SalomonVoiceLayer.playFromResponse
+          ) {
+            window.SalomonVoiceLayer.playFromResponse(result.data);
+          } else {
+            var mime = result.data.audio_mime || "audio/mpeg";
+            var audio = new Audio(
+              "data:" + mime + ";base64," + result.data.audio_base64
+            );
+            audio.play().catch(function () {});
+          }
         } catch (_) {}
       }
 

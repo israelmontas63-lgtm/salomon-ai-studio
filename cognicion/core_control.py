@@ -78,10 +78,17 @@ def trigger_ai_core(
 
     payload = data_payload if data_payload is not None else {}
     msg = ""
+    has_image = False
     if isinstance(payload, str):
         msg = payload.strip()
     elif isinstance(payload, dict):
         msg = str(payload.get("mensaje") or "").strip()
+        has_image = bool(payload.get("imagen_base64"))
+        # Foto sin texto: forzar mensaje para que el cerebro ejecute visión
+        if has_image and not msg:
+            msg = "Analiza esta captura y dime qué ves con precisión."
+            payload = dict(payload)
+            payload["mensaje"] = msg
 
     result: dict[str, Any] = {
         "ok": True,
@@ -92,8 +99,8 @@ def trigger_ai_core(
         "is_ai_active": True,
     }
     try:
-        # only_activate / mensaje vacío: deja AI_PROCESSING (mic / armado)
-        if only_activate or not msg:
+        # only_activate / mensaje vacío (sin imagen): deja AI_PROCESSING (mic / armado)
+        if only_activate or (not msg and not has_image):
             return {**result, **get_system_state(), "brain": None}
 
         brain = execute_brain_sync(payload, obtener_sesion=obtener_sesion)

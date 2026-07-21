@@ -312,7 +312,8 @@ class MotorCognicion:
 
         mensaje_trabajo = entrada
 
-        if plan.usar_vision and imagen_base64:
+        # Raíz: si hay bytes de imagen, SIEMPRE analizar (no depender solo de intención)
+        if imagen_base64:
             vision = analizar_imagen(
                 imagen_base64,
                 mime_type=imagen_mime,
@@ -321,6 +322,7 @@ class MotorCognicion:
             if vision.exito:
                 bloques.append(vision.contexto)
                 meta["cognicion"]["vision_usado"] = True
+                meta["cognicion"]["vision_forced"] = not bool(plan.usar_vision)
             else:
                 bloques.append(
                     "[Análisis visual no disponible] "

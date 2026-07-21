@@ -30,8 +30,8 @@ class GestorMemoria:
     def activa(self) -> bool:
         return self._vectorial.activa
 
-    def memoria_inmediata(self, limite: int = 6) -> str:
-        """Últimos turnos desde SQLite."""
+    def memoria_inmediata(self, limite: int = 16) -> str:
+        """Últimos turnos desde SQLite (ventana corta ampliada para estabilidad)."""
         mensajes = ultimos_mensajes(self.session_id, limite=limite)
         if not mensajes:
             return ""

@@ -82,8 +82,10 @@ DEEPGRAM_LANGUAGE = os.getenv("DEEPGRAM_LANGUAGE", "es").strip() or "es"
 ELEVENLABS_VOICE_ADAM = "pNInz6obpgDQGcFmaJgB"
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "").strip()
 _raw_voice = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
-# Normaliza typos de casing del Voice ID Adam (Render suele pegar N/F mal)
-if _raw_voice and _raw_voice.lower() == ELEVENLABS_VOICE_ADAM.lower():
+# Normaliza typos de casing; si falta Voice ID → Adam por defecto (producción)
+if not _raw_voice:
+    ELEVENLABS_VOICE_ID = ELEVENLABS_VOICE_ADAM
+elif _raw_voice.lower() == ELEVENLABS_VOICE_ADAM.lower():
     ELEVENLABS_VOICE_ID = ELEVENLABS_VOICE_ADAM
 else:
     ELEVENLABS_VOICE_ID = _raw_voice
@@ -230,7 +232,7 @@ COLSUB_RAM_CRITICO = float(os.getenv("COLSUB_RAM_CRITICO", "68"))
 RENDER_FREE_TIER = os.getenv("RENDER_FREE_TIER", "true").strip().lower() in (
     "1", "true", "yes", "on",
 )
-MAX_SESIONES_RAM = int(os.getenv("MAX_SESIONES_RAM", "2" if RENDER_FREE_TIER else "8"))
+MAX_SESIONES_RAM = int(os.getenv("MAX_SESIONES_RAM", "4" if RENDER_FREE_TIER else "8"))
 MEDIA_HTTP_TIMEOUT = float(os.getenv("MEDIA_HTTP_TIMEOUT", "45"))
 MEDIA_HTTP_TIMEOUT_POLL = float(os.getenv("MEDIA_HTTP_TIMEOUT_POLL", "30"))
 MEDIA_ASYNC_DEFAULT = os.getenv("MEDIA_ASYNC_DEFAULT", "true").strip().lower() in (

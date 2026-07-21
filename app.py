@@ -1246,12 +1246,29 @@ def api_ai_central_button(body: CentralButtonRequest) -> dict:
     """
     from cognicion.core_control import trigger_ai_core
 
+    imagen_b64 = body.imagen_base64
+    imagen_mime = body.imagen_mime or "image/jpeg"
+    if imagen_b64:
+        try:
+            from views.capture import normalize_frame_payload
+
+            frame = normalize_frame_payload(imagen_b64, mime=imagen_mime)
+            if frame.get("ok"):
+                imagen_b64 = frame.get("imagen_base64") or imagen_b64
+                imagen_mime = frame.get("imagen_mime") or imagen_mime
+        except Exception:
+            pass
+
+    mensaje = (body.mensaje or "").strip()
+    if imagen_b64 and not mensaje:
+        mensaje = "Analiza esta captura y dime qué ves con precisión."
+
     pack = trigger_ai_core(
         {
-            "mensaje": body.mensaje,
+            "mensaje": mensaje,
             "session_id": body.session_id,
-            "imagen_base64": body.imagen_base64,
-            "imagen_mime": body.imagen_mime,
+            "imagen_base64": imagen_b64,
+            "imagen_mime": imagen_mime,
             "lat": body.lat,
             "lon": body.lon,
         },
@@ -1259,10 +1276,10 @@ def api_ai_central_button(body: CentralButtonRequest) -> dict:
         only_activate=body.only_activate,
     )
     brain = pack.get("brain") or {}
-    if body.mensaje.strip() and brain.get("session_id") and brain.get("texto"):
+    if (mensaje or imagen_b64) and brain.get("session_id") and brain.get("texto"):
         _persistir_turno(
             brain["session_id"],
-            body.mensaje.strip(),
+            mensaje or "[foto]",
             brain.get("texto") or "",
         )
     return pack

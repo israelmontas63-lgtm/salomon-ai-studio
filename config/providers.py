@@ -98,9 +98,8 @@ def cadenas() -> dict[Servicio, list[ProviderSlot]]:
             ProviderSlot(
                 "elevenlabs",
                 "ELEVENLABS_API_KEY",
-                # API key sola no basta: hace falta Voice ID para sintetizar.
-                _presente(S.ELEVENLABS_API_KEY)
-                and _presente(getattr(S, "ELEVENLABS_VOICE_ID", "")),
+                # Key basta: Voice ID vacío → resolver Adam canónico en runtime.
+                _presente(S.ELEVENLABS_API_KEY),
             ),
             ProviderSlot(
                 "cartesia",

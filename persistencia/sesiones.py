@@ -13,8 +13,14 @@ from settings import SESIONES_DB
 
 def _conexion() -> sqlite3.Connection:
     SESIONES_DB.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(SESIONES_DB, check_same_thread=False)
+    conn = sqlite3.connect(SESIONES_DB, check_same_thread=False, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("PRAGMA synchronous=NORMAL")
+    except Exception:
+        pass
     return conn
 
 
@@ -86,19 +92,36 @@ def guardar_mensaje(session_id: str, rol: str, contenido: str) -> None:
         return
 
     ahora = datetime.now(timezone.utc).isoformat()
-    asegurar_sesion(session_id)
+    # Una sola conexión (evita busy races ensure+insert)
     with _conexion() as conn:
-        conn.execute(
-            """
-            INSERT INTO mensajes (session_id, rol, contenido, timestamp)
-            VALUES (?, ?, ?, ?)
-            """,
-            (session_id, rol, contenido, ahora),
-        )
-        conn.execute(
-            "UPDATE sesiones SET actualizada_en = ? WHERE id = ?",
-            (ahora, session_id),
-        )
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute(
+                """
+                INSERT INTO sesiones (id, creada_en, actualizada_en)
+                VALUES (?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET actualizada_en = excluded.actualizada_en
+                """,
+                (session_id, ahora, ahora),
+            )
+            conn.execute(
+                """
+                INSERT INTO mensajes (session_id, rol, contenido, timestamp)
+                VALUES (?, ?, ?, ?)
+                """,
+                (session_id, rol, contenido, ahora),
+            )
+            conn.execute(
+                "UPDATE sesiones SET actualizada_en = ? WHERE id = ?",
+                (ahora, session_id),
+            )
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
 
 
 def cargar_mensajes(session_id: str) -> list[dict[str, str]]:
