@@ -1907,12 +1907,12 @@ def _chat_core(body: ChatRequest, session_id: str, salomon) -> ChatResponse:
 
     return ChatResponse(
         texto=texto_out,
-        exito=respuesta.exito,
+        exito=bool(getattr(respuesta, "exito", False)),
         session_id=session_id,
         metadata=meta,
-        audio_base64=respuesta.audio_base64,
-        audio_mime=respuesta.audio_mime or "audio/mpeg",
-        tts_disponible=respuesta.tts_disponible,
+        audio_base64=getattr(respuesta, "audio_base64", None),
+        audio_mime=getattr(respuesta, "audio_mime", None) or "audio/mpeg",
+        tts_disponible=bool(getattr(respuesta, "tts_disponible", False)),
         imagen_url=imagen_url,
     )
 

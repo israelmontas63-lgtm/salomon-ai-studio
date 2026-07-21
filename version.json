@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T21:10:00Z",
-  "timestamp": 1753132200,
-  "version": "110.21.10",
+  "timestamp_iso": "2026-07-21T21:20:00Z",
+  "timestamp": 1753132800,
+  "version": "110.21.11",
   "channel": "main",
-  "label": "gemini-env-deadline-fix",
+  "label": "fix-resperr-tts-attr",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "LLM_ROBUST_CONNECT",
-  "notes": "v110.21.10 — Never override Render secrets; Gemini deadline >=10s; retry=1; reload-env; flash-lite default."
+  "notes": "v110.21.11 — Fix _RespErr.tts_disponible (Error 27 false positive); safe getattr on chat pack."
 }

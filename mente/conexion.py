@@ -91,6 +91,8 @@ def procesar_unificado(
             metadata = err.to_meta()
             audio_base64 = None
             audio_mime = "audio/mpeg"
+            tts_disponible = False
+            imagen_url = None
 
         respuesta = _RespErr()
         texto = respuesta.texto
