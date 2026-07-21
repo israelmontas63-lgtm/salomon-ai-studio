@@ -117,6 +117,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/neural/master",
         "/api/deploy/strict-audit",
         "/api/intelligence/layers",
+        "/api/intelligence/supervisor",
         "/api/deploy/stream",
         "/api/motor/estado",
         "/api/chat/nuevo",
@@ -1358,24 +1359,51 @@ def api_deploy_strict_audit() -> dict:
     return run_strict_master_audit()
 
 
-@app.get("/api/intelligence/layers")
-def api_intelligence_layers() -> dict:
-    """Contratos sinápticos estrictos + aislamiento (fail-soft en producción)."""
+@app.get("/api/intelligence/supervisor")
+def api_intelligence_supervisor() -> dict:
+    """Agente Supervisor Supremo — auditoría cruzada + estado web intelligence."""
     try:
-        from cognicion.core_salomon_synaptic_contracts_and_layer_isolation import (
-            run_synaptic_architect,
+        from cognicion.core_salomon_supreme_supervisor_and_web_intelligence import (
+            run_supreme_supervisor,
         )
 
-        return run_synaptic_architect()
+        return run_supreme_supervisor()
     except Exception as exc:
         return {
             "ok": False,
             "complete": False,
-            "status": "LAYERS_AUDIT_SOFT_FAIL",
+            "status": "SUPERVISOR_SOFT_FAIL",
             "error": type(exc).__name__,
             "detail": str(exc)[:240],
             "fail_soft": True,
         }
+
+
+@app.get("/api/intelligence/layers")
+def api_intelligence_layers() -> dict:
+    """Contratos sinápticos + supervisor (fail-soft)."""
+    try:
+        from cognicion.core_salomon_supreme_supervisor_and_web_intelligence import (
+            run_supreme_supervisor,
+        )
+
+        return run_supreme_supervisor()
+    except Exception as exc:
+        try:
+            from cognicion.core_salomon_synaptic_contracts_and_layer_isolation import (
+                run_synaptic_architect,
+            )
+
+            return run_synaptic_architect()
+        except Exception as exc2:
+            return {
+                "ok": False,
+                "complete": False,
+                "status": "LAYERS_AUDIT_SOFT_FAIL",
+                "error": type(exc).__name__,
+                "fallback_error": type(exc2).__name__,
+                "fail_soft": True,
+            }
 
 
 @app.get("/api/deploy/stream")

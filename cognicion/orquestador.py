@@ -262,6 +262,34 @@ class MotorCognicion:
         except Exception as exc:
             meta["cognicion"]["master_neural_error"] = type(exc).__name__
 
+        # Supervisor Supremo: audita capas + web intelligence si falta contexto
+        try:
+            from cognicion.core_salomon_supreme_supervisor_and_web_intelligence import (
+                obtener_supreme_supervisor,
+            )
+
+            already = bool(
+                ((meta.get("cognicion") or {}).get("master_neural") or {}).get("swarm")
+            ) or bool(meta.get("busqueda_consultada"))
+            sup = obtener_supreme_supervisor().supervise_turn(
+                entrada,
+                session_id=self.session_id,
+                already_swarmed=already,
+            )
+            meta["cognicion"]["supreme_supervisor"] = {
+                "ok": bool(sup.get("ok")),
+                "desync": (sup.get("audit") or {}).get("desync") or [],
+                "web": bool((sup.get("web") or {}).get("ok")),
+                "via": "supreme_supervisor",
+            }
+            bloque_s = (sup.get("bloque") or "").strip()
+            if bloque_s:
+                bloques.append(bloque_s)
+                meta["busqueda_consultada"] = True
+                meta["cognicion"]["memory_cortex"] = "supreme_web_intelligence"
+        except Exception as exc:
+            meta["cognicion"]["supreme_supervisor_error"] = type(exc).__name__
+
         # Capa 6: verificacion autonoma en segundo plano (sin bloquear respuesta)
         try:
             from cognicion.capas_inteligencia.layer_06_autonomy import (

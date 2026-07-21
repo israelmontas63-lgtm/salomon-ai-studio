@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T01:40:00Z",
-  "timestamp": 1753062000,
-  "version": "110.10.0",
+  "timestamp_iso": "2026-07-21T01:50:00Z",
+  "timestamp": 1753062600,
+  "version": "110.11.0",
   "channel": "main",
-  "label": "smart-button-synaptic-taps",
+  "label": "supreme-supervisor-web-intel",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "SMART_BUTTON_SYNAPTIC_CONTROLLER",
-  "notes": "v110.10.0 - 1 toque dictado, 2 toques IA, apagado total; sinapsis vision+voz."
+  "protocol": "SUPREME_SUPERVISOR_WEB_INTELLIGENCE",
+  "notes": "v110.11.0 - Supervisor cruzado de capas + web intelligence; anti-desync."
 }

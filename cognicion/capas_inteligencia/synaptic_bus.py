@@ -58,6 +58,14 @@ AUTHORIZED_SYNAPSES: list[dict[str, Any]] = [
         "methods": ["sanitizar_salida_chat"],
         "payload": {"texto": str},
     },
+    {
+        "from": 8,
+        "to": 3,
+        "channel": "supervisor_web_intelligence",
+        "methods": ["supervise_turn", "fetch_web_intelligence"],
+        "payload": {"mensaje": str, "session_id": (str, type(None))},
+        "note": "Supervisor inyecta bloque web; no escribe SQLite ni cierra camara.",
+    },
 ]
 
 
