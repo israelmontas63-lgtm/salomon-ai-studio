@@ -88,7 +88,21 @@ def asegurar_sesion(session_id: str) -> None:
 
 
 def guardar_mensaje(session_id: str, rol: str, contenido: str) -> None:
-    if rol not in ("usuario", "asistente"):
+    # Cemento sináptico: tipado seguro antes de tocar SQLite (Capa 2 aislada)
+    try:
+        from cognicion.capas_inteligencia.synaptic_bus import (
+            cement_session_id,
+            cement_turn_roles,
+        )
+
+        sid = cement_session_id(session_id)
+        rol = cement_turn_roles(rol)
+    except Exception:
+        return
+    if not sid:
+        return
+    session_id = sid
+    if not isinstance(contenido, str) or not contenido:
         return
 
     ahora = datetime.now(timezone.utc).isoformat()

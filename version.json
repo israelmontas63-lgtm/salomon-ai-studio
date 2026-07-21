@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T01:05:00Z",
-  "timestamp": 1753059900,
-  "version": "110.8.0",
+  "timestamp_iso": "2026-07-21T01:15:00Z",
+  "timestamp": 1753060500,
+  "version": "110.9.0",
   "channel": "main",
-  "label": "neural-isolation-voice-vision",
+  "label": "synaptic-contracts-strict",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "NEURAL_ISOLATION_VOICE_VISION_BRIDGE",
-  "notes": "v110.8.0 - Contratos de capas + visión standby/analítica por voz; guard pre-commit."
+  "protocol": "SYNAPTIC_CONTRACTS_STRICT_MODE",
+  "notes": "v110.9.0 - Bus sináptico autorizado + cemento tipado; aislamiento estricto L1/L2/L4."
 }

@@ -79,6 +79,10 @@ LAYER_CONTRACTS: list[dict[str, Any]] = [
         "must_contain": {
             "static/js/voice_layer.js": ["playBase64", "SalomonVoiceLayer"],
             "settings.py": ["ELEVENLABS_VOICE_ADAM", "ELEVENLABS_VOICE_ID"],
+            "cognicion/capas_inteligencia/synaptic_bus.py": [
+                "voice_triggered_vision",
+                "AUTHORIZED_SYNAPSES",
+            ],
         },
         "must_not_contain": {
             # Voz no toca esquema SQLite
@@ -87,6 +91,21 @@ LAYER_CONTRACTS: list[dict[str, Any]] = [
                 "sesiones.db",
                 "guardar_mensaje",
             ],
+        },
+    },
+    {
+        "id": 3,
+        "name": "logic_reasoning",
+        "owns": [
+            "cognicion/orquestador.py",
+            "cognicion/core_salomon_master_neural_engine.py",
+        ],
+        "must_contain": {
+            "cognicion/orquestador.py": ["if imagen_base64:", "enrich_turn"],
+        },
+        "must_not_contain": {
+            # Razonamiento no cierra la cámara del cliente
+            "cognicion/orquestador.py": ["closeCamera(", "getUserMedia"],
         },
     },
     {

@@ -1360,12 +1360,12 @@ def api_deploy_strict_audit() -> dict:
 
 @app.get("/api/intelligence/layers")
 def api_intelligence_layers() -> dict:
-    """Soporte final: 7 capas calibradas + puente neuronal al núcleo."""
-    from cognicion.core_salomon_final_layer_seven_support_and_sync import (
-        run_final_layer_seven_sync,
+    """Contratos sinápticos estrictos + aislamiento de las 7 capas."""
+    from cognicion.core_salomon_synaptic_contracts_and_layer_isolation import (
+        run_synaptic_architect,
     )
 
-    return run_final_layer_seven_sync()
+    return run_synaptic_architect()
 
 
 @app.get("/api/deploy/stream")
