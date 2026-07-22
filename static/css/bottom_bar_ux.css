@@ -11,7 +11,8 @@
 
 #nav_bar_container,
 .control-bar.nav-bar-container {
-  transform: translate3d(0, 0, 0);
+  /* Mantener centrado (left:50%) + elevación sin romper bounding box */
+  transform: translate3d(-50%, 0, 0);
   transition: transform var(--salomon-controls-dur) var(--salomon-controls-ease);
   will-change: transform;
   touch-action: manipulation;
@@ -20,7 +21,36 @@
 #nav_bar_container.is-controls-elevated,
 html.salomon-controls-elevated #nav_bar_container,
 .control-bar.is-controls-elevated {
-  transform: translate3d(0, calc(-1 * var(--salomon-controls-lift)), 0);
+  transform: translate3d(-50%, calc(-1 * var(--salomon-controls-lift)), 0);
+}
+
+/* Erradicación de líneas guía doradas (header / barra) — visibles = 0 */
+.header,
+#nav_bar_container,
+.control-bar,
+.nav-bar-container {
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+}
+
+.header::before,
+.header::after,
+.chat::before,
+.chat::after,
+#nav_bar_container::before,
+#nav_bar_container::after,
+.control-bar::before,
+.control-bar::after {
+  content: none !important;
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
 }
 
 /* Modo texto: foco en input; secundarios (flip) fuera */
