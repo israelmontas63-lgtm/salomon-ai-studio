@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-21T21:40:00Z",
-  "timestamp": 1753134000,
-  "version": "110.21.13",
+  "timestamp_iso": "2026-07-22T01:10:00Z",
+  "timestamp": 1753146600,
+  "version": "110.21.14",
   "channel": "main",
-  "label": "silent-boot-contrast-fix",
+  "label": "llm-coherence-temp-latency",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "LLM_ROBUST_CONNECT",
-  "notes": "v110.21.13 — Suppress auto greeting on load; dark text contrast on gold bubbles while thinking."
+  "notes": "v110.21.14 — Temperature 0.4; strict coherence system prompt; shorter Free Tier history for latency."
 }

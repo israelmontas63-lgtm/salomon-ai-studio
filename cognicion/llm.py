@@ -17,6 +17,8 @@ from settings import (
     GROQ_MODEL,
     LLM_FALLBACK,
     LLM_LOCAL_FALLBACK,
+    LLM_TEMPERATURE,
+    LLM_TOP_P,
     MODEL_PROVIDER,
     OPENAI_API_KEY,
     OPENAI_BASE_URL,
@@ -75,6 +77,62 @@ _LLM_MAX_MODELS = int(
 _LLM_TOTAL_BUDGET_S = float(
     os.getenv("LLM_TOTAL_BUDGET_S", "18" if _render_free else "45") or "18"
 )
+# Temperatura estable (0.3–0.5): menos alucinación / basura creativa
+try:
+    _LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", str(LLM_TEMPERATURE)) or LLM_TEMPERATURE)
+except Exception:
+    _LLM_TEMPERATURE = float(LLM_TEMPERATURE)
+_LLM_TEMPERATURE = max(0.0, min(1.0, _LLM_TEMPERATURE))
+try:
+    _LLM_TOP_P = float(os.getenv("LLM_TOP_P", str(LLM_TOP_P)) or LLM_TOP_P)
+except Exception:
+    _LLM_TOP_P = float(LLM_TOP_P)
+_LLM_TOP_P = max(0.1, min(1.0, _LLM_TOP_P))
+# Historial corto en Free Tier = menos latencia y menos contexto contaminado
+_HIST_MAX_TURNS = int(os.getenv("LLM_HIST_MAX_TURNS", "6" if _render_free else "12") or "6")
+_HIST_MAX_MSG_CHARS = int(
+    os.getenv("LLM_HIST_MAX_MSG_CHARS", "2000" if _render_free else "3500") or "2000"
+)
+_HIST_MAX_TOTAL_CHARS = int(
+    os.getenv("LLM_HIST_MAX_TOTAL_CHARS", "10000" if _render_free else "24000") or "10000"
+)
+_SYS_PROMPT_MAX = int(os.getenv("LLM_SYS_PROMPT_MAX", "4200" if _render_free else "12000") or "4200")
+
+
+def _config_generacion() -> dict[str, Any]:
+    """Parámetros de muestreo estables para todos los proveedores."""
+    return {
+        "temperature": float(_LLM_TEMPERATURE),
+        "top_p": float(_LLM_TOP_P),
+    }
+
+
+def _preparar_system_instruction(system_instruction: str) -> str:
+    """
+    Free Tier: recorta el prompt preservando el bloque inicial de Coherencia Estricta.
+    """
+    sys_inst = (system_instruction or "").strip()
+    if not sys_inst:
+        return ""
+    if len(sys_inst) <= _SYS_PROMPT_MAX:
+        return sys_inst
+    # Mantener el encabezado (coherencia) + cola de estabilidad si cabe
+    head = sys_inst[: max(1800, _SYS_PROMPT_MAX - 900)]
+    tail_marker = "[Prompt de Estabilidad"
+    idx = sys_inst.find(tail_marker)
+    if idx >= 0:
+        tail = sys_inst[idx : idx + 800]
+        merged = (head.rstrip() + "\n\n…\n\n" + tail).strip()
+        if len(merged) > _SYS_PROMPT_MAX:
+            merged = merged[: _SYS_PROMPT_MAX - 1] + "…"
+        print(
+            f"[LLM] system_instruction recortado a {len(merged)} chars (coherencia+estabilidad)",
+            flush=True,
+        )
+        return merged
+    out = sys_inst[: _SYS_PROMPT_MAX - 1] + "…"
+    print(f"[LLM] system_instruction truncado a {len(out)} chars", flush=True)
+    return out
 
 
 def _env_key(*names: str) -> str:
@@ -138,6 +196,9 @@ def estado_llm() -> dict[str, Any]:
         "timeout_ms": _LLM_HTTP_TIMEOUT_MS,
         "max_models": _LLM_MAX_MODELS,
         "budget_s": _LLM_TOTAL_BUDGET_S,
+        "temperature": _LLM_TEMPERATURE,
+        "top_p": _LLM_TOP_P,
+        "hist_max_turns": _HIST_MAX_TURNS,
         "keys": {
             "gemini": bool(_env_key("GEMINI_API_KEY")),
             "openai": bool(_env_key("OPENAI_API_KEY")),
@@ -380,7 +441,12 @@ def _historial_a_gemini_contents(historial: list[dict], mensaje: str) -> list:
     from google.genai import types
 
     cleaned, msg, meta = _sanitizar_historial_chat(
-        historial, mensaje, role_assistant="model"
+        historial,
+        mensaje,
+        role_assistant="model",
+        max_turns=_HIST_MAX_TURNS,
+        max_msg_chars=_HIST_MAX_MSG_CHARS,
+        max_total_chars=_HIST_MAX_TOTAL_CHARS,
     )
     evento(
         _log,
@@ -482,22 +548,23 @@ class GeminiProvider:
         if not self.disponible():
             raise _falta_clave("gemini")
         client = self._cliente()
-        # Free Tier: system prompt corto = menos latencia / menos timeout
-        sys_inst = system_instruction or ""
-        if _render_free and len(sys_inst) > 4500:
-            sys_inst = sys_inst[:4499] + "…"
-            print(f"[LLM] system_instruction truncado a {len(sys_inst)} chars", flush=True)
+        # Free Tier: system prompt corto = menos latencia; preserva Coherencia Estricta
+        sys_inst = _preparar_system_instruction(system_instruction)
         contents = _historial_a_gemini_contents(historial, mensaje)
         ultimo_error: Exception | None = None
+        gen = _config_generacion()
 
         for modelo in self._modelos_a_probar(model_name):
             try:
                 print(
-                    f"[LLM] Gemini generate_content model={modelo} turns={len(contents)}",
+                    f"[LLM] Gemini generate_content model={modelo} turns={len(contents)} "
+                    f"temp={gen['temperature']}",
                     flush=True,
                 )
                 cfg_kwargs: dict[str, Any] = {
                     "system_instruction": sys_inst or None,
+                    "temperature": gen["temperature"],
+                    "top_p": gen["top_p"],
                 }
                 try:
                     cfg_kwargs["http_options"] = types.HttpOptions(
@@ -619,7 +686,12 @@ def _mensajes_openai_style(
     label: str = "openai",
 ) -> list[dict[str, str]]:
     cleaned, msg, meta = _sanitizar_historial_chat(
-        historial, mensaje, role_assistant="assistant"
+        historial,
+        mensaje,
+        role_assistant="assistant",
+        max_turns=_HIST_MAX_TURNS,
+        max_msg_chars=_HIST_MAX_MSG_CHARS,
+        max_total_chars=_HIST_MAX_TOTAL_CHARS,
     )
     evento(
         _log,
@@ -631,8 +703,9 @@ def _mensajes_openai_style(
         dropped_empty=meta.get("dropped_empty"),
         merged=meta.get("merged_same_role"),
     )
+    sys_inst = _preparar_system_instruction(system_instruction)
     mensajes: list[dict[str, str]] = [
-        {"role": "system", "content": system_instruction or ""},
+        {"role": "system", "content": sys_inst},
     ]
     for item in cleaned:
         mensajes.append({"role": item["role"], "content": item["parts"][0]})
@@ -682,10 +755,16 @@ class OpenAIProvider:
             raise _falta_clave("openai")
         try:
             client = self._cliente()
-            print("[LLM] OpenAI chat.completions.create", flush=True)
+            gen = _config_generacion()
+            print(
+                f"[LLM] OpenAI chat.completions.create temp={gen['temperature']}",
+                flush=True,
+            )
             respuesta = client.chat.completions.create(
                 model=model_name or OPENAI_MODEL,
                 messages=self._mensajes_openai(mensaje, historial, system_instruction),
+                temperature=gen["temperature"],
+                top_p=gen["top_p"],
             )
             return (respuesta.choices[0].message.content or "").strip()
         except Exception as exc:
@@ -696,9 +775,12 @@ class OpenAIProvider:
             raise _falta_clave("openai")
         try:
             client = self._cliente()
+            gen = _config_generacion()
             respuesta = client.chat.completions.create(
                 model=model_name or OPENAI_MODEL,
                 messages=[{"role": "user", "content": prompt}],
+                temperature=gen["temperature"],
+                top_p=gen["top_p"],
             )
             return (respuesta.choices[0].message.content or "").strip()
         except Exception as exc:
@@ -776,10 +858,16 @@ class GroqProvider:
             raise _falta_clave("groq")
         try:
             client = self._cliente()
-            print("[LLM] Groq chat.completions.create", flush=True)
+            gen = _config_generacion()
+            print(
+                f"[LLM] Groq chat.completions.create temp={gen['temperature']}",
+                flush=True,
+            )
             respuesta = client.chat.completions.create(
                 model=model_name or GROQ_MODEL,
                 messages=self._mensajes_openai(mensaje, historial, system_instruction),
+                temperature=gen["temperature"],
+                top_p=gen["top_p"],
             )
             return (respuesta.choices[0].message.content or "").strip()
         except Exception as exc:
@@ -790,9 +878,12 @@ class GroqProvider:
             raise _falta_clave("groq")
         try:
             client = self._cliente()
+            gen = _config_generacion()
             respuesta = client.chat.completions.create(
                 model=model_name or GROQ_MODEL,
                 messages=[{"role": "user", "content": prompt}],
+                temperature=gen["temperature"],
+                top_p=gen["top_p"],
             )
             return (respuesta.choices[0].message.content or "").strip()
         except Exception as exc:

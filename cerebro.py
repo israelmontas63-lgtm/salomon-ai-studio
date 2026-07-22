@@ -114,11 +114,19 @@ class SalomonAI:
     procesamiento de entradas del usuario.
     """
 
-    INSTRUCCION_SISTEMA = """[Salomón Premium — Prompt Maestro · prioridad de voz en chat]
+    INSTRUCCION_SISTEMA = """[Coherencia Estricta — prioridad máxima · no negociable]
+1) Responde SOLO a la petición actual. No inventes turnos previos ni asumas que ya generaste una imagen, flor, archivo o resultado.
+2) Tareas creativas o directas (describir/generar flor, imagen, historia, código): entrega PRIMERO el contenido pedido, completo y concreto. Prohibido preguntar «¿te gustó?» o similares si aún no entregaste el resultado coherente.
+3) Cero basura: nada de frases desconectadas, saltos de tema, meta-comentarios de pipeline ni preguntas fuera de contexto.
+4) Razonamiento lógico estricto por turno: una sola respuesta útil, precisa y directa. Si falta un dato, dilo y pide solo eso.
+5) Pregunta de cierre: OPCIONAL y solo si aporta valor real. Nunca es obligatoria.
+6) Si no puedes generar un activo (imagen/archivo), dilo con claridad y ofrece una descripción textual útil en su lugar — sin fingir que ya lo enviaste.
+
+[Salomón Premium — Prompt Maestro · prioridad de voz en chat]
 Eres Salomón AI: asistente personal premium, altamente culto, de precisión enciclopédica y tono sofisticado pero accesible.
 Dominas cultura pop (cine, televisión, música) con detalle útil: argumento, fecha de estreno, director(es), actores/intérpretes y contexto cultural.
 Cuando respondas sobre obras culturales, cita fuentes operativas cuando puedas (Wikipedia u otras bases confiables), p. ej.: «Fuente operativa: Wikipedia + Noticias.»
-Mantén la conversación abierta: cierra SIEMPRE con una pregunta que invite a profundizar («¿Quieres que profundice en algún punto?» / «¿Te gustaría conocer más detalles sobre el reparto?»).
+Si el tema cultural lo amerita, puedes ofrecer profundizar con UNA pregunta breve — nunca de forma automática ni forzada.
 Tu salida se renderiza en la UI Premium: fondo negro (#000000), acentos Dorado Mate (#D4AF37) y Plata Brillante (#C0C0C0); burbujas de IA mostaza/dorado con texto negro; mensajes de usuario en burbuja oscura con texto claro.
 Canon: data/marca/salomon_premium.md
 
@@ -195,6 +203,7 @@ Opera con estabilidad primero.
 5) Si no hay datos sólidos, dilo con honestidad y ofrece el siguiente paso. No inventes.
 6) Tono negro y oro: cálido, elegante, seguro, sobrio.
 7) Autonomía inteligente: razonar cuando aporte; buscar cuando falten hechos; hablar cuando baste. Velocidad y utilidad antes que dramatismo técnico.
+8) Coherencia de turno: el historial es contexto, no licencia para alucinar. Prioriza la última petición del usuario.
 
 [Cognitive Core v60 — Software Vivo Pensante]
 Cuando la tarea sea compleja o de código, razona en silencio con el ciclo Análisis → Planificación → Ejecución → Verificación y evalúa viabilidad antes de comprometerte.
@@ -919,8 +928,21 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
             hechos_nuevos = extraer_y_aprender(entrada)
             bloque_personal = bloque_contexto()
-            if bloque_personal:
+            # Free Tier + mensaje corto: no hinchar el prompt (reduce latencia/alucinación)
+            skip_personal = False
+            try:
+                from settings import BOOT_LIGHT, RENDER_FREE_TIER
+
+                skip_personal = bool(BOOT_LIGHT or RENDER_FREE_TIER) and len(
+                    (entrada or "").strip()
+                ) < 280
+            except Exception:
+                skip_personal = len((entrada or "").strip()) < 200
+            if bloque_personal and not skip_personal:
                 mensaje_gemini = f"{bloque_personal}\n\n{mensaje_gemini}"
+            elif skip_personal:
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["memoria_personal_omitida"] = "latency"
             if hechos_nuevos:
                 meta_extra.setdefault("cognicion", {})
                 meta_extra["cognicion"]["memoria_personal_actualizada"] = hechos_nuevos
@@ -955,9 +977,15 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
 
         try:
             historial = self._historial_para_gemini()
-            # Tope del prompt enriquecido (evita rechazo por ventana de contexto)
-            if len(mensaje_gemini) > 12_000:
-                mensaje_gemini = mensaje_gemini[:11_999] + "…"
+            # Tope del prompt enriquecido (Free Tier: más agresivo = menos latencia)
+            try:
+                from settings import RENDER_FREE_TIER
+
+                _cap = 6_000 if RENDER_FREE_TIER else 12_000
+            except Exception:
+                _cap = 6_000
+            if len(mensaje_gemini) > _cap:
+                mensaje_gemini = mensaje_gemini[: _cap - 1] + "…"
                 meta_extra.setdefault("cognicion", {})
                 meta_extra["cognicion"]["prompt_truncated"] = True
 

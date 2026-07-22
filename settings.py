@@ -36,7 +36,11 @@ except Exception:
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite").strip()
 GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash").strip()
-GEMINI_MAX_TURNOS = int(os.getenv("GEMINI_MAX_TURNOS", "20"))
+# Free Tier: historial corto (menos latencia / menos contaminación de contexto)
+_GEMINI_TURNOS_DEFAULT = "8" if os.getenv("RENDER_FREE_TIER", "true").strip().lower() in (
+    "1", "true", "yes", "on",
+) else "16"
+GEMINI_MAX_TURNOS = int(os.getenv("GEMINI_MAX_TURNOS", _GEMINI_TURNOS_DEFAULT))
 GEMINI_MODELOS_RESPALDO = [
     m.strip()
     for m in os.getenv(
@@ -167,6 +171,17 @@ NUMVERIFY_API_KEY = os.getenv("NUMVERIFY_API_KEY", "").strip()
 
 # ── Proveedor LLM ──────────────────────────────────────────────────────────
 MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "gemini").strip().lower()
+# Temperatura baja = menos alucinación / basura creativa (rango óptimo 0.3–0.5)
+try:
+    LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.4") or "0.4")
+except Exception:
+    LLM_TEMPERATURE = 0.4
+LLM_TEMPERATURE = max(0.0, min(1.0, LLM_TEMPERATURE))
+try:
+    LLM_TOP_P = float(os.getenv("LLM_TOP_P", "0.9") or "0.9")
+except Exception:
+    LLM_TOP_P = 0.9
+LLM_TOP_P = max(0.1, min(1.0, LLM_TOP_P))
 
 # ── Fallback LLM ───────────────────────────────────────────────────────────
 LLM_FALLBACK = os.getenv("LLM_FALLBACK", "true").strip().lower() in (
