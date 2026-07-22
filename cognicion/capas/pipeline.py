@@ -152,12 +152,18 @@ def generar_respuesta(
     try:
         from cognicion.llm import chat_con_historial
 
+        preferir = (
+            ctx.get("proveedor_preferido")
+            or ctx.get("preferir")
+            or (ctx.get("modelo_resuelto") or {}).get("proveedor_sugerido")
+        )
         texto = _texto_limpio(
             chat_con_historial(
                 mensaje,
                 hist,
                 system_instruction,
                 model_name=model_name,
+                preferir=str(preferir) if preferir else None,
             )
         )
     except Exception as exc:

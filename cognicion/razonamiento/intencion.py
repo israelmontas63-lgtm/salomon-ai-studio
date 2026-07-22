@@ -95,19 +95,23 @@ def planificar(intencion: Intencion) -> PlanEnriquecimiento:
             intencion=Intencion.ERROR,
             usar_autocorreccion=True,
             usar_razonamiento=True,
+            prioridad_modelo="codigo",
         ),
         Intencion.TECNICO: PlanEnriquecimiento(
             intencion=Intencion.TECNICO,
             usar_razonamiento=True,
+            prioridad_modelo="razonamiento",
         ),
         Intencion.AGENTE: PlanEnriquecimiento(
             intencion=Intencion.AGENTE,
             usar_autocorreccion=True,
             usar_razonamiento=True,
+            prioridad_modelo="codigo",
         ),
         Intencion.INVESTIGACION: PlanEnriquecimiento(
             intencion=Intencion.INVESTIGACION,
             usar_rag=True,
+            prioridad_modelo="razonamiento",
         ),
     }
     return planes.get(intencion, PlanEnriquecimiento(intencion=Intencion.CHAT))

@@ -1011,6 +1011,10 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                 historial,
                 self.INSTRUCCION_SISTEMA,
                 model_name=config_modelo.get("model_name"),
+                contexto={
+                    "modelo_resuelto": config_modelo,
+                    "proveedor_preferido": config_modelo.get("proveedor_sugerido"),
+                },
             )
             texto = sanitizar_salida_chat(extraer_respuesta_final(pipeline.texto))
             if not texto:

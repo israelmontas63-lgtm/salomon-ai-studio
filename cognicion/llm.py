@@ -35,6 +35,8 @@ _log = obtener_logger("llm")
 _ultimo_uso: dict[str, object] = {}
 # Circuit breaker: si Gemini responde 429/limit:0, saltar a Groq unos minutos
 _gemini_skip_until: float = 0.0
+# Circuit: DeepSeek 402 / sin saldo → no reintentar en cascada por unos minutos
+_deepseek_skip_until: float = 0.0
 
 
 def _gemini_circuit_abierto() -> bool:
@@ -54,6 +56,28 @@ def _gemini_circuit_abrir(segundos: float = 180.0) -> None:
 def _gemini_circuit_cerrar() -> None:
     global _gemini_skip_until
     _gemini_skip_until = 0.0
+
+
+def _deepseek_circuit_abierto() -> bool:
+    import time
+
+    return time.monotonic() < float(_deepseek_skip_until)
+
+
+def _deepseek_circuit_abrir(segundos: float = 300.0) -> None:
+    global _deepseek_skip_until
+    import time
+
+    _deepseek_skip_until = time.monotonic() + max(60.0, float(segundos))
+    print(
+        f"[LLM] DeepSeek circuit OPEN {segundos:.0f}s (saldo/402) -> cascada Gemini/Groq",
+        flush=True,
+    )
+
+
+def _deepseek_circuit_cerrar() -> None:
+    global _deepseek_skip_until
+    _deepseek_skip_until = 0.0
 
 # Tope duro por llamada (ms). Free Tier Render: corto para no matar el proxy (~30s).
 _render_free = os.getenv("RENDER_FREE_TIER", "true").strip().lower() in (
@@ -217,6 +241,8 @@ def estado_llm() -> dict[str, Any]:
             "groq": GROQ_MODEL,
         },
         "disponible": disponible,
+        "gemini_circuit_open": _gemini_circuit_abierto(),
+        "deepseek_circuit_open": _deepseek_circuit_abierto(),
     }
 
 
@@ -235,6 +261,7 @@ def recargar_entorno_llm() -> dict[str, Any]:
 
     # Invalidar clientes cacheados para forzar nueva key
     _gemini_circuit_cerrar()
+    _deepseek_circuit_cerrar()
     for nombre, prov in list(_PROVEEDORES.items()):
         if hasattr(prov, "_client"):
             try:
@@ -258,6 +285,7 @@ def recargar_entorno_llm() -> dict[str, Any]:
     st["reloaded"] = True
     st["gemini_key_len"] = len(_env_key("GEMINI_API_KEY"))
     st["gemini_circuit_open"] = _gemini_circuit_abierto()
+    st["deepseek_circuit_open"] = _deepseek_circuit_abierto()
     print(
         f"[LLM] entorno recargado gemini_key={bool(_env_key('GEMINI_API_KEY'))} "
         f"timeout_ms={_LLM_HTTP_TIMEOUT_MS}",
@@ -912,6 +940,8 @@ class DeepSeekProvider:
     nombre = "deepseek"
 
     def disponible(self) -> bool:
+        if _deepseek_circuit_abierto():
+            return False
         return bool(_env_key("DEEPSEEK_API_KEY"))
 
     def _cliente(self):
@@ -963,6 +993,7 @@ class DeepSeekProvider:
             )
             return (respuesta.choices[0].message.content or "").strip()
         except Exception as exc:
+            _marcar_saldo_deepseek(exc)
             raise _anclar_error_proveedor(exc, provider="deepseek") from exc
 
     def generar_texto(self, prompt: str, model_name: str | None = None) -> str:
@@ -980,6 +1011,7 @@ class DeepSeekProvider:
             )
             return (respuesta.choices[0].message.content or "").strip()
         except Exception as exc:
+            _marcar_saldo_deepseek(exc)
             raise _anclar_error_proveedor(exc, provider="deepseek") from exc
 
     def analizar_imagen(
@@ -1065,9 +1097,9 @@ def _es_error_recuperable(exc: Exception) -> bool:
     texto = str(exc).lower()
     codigo = getattr(exc, "code", None)
     status = getattr(exc, "status_code", None)
-    if codigo in (429, "429", 404, "404", 401, "401", 503, "503"):
+    if codigo in (429, "429", 404, "404", 401, "401", 402, "402", 503, "503"):
         return True
-    if status in (429, 404, 401, 503, 500):
+    if status in (429, 404, 401, 402, 503, 500):
         return True
     nombre = type(exc).__name__.lower()
     if any(x in nombre for x in ("notfound", "ratelimit", "authentication", "apiconnection")):
@@ -1077,8 +1109,12 @@ def _es_error_recuperable(exc: Exception) -> bool:
         for x in (
             "quota",
             "429",
+            "402",
             "404",
             "not found",
+            "insufficient balance",
+            "insufficient_balance",
+            "payment required",
             "resource_exhausted",
             "resourceexhausted",
             "rate limit",
@@ -1102,6 +1138,16 @@ def _marcar_cuota_gemini(exc: Exception) -> None:
         for x in ("429", "quota", "resource_exhausted", "resourceexhausted", "rate limit")
     ):
         _gemini_circuit_abrir(180.0)
+
+
+def _marcar_saldo_deepseek(exc: Exception) -> None:
+    texto = str(exc).lower()
+    status = getattr(exc, "status_code", None)
+    if status == 402 or any(
+        x in texto
+        for x in ("402", "insufficient balance", "insufficient_balance", "payment required")
+    ):
+        _deepseek_circuit_abrir(300.0)
 
 
 def _proveedor_respaldo(actual: str) -> ModelProvider | None:
@@ -1140,12 +1186,14 @@ def proveedor_respaldo_disponible() -> str | None:
     return respaldo.nombre if respaldo else None
 
 
-def _orden_fallback(desde: str) -> list[str]:
+def _orden_fallback(desde: str, preferir: str | None = None) -> list[str]:
     # Cadena oficial: Gemini → DeepSeek (lógica) → Groq → OpenAI → local
-    preferidos = [desde, "gemini", "deepseek", "groq", "openai", "local"]
+    # Si preferir=deepseek (razonamiento/código), DeepSeek abre la cascada.
+    cabeza = (preferir or desde or "gemini").strip().lower()
+    preferidos = [cabeza, desde, "gemini", "deepseek", "groq", "openai", "local"]
     orden: list[str] = []
     for nombre in preferidos:
-        if nombre not in orden:
+        if nombre and nombre not in orden:
             orden.append(nombre)
     for nombre in listar_proveedores():
         if nombre not in orden:
@@ -1154,11 +1202,16 @@ def _orden_fallback(desde: str) -> list[str]:
 
 
 
-def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
+def _ejecutar_con_respaldo(
+    ejecutar: Callable[[ModelProvider], str],
+    *,
+    preferir: str | None = None,
+) -> str:
     import time
 
     t0 = time.monotonic()
-    principal = obtener_proveedor()
+    prefer = (preferir or "").strip().lower() or None
+    principal = obtener_proveedor(prefer) if prefer else obtener_proveedor()
 
     def _agotado() -> bool:
         return (time.monotonic() - t0) >= float(_LLM_TOTAL_BUDGET_S)
@@ -1183,13 +1236,21 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
             raise ultimo
 
     ultimo_error: Exception | None = None
-    # Free Tier: Gemini → Groq (rápido) → local. OpenAI al final (más lento).
-    orden = _orden_fallback(principal.nombre)
+    # Free Tier: preferido → Gemini → DeepSeek → Groq → local. OpenAI al final.
+    orden = _orden_fallback(principal.nombre, preferir=prefer)
     if _render_free:
-        prefer = [principal.nombre, "gemini", "deepseek", "groq", "local", "openai"]
+        prefer_list = [
+            prefer or principal.nombre,
+            principal.nombre,
+            "gemini",
+            "deepseek",
+            "groq",
+            "local",
+            "openai",
+        ]
         orden = []
-        for n in prefer:
-            if n not in orden:
+        for n in prefer_list:
+            if n and n not in orden:
                 orden.append(n)
 
     for indice, nombre in enumerate(orden):
@@ -1234,6 +1295,10 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
             continue
         except Exception as exc:
             ultimo_error = _anclar_error_proveedor(exc, provider=nombre)
+            if nombre == "gemini":
+                _marcar_cuota_gemini(exc)
+            elif nombre == "deepseek":
+                _marcar_saldo_deepseek(exc)
             evento(
                 _log,
                 "proveedor_fallido",
@@ -1313,6 +1378,8 @@ def chat_con_historial(
     historial: list[dict],
     system_instruction: str,
     model_name: str | None = None,
+    *,
+    preferir: str | None = None,
 ) -> str:
     return _ejecutar_con_respaldo(
         lambda proveedor: proveedor.chat_con_historial(
@@ -1320,15 +1387,22 @@ def chat_con_historial(
             historial,
             system_instruction,
             _modelo_para_proveedor(proveedor, model_name),
-        )
+        ),
+        preferir=preferir,
     )
 
 
-def generar_texto(prompt: str, model_name: str | None = None) -> str:
+def generar_texto(
+    prompt: str,
+    model_name: str | None = None,
+    *,
+    preferir: str | None = None,
+) -> str:
     return _ejecutar_con_respaldo(
         lambda proveedor: proveedor.generar_texto(
             prompt, _modelo_para_proveedor(proveedor, model_name)
-        )
+        ),
+        preferir=preferir,
     )
 
 

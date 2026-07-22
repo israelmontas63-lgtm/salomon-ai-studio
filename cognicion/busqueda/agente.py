@@ -327,13 +327,14 @@ def _buscar_exa(consulta: str, max_results: int = 5) -> dict[str, Any] | None:
                     "x-api-key": EXA_API_KEY,
                     "Content-Type": "application/json",
                 },
+                # API HTTP Exa usa camelCase (no snake_case del SDK Python).
                 json={
                     "query": consulta,
                     "type": "auto",
-                    "num_results": max_results,
+                    "numResults": max_results,
                     "contents": {
-                        "text": {"max_characters": 1800},
-                        "highlights": {"max_characters": 400},
+                        "text": {"maxCharacters": 1800},
+                        "highlights": {"maxCharacters": 400},
                     },
                 },
             )

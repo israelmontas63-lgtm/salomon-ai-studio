@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T04:45:00Z",
-  "timestamp": 1753159500,
-  "version": "110.21.15",
+  "timestamp_iso": "2026-07-22T04:55:00Z",
+  "timestamp": 1753160100,
+  "version": "110.21.16",
   "channel": "main",
-  "label": "deepseek-exa-media-connect",
+  "label": "deepseek-prefer-exa-camelcase",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "TOOLS_FULL_CONNECT",
-  "notes": "v110.21.15 — DeepSeek in LLM cascade; Tavily advanced + Exa search; media/estado key inventory."
+  "notes": "v110.21.16 — DeepSeek preferred for reasoning/code; Exa camelCase fix; /api/tools/conectividad."
 }

@@ -68,6 +68,8 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/version",
         "/api/llm/status",
         "/api/llm/reload-env",
+        "/api/tools/conectividad",
+        "/api/proveedores",
         "/api/bca/estado",
         "/api/tunel/estado",
         "/api/cognicion/vdcp/estado",
@@ -739,6 +741,44 @@ def api_version() -> dict:
     }
 
 
+def _tools_conectividad_payload() -> dict:
+    """Snapshot seguro DeepSeek / Tavily / Exa / media para /api/salud."""
+    try:
+        from cognicion.busqueda.agente import estado_circuit_breakers
+        from cognicion.llm import estado_llm
+        from cognicion.modelos.gestor import resolver_modelo
+        from lib.web_search import estado_conectividad as web_estado
+        from settings import (
+            CARTESIA_API_KEY,
+            DEEPGRAM_API_KEY,
+            ELEVENLABS_API_KEY,
+            FAL_KEY,
+            REPLICATE_API_TOKEN,
+        )
+
+        llm = estado_llm()
+        keys = llm.get("keys") or {}
+        web = web_estado()
+        return {
+            "active": True,
+            "llm_deepseek": bool(keys.get("deepseek")),
+            "web_tavily": bool(web.get("tavily_key")),
+            "web_exa": bool(web.get("exa_key")),
+            "web_depth": web.get("tavily_search_depth"),
+            "web_cascade": web.get("cascade"),
+            "circuit_breakers": estado_circuit_breakers(),
+            "razonamiento": resolver_modelo("razonamiento"),
+            "media": {
+                "fal": bool((FAL_KEY or "").strip()),
+                "replicate": bool((REPLICATE_API_TOKEN or "").strip()),
+                "tts": bool((ELEVENLABS_API_KEY or "").strip() or (CARTESIA_API_KEY or "").strip()),
+                "stt": bool((DEEPGRAM_API_KEY or "").strip()),
+            },
+        }
+    except Exception as exc:
+        return {"active": False, "error": type(exc).__name__}
+
+
 def _salud_payload() -> dict:
     """Estado técnico de salud (JSON / Render / SystemGuard)."""
     ver = _leer_version_json()
@@ -854,6 +894,7 @@ def _salud_payload() -> dict:
             "nucleo": evolucion_30x.get("nucleo"),
         },
         "comic_engine": comic,
+        "tools": _tools_conectividad_payload(),
         "sistema_inmune": {
             "active": bool(sce.get("active")),
             "protocol": "IDENTIDAD_PROPIEDAD_SEGURIDAD_INMUNE",
@@ -1169,7 +1210,14 @@ def api_llm_reload_env() -> dict:
     from cognicion.llm import recargar_entorno_llm
 
     st = recargar_entorno_llm()
-    st["ok"] = bool(st.get("keys", {}).get("gemini") or st.get("disponible"))
+    keys = st.get("keys") or {}
+    st["ok"] = bool(
+        keys.get("gemini")
+        or keys.get("deepseek")
+        or keys.get("groq")
+        or keys.get("openai")
+        or st.get("disponible")
+    )
     return st
 
 
@@ -2979,7 +3027,7 @@ class BusquedaRequest(BaseModel):
 
 @app.post("/api/busqueda")
 def api_busqueda(body: BusquedaRequest) -> dict:
-    """Búsqueda web en vivo (Tavily / DuckDuckGo) — respaldo autónomo de Salomón."""
+    """Búsqueda web en vivo (Tavily advanced → Exa → DuckDuckGo/Wikipedia)."""
     if body.via_grafo:
         from cognicion.grafo import ejecutar_grafo
 
@@ -3007,6 +3055,53 @@ def api_busqueda(body: BusquedaRequest) -> dict:
         "ruta": None,
         "session_id": body.session_id,
         "metadata": {"motor": pack.get("motor")},
+    }
+
+
+@app.get("/api/tools/conectividad")
+def api_tools_conectividad() -> dict:
+    """Inventario seguro de DeepSeek / Tavily / Exa / multimedia (sin secretos)."""
+    from cognicion.busqueda.agente import estado_circuit_breakers
+    from cognicion.llm import estado_llm
+    from cognicion.modelos.gestor import resolver_modelo
+    from config.providers import inventario_claves
+    from lib.web_search import estado_conectividad as web_estado
+    from settings import (
+        CARTESIA_API_KEY,
+        DEEPGRAM_API_KEY,
+        ELEVENLABS_API_KEY,
+        FAL_KEY,
+        REPLICATE_API_TOKEN,
+    )
+
+    llm = estado_llm()
+    web = web_estado()
+    raz = resolver_modelo("razonamiento")
+    cod = resolver_modelo("codigo")
+    return {
+        "ok": True,
+        "version": "110.21.16",
+        "protocol": "TOOLS_FULL_CONNECT",
+        "llm": {
+            "keys": llm.get("keys"),
+            "models": llm.get("models"),
+            "disponible": llm.get("disponible"),
+            "cascade": ["gemini", "deepseek", "groq", "openai", "local"],
+            "razonamiento": raz,
+            "codigo": cod,
+        },
+        "web": {
+            **web,
+            "circuit_breakers": estado_circuit_breakers(),
+        },
+        "media": {
+            "fal": bool((FAL_KEY or "").strip()),
+            "replicate": bool((REPLICATE_API_TOKEN or "").strip()),
+            "tts_elevenlabs": bool((ELEVENLABS_API_KEY or "").strip()),
+            "tts_cartesia": bool((CARTESIA_API_KEY or "").strip()),
+            "stt_deepgram": bool((DEEPGRAM_API_KEY or "").strip()),
+        },
+        "inventario": inventario_claves(),
     }
 
 
