@@ -1,128 +1,193 @@
 /**
- * Bottom bar — coordenadas fijas + elevación táctil (sin recortar botones).
+ * Coordenadas exactas — ORDÉN ESTRICTA (sin desviaciones).
+ * Maqueta reposo: Header | Chat scroll | Dock (📷 · S · Aa) bottom:24px
  * Created by Israel Monta - Salomón AI Studio
- *
- * REPOSO: franja inferior viewport (bottom 20–30px / safe-area).
- * ELEVACIÓN: solo al tocar → translateY(-28px); al soltar → reposo.
- * Líneas guía: ocultas. Botones: NUNCA display:none.
  */
 
-:root {
-  --salomon-controls-lift: 28px;
-  --salomon-controls-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --salomon-controls-dur: 0.3s;
-  --salomon-bar-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+/* 1. Contenedor principal de pantalla completa sin desbordes */
+.app-viewport,
+.phone.app-viewport {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  max-width: 430px;
+  margin: 0 auto;
+  background: #000;
 }
 
-/* ——— Ancla absoluta (vence position:relative de boton.css) ——— */
-#nav_bar_container.control-bar,
-#nav_bar_container.nav-bar-container,
-footer#nav_bar_container {
-  position: fixed !important;
-  left: 50% !important;
-  right: auto !important;
+.app-viewport .header {
+  flex-shrink: 0;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+.app-viewport .chat {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Reserva espacio bajo el dock absoluto (~80px + 24px + safe) */
+  padding-bottom: calc(120px + env(safe-area-inset-bottom, 16px)) !important;
+}
+
+/* 2. Eliminación absoluta de líneas divisorias o artefactos visuales */
+.debug-line,
+.divider-line-yellow,
+hr.ui-guide,
+.app-viewport::before,
+.app-viewport::after,
+.app-viewport .header::before,
+.app-viewport .header::after,
+.app-viewport .chat::before,
+.app-viewport .chat::after,
+.bottom-dock::before,
+.bottom-dock::after,
+#nav_bar_container::before,
+#nav_bar_container::after {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  content: none !important;
+  border: none !important;
+  background: none !important;
+  pointer-events: none !important;
+}
+
+/* 3. Dock Inferior unificado por coordenadas fijas */
+.bottom-dock,
+footer.bottom-dock#nav_bar_container {
+  position: absolute !important;
+  bottom: 24px !important; /* Distancia exacta de separación inferior */
+  left: 0 !important;
+  right: 0 !important;
   top: auto !important;
-  bottom: var(--salomon-bar-bottom) !important;
-  width: min(100vw, 430px) !important;
-  max-width: 430px !important;
+  width: 100% !important;
+  max-width: 100% !important;
   margin: 0 !important;
-  z-index: 100040 !important;
-  overflow: visible !important;
-  /* Centrado X + reposo Y */
-  transform: translate3d(-50%, 0, 0) !important;
-  transition: transform var(--salomon-controls-dur) var(--salomon-controls-ease) !important;
-  will-change: transform;
-  touch-action: manipulation;
-  /* Sin líneas guía */
+  display: flex !important;
+  justify-content: space-between !important; /* Simetría perfecta */
+  align-items: center !important;
+  padding-left: 28px !important; /* Margen exacto izquierdo para la cámara */
+  padding-right: 28px !important; /* Margen exacto derecho para el botón Aa */
+  padding-top: 0 !important;
+  padding-bottom: env(safe-area-inset-bottom, 16px) !important;
+  z-index: 1000 !important;
+  box-sizing: border-box !important;
   border: none !important;
   border-top: none !important;
-  border-bottom: none !important;
   box-shadow: none !important;
   background: transparent !important;
-  padding-left: 12px !important;
-  padding-right: 12px !important;
-  padding-bottom: 8px !important;
-  padding-top: 10px !important;
-  min-height: calc(80px + 20px) !important;
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  display: grid !important;
-}
-
-/* Elevación táctil: +1" (~28px) hacia arriba — los tres juntos */
-#nav_bar_container.is-controls-elevated,
-html.salomon-controls-elevated #nav_bar_container {
-  transform: translate3d(-50%, calc(-1 * var(--salomon-controls-lift)), 0) !important;
-}
-
-/* Los tres controles siempre visibles y completos */
-#nav_bar_container #btn-cam,
-#nav_bar_container #smart-button,
-#nav_bar_container #btn-aa,
-#nav_bar_container #side-close,
-#nav_bar_container #side-aa {
-  display: flex !important;
+  overflow: visible !important;
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
-  overflow: visible !important;
+  min-height: 0 !important;
+  grid-template-columns: none !important;
+  transform: translateY(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-#nav_bar_container #smart-button {
+/* 4. Posicionamiento individual de los elementos del Dock */
+.dock-cam-btn,
+.bottom-dock #side-close {
+  order: 1;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0;
+  grid-column: auto !important;
+  justify-self: auto !important;
+}
+
+.dock-center-btn,
+.bottom-dock #smart-button {
+  order: 2;
+  position: absolute !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important; /* Centrado geométrico absoluto milimétrico */
+  margin: 0 !important;
+  grid-column: auto !important;
+  justify-self: auto !important;
   display: grid !important;
   border: 2px solid #d4af37 !important;
+  z-index: 1001 !important;
 }
 
-#nav_bar_container #btn-cam,
-#nav_bar_container #btn-aa {
+.dock-text-btn,
+.bottom-dock #side-aa {
+  order: 3;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0;
+  margin-left: auto;
+  grid-column: auto !important;
+  justify-self: auto !important;
+}
+
+.bottom-dock #btn-cam,
+.bottom-dock #btn-aa {
+  display: grid !important;
+  width: 48px !important;
+  height: 48px !important;
   border: 2px solid #d4af37 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
-/* Header / chat: sin líneas guía doradas */
-.header {
-  border-bottom: none !important;
-  box-shadow: none !important;
+/* 5. Animación de elevación táctil unificada (suben los tres juntos) */
+.bottom-dock.active-touch,
+.bottom-dock:focus-within {
+  transform: translateY(-25px); /* Elevación exacta */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.header::before,
-.header::after,
-.chat::before,
-.chat::after {
-  content: none !important;
-  display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
+/* Con elevación, la S mantiene centrado X + no pierde translateX(-50%) */
+.bottom-dock.active-touch #smart-button,
+.bottom-dock:focus-within #smart-button {
+  transform: translateX(-50%) !important;
+}
+
+/* Input encima del dock (WhatsApp / Telegram) */
+#input-layer {
+  z-index: 1100 !important;
+  left: 50% !important;
+  width: min(100%, 430px) !important;
+  bottom: 0 !important;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 16px)) !important;
+}
+
+/* Teclado activo: secundarios se ocultan; dock no satura */
+body.input-sheet-open .bottom-dock {
+  transform: translateY(0) !important;
   pointer-events: none !important;
 }
 
-/* Evitar que .phone recorte la barra fija al elevar */
-.phone {
-  overflow: visible !important;
-}
-
-html,
-body {
-  overflow-x: hidden !important;
-}
-
-/* Modos: solo input/flip secundario — NUNCA ocultar los 3 botones */
-html.salomon-ui-mode-text #btn-flip,
-html.salomon-ui-mode-voice #btn-flip {
-  opacity: 0;
-  pointer-events: none;
-}
-
-html.salomon-ui-mode-camera #input-layer,
-body.vision-immersive #input-layer {
+body.input-sheet-open .bottom-dock #btn-cam,
+body.input-sheet-open .bottom-dock #btn-aa,
+body.input-sheet-open .bottom-dock #btn-flip,
+body.input-sheet-open .bottom-dock #side-close,
+body.input-sheet-open .bottom-dock #side-aa,
+body.input-sheet-open .bottom-dock #smart-button {
   opacity: 0 !important;
   pointer-events: none !important;
-  transform: translate(-50%, 110%) !important;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #nav_bar_container.control-bar,
-  footer#nav_bar_container {
+  .bottom-dock,
+  .bottom-dock.active-touch,
+  .bottom-dock:focus-within {
     transition: none !important;
   }
 }

@@ -3,16 +3,9 @@
 .control-bar,
 #nav_bar_container,
 .nav-bar-container {
-  /* Espacio inferior para el botón de 80px */
-  padding-top: 18px;
-  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  min-height: calc(80px + 36px + env(safe-area-inset-bottom, 0px));
-  /* Centro geométrico: columnas simétricas (izq = der) */
-  display: grid !important;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  column-gap: 8px;
-  gap: 0 8px;
+  /* Espacio inferior para el botón de 80px — sin grid forzado (usa flex .bottom-dock) */
+  padding-top: 10px;
+  min-height: 0;
 }
 
 .control-side,
@@ -249,6 +242,6 @@ body.ai-active #chat {
 .control-bar,
 #nav_bar_container,
 .nav-bar-container {
-  /* Fijo al viewport — no relative (rompe left:50% / recorta botones) */
-  position: fixed !important;
+  /* Coordenadas: .bottom-dock { position: absolute; bottom: 24px } */
+  position: absolute !important;
 }

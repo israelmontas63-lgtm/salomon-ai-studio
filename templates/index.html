@@ -32,10 +32,10 @@
   <link rel="stylesheet" href="/static/css/settings_layer.css" />
   <link rel="stylesheet" href="/static/css/chat_history_drawer.css" />
   <link rel="stylesheet" href="/static/css/back_button.css" />
-  <link rel="stylesheet" href="/static/css/bottom_bar_ux.css?v=110.22.11" />
+  <link rel="stylesheet" href="/static/css/bottom_bar_ux.css?v=110.22.13" />
 </head>
 <body>
-  <div class="phone">
+  <div class="phone app-viewport">
     <header class="header">
       <!-- Estándar móvil: Back arriba-izquierda -->
       <div class="header-nav header-nav--start" id="header-nav-start">
@@ -76,8 +76,12 @@
     </div>
 
     <!-- nav_bar_container: único HUD de controles (sin flotantes sobre el video) -->
-    <footer class="control-bar nav-bar-container" id="nav_bar_container" data-role="nav">
-      <div class="control-side nav-bar__cluster" id="side-close">
+    <footer
+      class="bottom-dock control-bar nav-bar-container"
+      id="nav_bar_container"
+      data-role="nav"
+    >
+      <div class="dock-cam-btn control-side nav-bar__cluster" id="side-close">
         <div class="cam-wrap" id="cam-wrap">
           <button type="button" class="circle-btn" id="btn-cam" aria-label="Cámara" data-ui-action="camera">
             <img src="/static/assets/icon-camera.svg" alt="" />
@@ -88,13 +92,13 @@
         </div>
       </div>
 
-      <button type="button" class="smart-button is-seamless" id="smart-button" aria-label="Salomón: toque = dictado · mantén = conversar · toque otra vez = salir" data-role="ai" data-trigger="trigger_ai_core" data-gesture-engine="seamless-smart-button" data-hold-ms="500" data-tap-max-ms="300">
+      <button type="button" class="dock-center-btn smart-button is-seamless" id="smart-button" aria-label="Salomón: toque = dictado · mantén = conversar · toque otra vez = salir" data-role="ai" data-trigger="trigger_ai_core" data-gesture-engine="seamless-smart-button" data-hold-ms="500" data-tap-max-ms="300">
         <span class="smart-button__glyph">S</span>
         <img class="smart-button__icon" src="/static/assets/icon-shutter.svg" alt="" hidden />
         <span class="smart-button__label">Salomón AI</span>
       </button>
 
-      <div class="control-side nav-bar__cluster" id="side-aa">
+      <div class="dock-text-btn control-side nav-bar__cluster" id="side-aa">
         <button type="button" class="circle-btn" id="btn-aa" aria-label="Texto" data-ui-action="aa_input">Aa</button>
       </div>
     </footer>
@@ -128,7 +132,7 @@
 
   <!-- SW eager: instalabilidad PWA no depende del lazy-loader -->
   <script src="/static/js/pwa-register.js" defer></script>
-  <script src="/static/js/bottom_bar_ux.js?v=110.22.11" defer></script>
+  <script src="/static/js/bottom_bar_ux.js?v=110.22.13" defer></script>
   <!-- Performance Overhaul: bootstrap UI → lazy load del resto -->
   <script src="/static/js/main.js" defer></script>
 </body>
