@@ -143,10 +143,19 @@ def auditar_render() -> list[dict[str, Any]]:
 
     out: list[dict[str, Any]] = []
     key = bool(os.getenv("RENDER_API_KEY") or os.getenv("RENDER_API_TOKEN"))
+    on_render = bool(
+        os.getenv("RENDER")
+        or os.getenv("RENDER_SERVICE_ID")
+        or os.getenv("ON_RENDER")
+    )
     if key:
         out.append(_ok("RENDER_API_KEY", "presente"))
+    elif on_render:
+        # En runtime de Render la llave de API de cuenta no vive en el servicio;
+        # el deploy se dispara desde el entorno local / CI.
+        out.append(_warn("RENDER_API_KEY", "runtime_render: no requerida en servicio"))
     else:
-        out.append(_fail("RENDER_API_KEY", "ausente en entorno"))
+        out.append(_fail("RENDER_API_KEY", "ausente en entorno local de despliegue"))
     return out
 
 

@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T06:45:00Z",
-  "timestamp": 1753166700,
-  "version": "110.22.5",
+  "timestamp_iso": "2026-07-22T06:55:00Z",
+  "timestamp": 1753167300,
+  "version": "110.22.6",
   "channel": "main",
-  "label": "auditoria-cruzada-pwa-deploy",
+  "label": "prod-ciclo-cerrado",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "AUDITORIA_CRUZADA_SALOMON_CURSOR",
-  "notes": "v110.22.5 — Cross-audit approved; Self-Debug + Metacognition live; PWA cache v80; Render deploy."
+  "notes": "v110.22.6 — Production cycle closed; audit warn-safe on Render; muta_fuentes=false; PWA sync."
 }
