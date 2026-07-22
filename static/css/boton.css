@@ -249,5 +249,6 @@ body.ai-active #chat {
 .control-bar,
 #nav_bar_container,
 .nav-bar-container {
-  position: relative;
+  /* Fijo al viewport — no relative (rompe left:50% / recorta botones) */
+  position: fixed !important;
 }

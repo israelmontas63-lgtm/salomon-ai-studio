@@ -1,84 +1,118 @@
 /**
- * Bottom bar UX (templates/index.html) — elevación + modos estilo WhatsApp.
+ * Bottom bar — coordenadas fijas + elevación táctil (sin recortar botones).
  * Created by Israel Monta - Salomón AI Studio
+ *
+ * REPOSO: franja inferior viewport (bottom 20–30px / safe-area).
+ * ELEVACIÓN: solo al tocar → translateY(-28px); al soltar → reposo.
+ * Líneas guía: ocultas. Botones: NUNCA display:none.
  */
 
 :root {
   --salomon-controls-lift: 28px;
   --salomon-controls-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --salomon-controls-dur: 0.3s;
+  --salomon-bar-bottom: max(20px, env(safe-area-inset-bottom, 0px));
 }
 
-#nav_bar_container,
-.control-bar.nav-bar-container {
-  /* Mantener centrado (left:50%) + elevación sin romper bounding box */
-  transform: translate3d(-50%, 0, 0);
-  transition: transform var(--salomon-controls-dur) var(--salomon-controls-ease);
+/* ——— Ancla absoluta (vence position:relative de boton.css) ——— */
+#nav_bar_container.control-bar,
+#nav_bar_container.nav-bar-container,
+footer#nav_bar_container {
+  position: fixed !important;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: var(--salomon-bar-bottom) !important;
+  width: min(100vw, 430px) !important;
+  max-width: 430px !important;
+  margin: 0 !important;
+  z-index: 100040 !important;
+  overflow: visible !important;
+  /* Centrado X + reposo Y */
+  transform: translate3d(-50%, 0, 0) !important;
+  transition: transform var(--salomon-controls-dur) var(--salomon-controls-ease) !important;
   will-change: transform;
   touch-action: manipulation;
+  /* Sin líneas guía */
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  padding-bottom: 8px !important;
+  padding-top: 10px !important;
+  min-height: calc(80px + 20px) !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: grid !important;
 }
 
+/* Elevación táctil: +1" (~28px) hacia arriba — los tres juntos */
 #nav_bar_container.is-controls-elevated,
-html.salomon-controls-elevated #nav_bar_container,
-.control-bar.is-controls-elevated {
-  transform: translate3d(-50%, calc(-1 * var(--salomon-controls-lift)), 0);
+html.salomon-controls-elevated #nav_bar_container {
+  transform: translate3d(-50%, calc(-1 * var(--salomon-controls-lift)), 0) !important;
 }
 
-/* Erradicación de líneas guía doradas (header / barra) — visibles = 0 */
-.header,
-#nav_bar_container,
-.control-bar,
-.nav-bar-container {
-  border-top-color: transparent !important;
-  border-bottom-color: transparent !important;
-  border-top-width: 0 !important;
-  border-bottom-width: 0 !important;
+/* Los tres controles siempre visibles y completos */
+#nav_bar_container #btn-cam,
+#nav_bar_container #smart-button,
+#nav_bar_container #btn-aa,
+#nav_bar_container #side-close,
+#nav_bar_container #side-aa {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  overflow: visible !important;
+}
+
+#nav_bar_container #smart-button {
+  display: grid !important;
+  border: 2px solid #d4af37 !important;
+}
+
+#nav_bar_container #btn-cam,
+#nav_bar_container #btn-aa {
+  border: 2px solid #d4af37 !important;
+}
+
+/* Header / chat: sin líneas guía doradas */
+.header {
+  border-bottom: none !important;
+  box-shadow: none !important;
 }
 
 .header::before,
 .header::after,
 .chat::before,
-.chat::after,
-#nav_bar_container::before,
-#nav_bar_container::after,
-.control-bar::before,
-.control-bar::after {
+.chat::after {
   content: none !important;
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
-  border: none !important;
-  background: none !important;
-  box-shadow: none !important;
 }
 
-/* Modo texto: foco en input; secundarios (flip) fuera */
+/* Evitar que .phone recorte la barra fija al elevar */
+.phone {
+  overflow: visible !important;
+}
+
+html,
+body {
+  overflow-x: hidden !important;
+}
+
+/* Modos: solo input/flip secundario — NUNCA ocultar los 3 botones */
 html.salomon-ui-mode-text #btn-flip,
-html.salomon-ui-mode-text .btn-flip {
-  opacity: 0;
-  pointer-events: none;
-  max-width: 0;
-  overflow: hidden;
-  transition: opacity var(--salomon-controls-dur) var(--salomon-controls-ease);
-}
-
-html.salomon-ui-mode-text #input-layer {
-  z-index: 90;
-}
-
-/* Modo voz: barra limpia, input cerrado visualmente */
-html.salomon-ui-mode-voice #input-layer:not(.is-open),
 html.salomon-ui-mode-voice #btn-flip {
   opacity: 0;
   pointer-events: none;
 }
 
-html.salomon-ui-mode-voice #smart-button {
-  box-shadow: 0 8px 28px rgba(212, 175, 55, 0.5);
-}
-
-/* Modo cámara: input oculto con fluidez (WhatsApp multimedia) */
 html.salomon-ui-mode-camera #input-layer,
 body.vision-immersive #input-layer {
   opacity: 0 !important;
@@ -87,8 +121,8 @@ body.vision-immersive #input-layer {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #nav_bar_container,
-  .control-bar.nav-bar-container {
+  #nav_bar_container.control-bar,
+  footer#nav_bar_container {
     transition: none !important;
   }
 }

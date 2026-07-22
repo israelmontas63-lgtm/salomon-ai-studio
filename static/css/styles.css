@@ -185,19 +185,20 @@ body {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 0;
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
   width: min(100%, 430px);
-  z-index: 50;
+  z-index: 100040;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   justify-content: unset;
   gap: 0 8px;
   padding: 14px 12px calc(14px + var(--safe-b));
-  background: var(--negro);
-  /* Sin separador dorado superior de la barra (bounding box lógico intacto) */
+  background: transparent;
+  /* Sin separador dorado (línea guía oculta) */
   border-top: none;
   box-shadow: none;
+  overflow: visible;
 }
 
 .circle-btn {
