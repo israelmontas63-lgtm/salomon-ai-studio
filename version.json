@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T17:30:00Z",
-  "timestamp": 1753205400,
-  "version": "110.22.19",
+  "timestamp_iso": "2026-07-22T17:40:00Z",
+  "timestamp": 1753206000,
+  "version": "110.22.20",
   "channel": "main",
-  "label": "reconnect-all-buttons-hit-repair",
+  "label": "neuronal-reconnect-protocol-4-layers",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "UI_HIT_REPAIR",
-  "notes": "v110.22.19 — Nuclear hit-repair: camera-stage display:none when idle; ui_boot_reconnect wires cam/aa/settings/back; clear stuck body classes."
+  "protocol": "NEURONAL_RECONNECT",
+  "notes": "v110.22.20 — 4-layer reconnect: DOM clear, capture delegation, hit-repair, core brain eager bind."
 }

@@ -1,11 +1,22 @@
 /**
- * Boot de reconexión UI — limpia capas atascadas y re-enlaza botones.
+ * PROTOCOLO DE RECONEXIÓN NEURONAL — 4 capas
+ * DOM → Event Listeners → UI/Z-index → Inicialización JS
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
   "use strict";
 
-  function clearStuckLayers() {
+  var WIRED = false;
+
+  function log() {
+    try {
+      console.info.apply(console, ["[SalomonReconexion]"].concat([].slice.call(arguments)));
+    } catch (_) {}
+  }
+
+  /** Capa 1 — DOM / capas atascadas / overlays */
+  function repararCapaBaseDom() {
+    log("[1/4] Capa Base / DOM");
     var body = document.body;
     if (!body) return;
     body.classList.remove(
@@ -14,7 +25,8 @@
       "control-layer-open",
       "ai-active",
       "camera-ui-elevated",
-      "has-back-context"
+      "has-back-context",
+      "neutralizer-armed"
     );
     body.removeAttribute("data-vision");
 
@@ -28,22 +40,42 @@
         "is-selfie"
       );
       stage.setAttribute("aria-hidden", "true");
+      stage.style.display = "none";
+      stage.style.pointerEvents = "none";
     }
+
+    var hud = document.getElementById("camera-controls-container");
+    if (hud) {
+      hud.style.pointerEvents = "none";
+    }
+
+    ["control-layer", "chat-drawer", "input-layer"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove("is-open");
+      if (id === "input-layer") el.setAttribute("aria-hidden", "true");
+    });
 
     var wrap = document.getElementById("cam-wrap");
     if (wrap) wrap.classList.remove("is-active", "is-elevated");
 
-    var input = document.getElementById("input-layer");
-    if (input) {
-      input.classList.remove("is-open");
-      input.setAttribute("aria-hidden", "true");
-    }
-
-    var layer = document.getElementById("control-layer");
-    if (layer) layer.classList.remove("is-open");
-
-    var drawer = document.getElementById("chat-drawer");
-    if (drawer) drawer.classList.remove("is-open");
+    /* Forzar hit-test en controles */
+    [
+      "btn-cam",
+      "btn-aa",
+      "btn-settings",
+      "btn-nav-back",
+      "btn-dock-flip",
+      "smart-button",
+      "nav_bar_container",
+    ].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.style.pointerEvents = "auto";
+      el.style.visibility = "visible";
+      el.style.opacity = "1";
+      el.style.zIndex = id === "nav_bar_container" ? "100055" : "100060";
+    });
   }
 
   function load(src) {
@@ -58,105 +90,173 @@
         return;
       }
       var s = document.createElement("script");
-      s.src = src;
+      s.src = src + (src.indexOf("?") >= 0 ? "&" : "?") + "r=" + Date.now();
       s.async = true;
       s.dataset.salomonSrc = src;
       s.onload = function () {
         s.dataset.ready = "1";
         resolve();
       };
-      s.onerror = reject;
-      document.body.appendChild(s);
+      s.onerror = function () {
+        reject(new Error("fail " + src));
+      };
+      (document.body || document.documentElement).appendChild(s);
     });
   }
 
-  function wire(id, handler) {
-    var el = document.getElementById(id);
-    if (!el || el.dataset.uiReconnected === "1") return;
-    el.dataset.uiReconnected = "1";
-    el.addEventListener(
+  function ensureCoreBrain() {
+    return Promise.all([
+      load("/static/js/ai_state_lock.js"),
+      load("/static/js/settings_manager.js"),
+      load("/static/js/back_button.js"),
+      load("/static/js/ui_controller.js"),
+      load("/static/js/components/SmartButton.js"),
+      load("/static/js/ui_manager.js"),
+      load("/static/js/script.js"),
+      load("/static/js/input_engine.js"),
+    ]).catch(function (err) {
+      log("ensureCoreBrain partial", err && err.message);
+    });
+  }
+
+  function ensureCameraBrain() {
+    if (window.SalomonMain && window.SalomonMain.ensureCameraStack) {
+      return window.SalomonMain.ensureCameraStack();
+    }
+    return Promise.all([
+      load("/static/js/camera_logic.js"),
+      load("/static/js/camera_full.js"),
+      load("/static/js/camera_toggle_ui.js"),
+      load("/static/js/vision_engine.js"),
+    ]);
+  }
+
+  /** Capa 2 — Event listeners (delegación en captura) */
+  function repararCapaEventListeners() {
+    log("[2/4] Capa de Event Listeners");
+    if (WIRED) return;
+    WIRED = true;
+
+    function handle(id, ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      log("tap", id);
+
+      if (id === "btn-settings") {
+        ensureCoreBrain().then(function () {
+          if (window.SalomonSettings && window.SalomonSettings.toggle) {
+            window.SalomonSettings.toggle();
+          }
+        });
+        return;
+      }
+      if (id === "btn-aa") {
+        ensureCoreBrain().then(function () {
+          if (window.SalomonUiManager && window.SalomonUiManager.toggle) {
+            window.SalomonUiManager.toggle();
+          }
+        });
+        return;
+      }
+      if (id === "btn-cam" || id === "btn-dock-flip") {
+        ensureCameraBrain().then(function () {
+          if (id === "btn-dock-flip") {
+            if (window.SalomonCamera && window.SalomonCamera.flipCamera) {
+              window.SalomonCamera.flipCamera();
+            }
+            return;
+          }
+          if (window.SalomonCamera && window.SalomonCamera.toggleCamera) {
+            window.SalomonCamera.toggleCamera();
+          }
+        });
+        return;
+      }
+      if (id === "btn-nav-back") {
+        ensureCoreBrain().then(function () {
+          if (window.SalomonBack && window.SalomonBack.onBackTap) {
+            window.SalomonBack.onBackTap();
+          } else if (window.SalomonBack && window.SalomonBack.neutralize) {
+            window.SalomonBack.neutralize();
+          }
+        });
+        return;
+      }
+      if (id === "smart-button") {
+        /* SmartButton tiene gestos propios; solo asegurar cerebro */
+        ensureCoreBrain();
+        return;
+      }
+    }
+
+    document.addEventListener(
       "click",
-      function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        try {
-          handler(e);
-        } catch (err) {
-          console.error("[ui_boot_reconnect]", id, err);
+      function (ev) {
+        var t = ev.target;
+        if (!t || !t.closest) return;
+        var hit = t.closest(
+          "#btn-cam, #btn-aa, #btn-settings, #btn-nav-back, #btn-dock-flip, #smart-button"
+        );
+        if (!hit || !hit.id) return;
+        /* smart-button: no interceptar si ya tiene motor sináptico */
+        if (hit.id === "smart-button" && hit.dataset.gestureEngine) {
+          ensureCoreBrain();
+          return;
+        }
+        handle(hit.id, ev);
+      },
+      true
+    );
+
+    document.addEventListener(
+      "pointerup",
+      function (ev) {
+        var t = ev.target;
+        if (!t || !t.closest) return;
+        var hit = t.closest("#btn-cam, #btn-aa, #btn-settings, #btn-nav-back");
+        if (!hit) return;
+        /* refuerzo móvil: algunos WebViews tragan click */
+        if (ev.pointerType === "touch") {
+          handle(hit.id, ev);
         }
       },
-      false
+      true
     );
   }
 
-  function reconnect() {
-    clearStuckLayers();
+  /** Capa 3 — UI / z-index (refuerzo runtime) */
+  function repararCapaUiEstilos() {
+    log("[3/4] Capa de UI / Estilos (Z-index / Overlays)");
+    repararCapaBaseDom();
+  }
 
-    wire("btn-settings", function () {
-      function open() {
-        if (window.SalomonSettings && window.SalomonSettings.toggle) {
-          window.SalomonSettings.toggle();
-        }
-      }
-      if (window.SalomonSettings) open();
-      else load("/static/js/settings_manager.js").then(open);
+  /** Capa 4 — Inicialización JS / cerebro */
+  function repararCapaInicializacionJs() {
+    log("[4/4] Capa de Inicialización JS");
+    ensureCoreBrain().then(function () {
+      log("cerebro UI listo", {
+        settings: !!window.SalomonSettings,
+        ui: !!window.SalomonUiManager,
+        back: !!window.SalomonBack,
+        lock: !!window.SalomonAILock,
+      });
     });
+  }
 
-    wire("btn-aa", function () {
-      function open() {
-        if (window.SalomonUiManager && window.SalomonUiManager.toggle) {
-          window.SalomonUiManager.toggle();
-        }
-      }
-      if (window.SalomonUiManager) open();
-      else {
-        Promise.all([
-          load("/static/js/ui_manager.js"),
-          load("/static/js/script.js"),
-          load("/static/js/input_engine.js"),
-        ]).then(open);
-      }
-    });
-
-    wire("btn-cam", function () {
-      function go() {
-        if (window.SalomonCamera && window.SalomonCamera.toggleCamera) {
-          window.SalomonCamera.toggleCamera();
-        }
-      }
-      if (window.SalomonCamera) go();
-      else if (window.SalomonMain && window.SalomonMain.ensureCameraStack) {
-        window.SalomonMain.ensureCameraStack().then(go);
-      } else {
-        Promise.all([
-          load("/static/js/camera_logic.js"),
-          load("/static/js/camera_full.js"),
-          load("/static/js/camera_toggle_ui.js"),
-        ]).then(go);
-      }
-    });
-
-    wire("btn-nav-back", function () {
-      if (window.SalomonBack && window.SalomonBack.onBackTap) {
-        window.SalomonBack.onBackTap();
-      } else if (window.SalomonBack && window.SalomonBack.neutralize) {
-        window.SalomonBack.neutralize();
-      }
-    });
-
-    /* Smart button: no duplicar gestos; solo asegurar módulo */
-    var smart = document.getElementById("smart-button");
-    if (smart && !window.SalomonSmartButton) {
-      load("/static/js/components/SmartButton.js").catch(function () {});
-    }
+  function forzarReconexionBotones() {
+    log(">>> [ALERTA] Reconexion neuronal forzada");
+    repararCapaBaseDom();
+    repararCapaEventListeners();
+    repararCapaUiEstilos();
+    repararCapaInicializacionJs();
+    log(">>> [EXITO] Botones enlazados al cerebro");
   }
 
   function boot() {
-    clearStuckLayers();
-    reconnect();
-    /* Segunda pasada tras lazy load de main.js */
-    setTimeout(reconnect, 400);
-    setTimeout(clearStuckLayers, 800);
+    forzarReconexionBotones();
+    setTimeout(repararCapaBaseDom, 300);
+    setTimeout(repararCapaBaseDom, 1000);
+    setTimeout(repararCapaInicializacionJs, 500);
   }
 
   if (document.readyState === "loading") {
@@ -165,5 +265,9 @@
     boot();
   }
 
-  window.SalomonUiReconnect = { clearStuckLayers: clearStuckLayers, reconnect: reconnect };
+  window.SalomonUiReconnect = {
+    forzarReconexionBotones: forzarReconexionBotones,
+    clearStuckLayers: repararCapaBaseDom,
+    reconnect: forzarReconexionBotones,
+  };
 })();
