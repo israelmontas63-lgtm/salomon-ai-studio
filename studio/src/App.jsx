@@ -33,7 +33,7 @@ export default function App() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(true);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [showWelcomeFlash, setShowWelcomeFlash] = useState(true);
   const [accessibilityMode, setAccessibilityMode] = useState(false);
@@ -606,12 +606,22 @@ export default function App() {
       <BottomBar
         orchestrator={orchestrator}
         keyboardVisible={keyboardVisible}
+        cameraOpen={cameraOpen}
         inputValue={inputValue}
         sending={sending}
         onInputChange={setInputValue}
         onSend={() => sendMessage()}
-        onOpenCamera={() => setCameraOpen(true)}
-        onToggleKeyboard={() => setKeyboardVisible((v) => !v)}
+        onOpenCamera={() => {
+          setKeyboardVisible(false);
+          setCameraOpen(true);
+        }}
+        onToggleKeyboard={() =>
+          setKeyboardVisible((v) => {
+            const next = !v;
+            if (next) setCameraOpen(false);
+            return next;
+          })
+        }
         onNotify={showVoiceHint}
         onOpenMedia={() => setMediaOpen(true)}
         onToggleHandsFree={orchestrator.toggleHandsFree}

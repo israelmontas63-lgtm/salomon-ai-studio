@@ -2,53 +2,39 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="icon" href="/favicon-v2.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/icon-v2.svg" />
+    <link rel="icon" type="image/png" href="/icon-192-v2.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Salomón</title>
-    <link rel="icon" href="/favicon-v2.ico?v=31" sizes="any" />
-    <link rel="icon" type="image/svg+xml" href="/icon-v2.svg?v=31" />
-    <link rel="icon" type="image/png" href="/icon-192-v2.png?v=31" sizes="192x192" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png?v=31" />
-    <meta name="theme-color" content="#000000" />
-    <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(self), autoplay=(self)" />
+    <meta name="theme-color" content="#C5A059" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Salomon" />
+    <meta name="apple-mobile-web-app-title" content="Salomón" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="description" content="Salomon AI — asistente con memoria, voz y vision. Creado por Israel Monta." />
+    <meta name="description" content="Salomón — asistente con memoria, voz y visión. Negro plateado y oro." />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Salomon AI" />
-    <meta property="og:description" content="Asistente de inteligencia artificial — PWA nativa." />
-    <meta property="og:site_name" content="Salomon AI Studio" />
-    <link rel="manifest" href="/manifest.json?v=111" />
-    <link rel="manifest" href="/manifest.webmanifest?v=111" />
+    <meta property="og:title" content="Salomón AI" />
+    <meta property="og:description" content="Asistente de inteligencia artificial — negro plateado y oro." />
+    <meta property="og:site_name" content="Salomón AI" />
+    <link rel="manifest" href="/manifest.json?v=icon-v2" />
+    <link rel="manifest" href="/manifest.webmanifest?v=icon-v2" />
+    <title>Salomón AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/salomon-theme.css?v=111" />
-    <link rel="stylesheet" href="/splash.css?v=111" />
-    <link rel="stylesheet" href="/drawers.css?v=111" />
-    <link rel="stylesheet" crossorigin href="/assets/index-CVNkhEWW.css?v=111" />
-    <link rel="stylesheet" href="/header-logo-spec.css?v=111" />
-    <link rel="stylesheet" href="/voice-orchestrator.css?v=111" />
-    <link rel="stylesheet" href="/thinking-animation-spec.css?v=111" />
-    <link rel="stylesheet" href="/camera-v13.css?v=31" />
-    <link rel="stylesheet" href="/salomon-ui-shield.css?v=111" />
-    <link rel="stylesheet" href="/salomon-estructura.css?v=111" />
+    <link rel="stylesheet" href="/salomon-theme.css?v=icon-v2" />
+    <link rel="stylesheet" href="/splash.css?v=icon-v2" />
+    <link rel="stylesheet" href="/drawers.css?v=2" />
+    <link rel="stylesheet" href="/header-logo-spec.css?v=1" />
+    <link rel="stylesheet" href="/voice-orchestrator.css?v=capa1" />
+    <link rel="stylesheet" href="/thinking-animation-spec.css?v=1" />
+    <link rel="stylesheet" href="/salomon-ui-shield.css?v=camview1" />
+    <link rel="stylesheet" href="/bottom-bar-ux.css?v=112" />
+    <script type="module" crossorigin src="/assets/index-Bm6bKNpW.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-cbi0bDJp.css">
   </head>
   <body>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        document.title = "Salomón";
-        document.documentElement.lang = "es";
-      });
-      window.__SalomonNucleoReparacion105 = true;
-      window.__SalomonVoiceProtocol108 = true;
-      window.__SalomonKernel109 = true;
-      window.__SalomonKernelAuto = false;
-      window.__SalomonSilentBoot = true;
-    </script>
-
     <div id="salomon-splash" aria-live="polite">
       <div class="splash-icon" role="img" aria-label="Salomón"></div>
       <div class="splash-title">SALOMÓN</div>
@@ -60,29 +46,13 @@
 
     <div id="root"></div>
 
-    <!-- 1) Jerarquía kernel (orden estricto — evita requireMod) -->
-    <script src="/core/config.js?v=111"></script>
-    <script src="/boot/permissions_check.js?v=111"></script>
-    <script src="/core/core.js?v=111"></script>
-    <script src="/core/peripherals/VoiceCore.js?v=111"></script>
-    <script src="/core/peripherals/VisionAgent.js?v=111"></script>
-    <script src="/core/peripherals/HomeGateway.js?v=111"></script>
-    <script src="/core/main.js?v=111"></script>
-
-    <!-- 2) React + UI / boot auxiliares (carpetas, no huérfanos) -->
-    <script type="module" crossorigin src="/assets/index-Cb8PEdE8.js?v=111"></script>
-    <script src="/boot/standalone-boot.js?v=111" data-salomon-boot="1"></script>
-    <script src="/boot/salomon-self-heal.js?v=111"></script>
-    <script src="/ui/drawers.js?v=111" defer></script>
-    <script src="/ui/media-panel.js?v=111" defer></script>
-    <script src="/ui/visual-progress.js?v=111" defer></script>
-    <script src="/ui/bca-indicator.js?v=111" defer></script>
-    <script src="/ui/salomon-orchestrator-bridge.js?v=111" defer></script>
-    <script src="/tools/camera_actions.js?v=1" defer></script>
-    <script src="/ui/salomon-ui-shield.js?v=111" defer></script>
-    <script src="/ui/salomon-fase1.js?v=111" defer></script>
-    <script src="/ui/vision-overlay.js?v=111" defer></script>
-    <script src="/boot/salomon-update.js?v=111" defer></script>
-    <script src="/camera-v13.js?v=31" defer></script>
+    <script src="/standalone-boot.js?v=7" data-salomon-boot="1"></script>
+    <script src="/drawers.js?v=6" defer></script>
+    <script src="/media-panel.js?v=3" defer></script>
+    <script src="/bca-indicator.js?v=1" defer></script>
+    <script src="/salomon-orchestrator-bridge.js?v=nucleo13" defer></script>
+    <script src="/salomon-ui-shield.js?v=camview1" defer></script>
+    <script src="/vision-overlay.js?v=sync1" defer></script>
+    <script src="/salomon-update.js?v=proactive1" defer></script>
   </body>
 </html>

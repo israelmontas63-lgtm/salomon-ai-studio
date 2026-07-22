@@ -1,0 +1,118 @@
+/**
+ * Bottom bar UX — elevación sincronizada + modos aislados (estilo WhatsApp).
+ * Created by Israel Monta - Salomón AI Studio
+ */
+
+:root {
+  --salomon-controls-lift: 28px; /* ~1" táctil */
+  --salomon-controls-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --salomon-controls-dur: 0.3s;
+}
+
+.bottom-bar {
+  transition: padding var(--salomon-controls-dur) var(--salomon-controls-ease);
+}
+
+.bottom-bar .controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  transform: translate3d(0, 0, 0);
+  transition: transform var(--salomon-controls-dur) var(--salomon-controls-ease);
+  will-change: transform;
+  touch-action: manipulation;
+}
+
+/* 1) Elevación sincronizada de los tres botones */
+.bottom-bar.is-controls-elevated .controls-row,
+html.salomon-controls-elevated .bottom-bar .controls-row {
+  transform: translate3d(0, calc(-1 * var(--salomon-controls-lift)), 0);
+}
+
+/* 2) Modo cámara — foco multimedia (texto/meta fuera) */
+.bottom-bar[data-ui-mode="camera"] .bottom-bar__meta,
+.bottom-bar[data-ui-mode="camera"] .chat-input,
+html.salomon-ui-mode-camera .bottom-bar .bottom-bar__meta,
+html.salomon-ui-mode-camera .bottom-bar .chat-input {
+  opacity: 0;
+  max-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition:
+    opacity var(--salomon-controls-dur) var(--salomon-controls-ease),
+    max-height var(--salomon-controls-dur) var(--salomon-controls-ease),
+    transform var(--salomon-controls-dur) var(--salomon-controls-ease);
+}
+
+/* 3) Modo teclado — foco texto; secundarios ocultos */
+.bottom-bar[data-ui-mode="text"] .bottom-bar__meta,
+html.salomon-ui-mode-text .bottom-bar .bottom-bar__meta {
+  opacity: 0;
+  max-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--salomon-controls-dur) var(--salomon-controls-ease),
+    max-height var(--salomon-controls-dur) var(--salomon-controls-ease);
+}
+
+.bottom-bar[data-ui-mode="text"] .chat-input,
+html.salomon-ui-mode-text .bottom-bar .chat-input {
+  animation: salomonChatInputIn var(--salomon-controls-dur) var(--salomon-controls-ease);
+}
+
+@keyframes salomonChatInputIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 4) Modo voz — interfaz limpia (sin teclado/meta) */
+.bottom-bar[data-ui-mode="voice"] .bottom-bar__meta,
+.bottom-bar[data-ui-mode="voice"] .chat-input,
+html.salomon-ui-mode-voice .bottom-bar .bottom-bar__meta,
+html.salomon-ui-mode-voice .bottom-bar .chat-input {
+  opacity: 0;
+  max-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--salomon-controls-dur) var(--salomon-controls-ease),
+    max-height var(--salomon-controls-dur) var(--salomon-controls-ease);
+}
+
+.bottom-bar[data-ui-mode="voice"] .control-btn--main,
+html.salomon-ui-mode-voice .bottom-bar .control-btn--main {
+  box-shadow: 0 6px 28px rgba(212, 175, 55, 0.55);
+}
+
+/* Transición suave de meta / input al salir de modos */
+.bottom-bar .bottom-bar__meta,
+.bottom-bar .chat-input {
+  transition:
+    opacity var(--salomon-controls-dur) var(--salomon-controls-ease),
+    max-height var(--salomon-controls-dur) var(--salomon-controls-ease),
+    transform var(--salomon-controls-dur) var(--salomon-controls-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-bar .controls-row,
+  .bottom-bar .bottom-bar__meta,
+  .bottom-bar .chat-input {
+    transition: none !important;
+    animation: none !important;
+  }
+}
