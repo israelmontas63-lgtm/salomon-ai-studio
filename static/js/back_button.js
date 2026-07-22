@@ -1,7 +1,7 @@
 /**
  * Salomón AI — Global Negative System (Master Back)
- * 1) Si hay capa → neutralize (settings / Aa / cámara / AI lock)
- * 2) Si home → exitSystem (cerrar aplicación / salir del sistema)
+ * 1) Capa activa → neutralize
+ * 2) Home → intentar cerrar PWA SIN destruir la sesión (no about:blank)
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
@@ -20,10 +20,9 @@
         (e) => {
           e.preventDefault();
           e.stopPropagation();
-          e.stopImmediatePropagation();
           this.onBackTap();
         },
-        true
+        false
       );
       this._sync();
       window.addEventListener("salomon:camera-state", () => this._sync());
@@ -59,7 +58,6 @@
       return false;
     },
 
-    /** Operador negativo global */
     onBackTap() {
       if (this.hasActiveLayer()) {
         this.neutralize();
@@ -69,7 +67,7 @@
     },
 
     /**
-     * Home / sin capas: cerrar la aplicación (PWA / fallback).
+     * Intenta cerrar la PWA. NUNCA navega a about:blank (deja la app muerta).
      */
     exitSystem() {
       window.dispatchEvent(
@@ -89,15 +87,25 @@
         }
       } catch (_) {}
 
+      /* Si el SO bloquea close(): avisar, no destruir el DOM */
       try {
-        if (window.history && window.history.length > 1) {
-          window.history.go(-(window.history.length - 1));
+        if (window.SalomonToast && typeof window.SalomonToast.show === "function") {
+          window.SalomonToast.show("Usa el gesto del sistema para salir de la app.");
+          return;
         }
       } catch (_) {}
 
-      try {
-        window.location.replace("about:blank");
-      } catch (_) {}
+      var toast = document.getElementById("update-toast");
+      if (toast) {
+        var text = toast.querySelector(".update-toast__text");
+        if (text) {
+          text.textContent = "Para salir: cierra la app desde el sistema.";
+        }
+        toast.classList.add("is-visible");
+        setTimeout(function () {
+          toast.classList.remove("is-visible");
+        }, 2800);
+      }
     },
 
     _sync() {
@@ -105,17 +113,12 @@
         document.getElementById("btn-nav-back") ||
         document.querySelector(".back-btn");
       if (!btn) return;
-      /* Siempre armado (Global Negative) — también en home */
       btn.classList.add("is-active", "is-neutralizer-armed");
       btn.setAttribute("aria-disabled", "false");
       btn.setAttribute("aria-label", "Salir del sistema / Cerrar capa");
       document.body.classList.add("has-back-context", "neutralizer-armed");
     },
 
-    /**
-     * Neutraliza la capa activa más alta (stack pop).
-     * Preserva el núcleo del asistente.
-     */
     neutralize() {
       var closed = false;
 

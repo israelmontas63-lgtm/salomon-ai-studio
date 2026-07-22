@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T16:20:00Z",
-  "timestamp": 1753201200,
-  "version": "110.22.17",
+  "timestamp_iso": "2026-07-22T16:50:00Z",
+  "timestamp": 1753203000,
+  "version": "110.22.18",
   "channel": "main",
-  "label": "global-negative-back-align",
+  "label": "hotfix-dead-ui-camera-stage-layout",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "GLOBAL_NEGATIVE_BACK",
-  "notes": "v110.22.17 — Back aligned with settings 36px; Global Negative: layer pop or exitSystem on home."
+  "protocol": "UI_HOTFIX",
+  "notes": "v110.22.18 — Fix dead UI: camera-stage out of flex flow when idle; remove about:blank exitSystem."
 }

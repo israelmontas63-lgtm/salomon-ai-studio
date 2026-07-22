@@ -1,28 +1,51 @@
 /**
- * Controles de Cámara — bloque obligatorio (coords exactas).
- * #camera-controls-container siempre sobre el video al activar el visor.
+ * Controles de Cámara — HUD solo con ojos activos.
+ * CRÍTICO: en reposo el stage NO ocupa layout ni captura clics.
  * Created by Israel Monta - Salomón AI Studio
  */
 
+/* REPOSO: fuera del flujo flex — no aplasta chat/dock */
+#camera-stage,
 #camera-stage.camera-container,
-#camera-stage {
-  position: relative;
-  background: #000;
-  overflow: hidden;
+.camera-stage {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+  transform: none !important;
+  background: #000 !important;
 }
 
+/* ACTIVO: pantalla completa por encima del chat */
 body.vision-immersive #camera-stage,
-#camera-stage.is-visible {
-  position: fixed !important;
+#camera-stage.is-visible,
+.camera-stage.is-visible {
   inset: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   width: 100vw !important;
   height: 100dvh !important;
   max-width: none !important;
   z-index: 9000 !important;
   opacity: 1 !important;
+  visibility: visible !important;
   pointer-events: auto !important;
   display: block !important;
-  visibility: visible !important;
+  border: none !important;
+  border-radius: 0 !important;
+  transform: none !important;
 }
 
 #camera-stage video {
@@ -32,9 +55,9 @@ body.vision-immersive #camera-stage,
   height: 100%;
   object-fit: cover;
   z-index: 1;
+  pointer-events: none;
 }
 
-/* Contenedor HUD: oculto en reposo, FORZADO visible con ojos activos */
 #camera-controls-container {
   display: none !important;
   position: absolute !important;
@@ -56,7 +79,6 @@ body.vision-immersive #camera-controls-container {
   z-index: 9998 !important;
 }
 
-/* Visor: #btn-flip del HUD NUNCA hereda opacity:0 del dock */
 #camera-controls-container #btn-back,
 #camera-controls-container #btn-flip,
 #camera-controls-container #btn-capture {
@@ -65,7 +87,6 @@ body.vision-immersive #camera-controls-container {
   opacity: 1 !important;
   display: flex !important;
   z-index: 9999 !important;
-  transform: none !important;
 }
 
 #camera-controls-container #btn-back {
@@ -76,6 +97,7 @@ body.vision-immersive #camera-controls-container {
   bottom: auto !important;
   width: 44px !important;
   height: 44px !important;
+  transform: none !important;
 }
 
 #camera-controls-container #btn-flip {
@@ -100,7 +122,6 @@ body.vision-immersive #camera-controls-container {
   height: 72px !important;
 }
 
-/* Safe-area (iPhone notch / Android gestos) sin mover el layout base */
 @supports (top: env(safe-area-inset-top)) {
   #camera-controls-container #btn-back {
     top: calc(24px + env(safe-area-inset-top, 0px)) !important;
@@ -113,15 +134,9 @@ body.vision-immersive #camera-controls-container {
   }
 }
 
-/* Dock del chat no tapa el visor */
 body.vision-immersive .bottom-dock,
 body.vision-immersive #nav_bar_container {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
-}
-
-/* Nav back del chat (no confundir con ✕ del visor) */
-#btn-nav-back.back-btn {
-  /* estilos en back_button.css */
 }
