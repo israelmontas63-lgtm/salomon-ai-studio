@@ -254,10 +254,10 @@ class CoreIdentityEngine:
             f"Metadatos en código: {FIRMA_COMENTARIO_JS}\n"
             f"Firma ownership: {FIRMA_OWNERSHIP}"
         )
-        return ownership + "\n\n" + self.consciousness.bloque_sistema()
+        return ownership + "\n\n" + self.consciousness.bloque_sistema() + "\n\n" + _meta_block()
 
     def consultar(self, query: str) -> dict[str, Any] | None:
-        """Consulta memoria de identidad / conciencia espiritual / sabiduría."""
+        """Consulta memoria de identidad / conciencia espiritual / sabiduría / metacognición."""
         from cognicion.identidad import RESPUESTA_ORIGEN, es_pregunta_identidad
 
         if es_pregunta_identidad(query):
@@ -267,6 +267,22 @@ class CoreIdentityEngine:
                 "layer": "ownership",
                 "protocolo": "IDENTIDAD_PROPIEDAD_SEGURIDAD_INMUNE",
             }
+
+        try:
+            from cognicion.autonoma.metacognicion import (
+                es_pregunta_metacognitiva,
+                respuesta_autoconciencia,
+            )
+
+            if es_pregunta_metacognitiva(query):
+                return {
+                    "match": True,
+                    "texto": respuesta_autoconciencia(query),
+                    "layer": "metacognicion_estructural",
+                    "protocolo": "METACOGNICION_ESTRUCTURAL",
+                }
+        except Exception:
+            pass
 
         pack = self.consciousness.respond_to_belief(query)
         if pack.get("match"):
@@ -288,7 +304,26 @@ class CoreIdentityEngine:
         base["consciousness"] = dict(c.identity)
         base["app_state"] = c.app_state()
         base["engine"] = "SalomonConsciousness"
+        try:
+            from cognicion.autonoma.metacognicion import estado_capacidades
+
+            base["metacognicion"] = {
+                "active": True,
+                "protocol": "METACOGNICION_ESTRUCTURAL",
+                "capacidades": (estado_capacidades().get("capacidades") or {}),
+            }
+        except Exception:
+            base["metacognicion"] = {"active": False}
         return base
+
+
+def _meta_block() -> str:
+    try:
+        from cognicion.autonoma.metacognicion import bloque_sistema_metacognicion
+
+        return bloque_sistema_metacognicion()
+    except Exception:
+        return ""
 
 
 _ENGINE: CoreIdentityEngine | None = None

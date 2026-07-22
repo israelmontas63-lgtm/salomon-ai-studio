@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T06:00:00Z",
-  "timestamp": 1753164000,
-  "version": "110.22.2",
+  "timestamp_iso": "2026-07-22T06:45:00Z",
+  "timestamp": 1753166700,
+  "version": "110.22.5",
   "channel": "main",
-  "label": "zen-empatia-smart-router-deploy",
+  "label": "auditoria-cruzada-pwa-deploy",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "ZEN_NEURONAL_8_CAPAS",
-  "notes": "v110.22.2 — Empatía ZEN serena; Smart Router failover; L6 prefetch; deploy Render consciente."
+  "protocol": "AUDITORIA_CRUZADA_SALOMON_CURSOR",
+  "notes": "v110.22.5 — Cross-audit approved; Self-Debug + Metacognition live; PWA cache v80; Render deploy."
 }

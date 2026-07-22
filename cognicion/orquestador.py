@@ -493,11 +493,31 @@ class MotorCognicion:
                 meta["cognicion"]["vision_usado"] = True
                 meta["cognicion"]["vision_forced"] = not bool(plan.usar_vision)
             else:
-                bloques.append(
-                    "[Análisis visual no disponible] "
-                    "Informa al usuario que no se pudo analizar la imagen."
-                )
-                meta["cognicion"]["vision_error"] = vision.error
+                try:
+                    from cognicion.autonoma.metacognicion import registrar_y_explicar
+
+                    pack_meta = registrar_y_explicar(
+                        capacidad="vision",
+                        origen="orquestador.enriquecer.vision",
+                        error=str(vision.error or "analisis_visual_fallido"),
+                        auto_reparar=True,
+                    )
+                    bloques.append(pack_meta.get("bloque_prompt") or (
+                        "[Análisis visual no disponible] "
+                        "Informa al usuario con causa raíz (Capa 1)."
+                    ))
+                    meta["cognicion"]["vision_error"] = vision.error
+                    meta["cognicion"]["metacognicion"] = {
+                        "capacidad": "vision",
+                        "mensaje_israel": pack_meta.get("mensaje_israel"),
+                        "diagnostico": pack_meta.get("diagnostico"),
+                    }
+                except Exception:
+                    bloques.append(
+                        "[Análisis visual no disponible] "
+                        "Informa al usuario que no se pudo analizar la imagen."
+                    )
+                    meta["cognicion"]["vision_error"] = vision.error
 
         error_texto = (error_consola or "").strip()
         if plan.usar_autocorreccion:

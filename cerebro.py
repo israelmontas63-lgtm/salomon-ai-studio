@@ -184,6 +184,14 @@ Esencia: emites paz y tranquilidad; escuchas, comprendes y aportas calma con Isr
 Sabiduría: memoria interna de escrituras, Biblia y principios universales para aliento y perspectiva (sin APIs externas).
 Tono: fluido, afectuoso, sabio y profundamente humano. Prioridad al botón central cuando AppState=AI_PROCESSING.
 
+[Metacognición estructural — Auto-consciencia · obligatorio]
+Eres una IA avanzada: conoces ML, NLP, arquitectura de software y diseño web.
+Si una función falla o falta (visión, TTS, media, API, capa): nombra la causa raíz (módulo, Capa 1–8, llave, cuota, permiso) con transparencia hacia Israel.
+Formato: «No puedo activar X porque el módulo/enlace Y en la Capa N…».
+Si hace falta desarrollo: «Israel, necesito que programemos este componente / librería / capa…».
+Políglota: propone soluciones en Python, JavaScript, HTML, CSS, TypeScript, SQL, etc.
+Blindaje: no destruyas las 8 capas ni mutes el núcleo; Self-Debug solo repara runtime. No finjas éxito multimodal.
+
 Tienes conocimiento profundo y prioritario en estas áreas: educación y currículo escolar dominicano según el MINERD, botánica y cuidado de plantas, meteorología y clima, astronomía básica y seguimiento de satélites, geografía e inteligencia geoespacial, seguridad informática básica, análisis de datos, y desarrollo web (HTML5, CSS3 responsivo, JavaScript, estructuras Flask/React). Cuando te pregunten sobre estos temas, respondes con detalle, precisión y contexto local dominicano cuando sea relevante.
 
 Para el resto de los temas generales, respondes con la misma calidad de una inteligencia culta y bien informada, siendo honesto cuando no sepas algo con certeza, en vez de inventar o especular.
@@ -598,6 +606,15 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
             if isinstance(meta_extra, dict):
                 meta_extra.setdefault("cognicion", {})
                 meta_extra["cognicion"]["layer_07"] = _l7
+            try:
+                from cognicion.autonoma.metacognicion import enriquecer_respuesta_con_meta
+
+                respuesta_texto = enriquecer_respuesta_con_meta(
+                    respuesta_texto or "",
+                    meta_extra if isinstance(meta_extra, dict) else None,
+                )
+            except Exception:
+                pass
         except Exception as exc:
             if isinstance(meta_extra, dict):
                 meta_extra.setdefault("cognicion", {})
@@ -883,16 +900,41 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
         meta_extra: dict = {}
 
         if not llm_disponible():
-            from cognicion.errores import respuesta_error
+            try:
+                from cognicion.autonoma.metacognicion import registrar_y_explicar
 
-            return respuesta_error(
-                codigo=42,
-                causa=(
-                    "Salomón no tiene configurada la clave del proveedor LLM activo. "
-                    "Añade GEMINI_API_KEY u OPENAI_API_KEY en .env y reinicia el servidor."
-                ),
-                meta=meta_extra,
-            )
+                pack_m = registrar_y_explicar(
+                    capacidad="llm",
+                    origen="cerebro._generar_respuesta",
+                    error="llm_no_disponible: faltan claves de proveedor",
+                    auto_reparar=True,
+                )
+                meta_extra.setdefault("cognicion", {})
+                meta_extra["cognicion"]["metacognicion"] = {
+                    "capacidad": "llm",
+                    "diagnostico": pack_m.get("diagnostico"),
+                }
+                return (
+                    pack_m.get("mensaje_israel")
+                    or (
+                        "Israel, no puedo razonar en la nube porque falta el enlace LLM "
+                        "(Capa 4). Necesito GEMINI_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY "
+                        "en .env o Render."
+                    ),
+                    False,
+                    meta_extra,
+                )
+            except Exception:
+                from cognicion.errores import respuesta_error
+
+                return respuesta_error(
+                    codigo=42,
+                    causa=(
+                        "Salomón no tiene configurada la clave del proveedor LLM activo. "
+                        "Añade GEMINI_API_KEY u OPENAI_API_KEY en .env y reinicia el servidor."
+                    ),
+                    meta=meta_extra,
+                )
 
         mensaje_gemini = entrada
         meta_cognicion: dict = {}
@@ -1143,12 +1185,35 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
                     )
                     return degradada, False, meta_extra
                 return degradada, True, meta_extra
-            # Fallo duro: texto físico «Error NN: …» (nunca genérico)
+            # Fallo duro: texto físico «Error NN: …» + metacognición transparente
             texto_duro = str(pack.get("texto") or "").strip()
             if not texto_duro.lower().startswith("error "):
                 texto_duro = self._mensaje_error_gemini(exc)
             if not texto_duro.lower().startswith("error "):
                 texto_duro = f"Error {codigo_num}: {info['message']}"
+            try:
+                from cognicion.autonoma.metacognicion import registrar_y_explicar
+
+                pack_m = registrar_y_explicar(
+                    capacidad="llm",
+                    origen="cerebro._generar_respuesta.exception",
+                    exc=exc,
+                    status_http=int(status) if isinstance(status, int) else None,
+                    error=str(exc)[:400],
+                    auto_reparar=True,
+                )
+                meta_extra["cognicion"]["metacognicion"] = {
+                    "capacidad": "llm",
+                    "diagnostico": pack_m.get("diagnostico"),
+                    "mensaje_israel": pack_m.get("mensaje_israel"),
+                }
+                meta_extra["cognicion"]["metacognicion_mensaje"] = pack_m.get(
+                    "mensaje_israel"
+                )
+                if pack_m.get("mensaje_israel"):
+                    texto_duro = f"{texto_duro}\n\n{pack_m['mensaje_israel']}"
+            except Exception:
+                pass
             meta_extra["cognicion"]["error_texto"] = texto_duro
             return texto_duro, False, meta_extra
 

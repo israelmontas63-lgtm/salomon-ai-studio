@@ -71,6 +71,13 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/llm/probe-deepseek",
         "/api/tools/conectividad",
         "/api/smart-router/estado",
+        "/api/self-debug/estado",
+        "/api/self-debug/ciclo",
+        "/api/self-debug/registrar",
+        "/api/health",
+        "/api/metacognicion",
+        "/api/metacognicion/estado",
+        "/api/auditoria-cruzada",
         "/api/proveedores",
         "/api/bca/estado",
         "/api/tunel/estado",
@@ -396,7 +403,22 @@ async def motor_ciberseguridad_middleware(request: Request, call_next):
                         },
                     )
 
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            # Self-debug: traza + reparación segura; re-lanzar para que FastAPI responda
+            try:
+                from cognicion.autonoma.self_debug import registrar_fallo
+
+                registrar_fallo(
+                    origen="middleware.exception",
+                    exc=exc,
+                    path=path,
+                    auto_reparar=True,
+                )
+            except Exception:
+                pass
+            raise
         duracion_ms = round((time.perf_counter() - inicio) * 1000, 1)
 
         if path.startswith("/api/"):
@@ -408,6 +430,20 @@ async def motor_ciberseguridad_middleware(request: Request, call_next):
                 status=response.status_code,
                 ms=duracion_ms,
             )
+            # Self-debug: capturar 5xx / fallos de API sin tumbar la respuesta
+            if response.status_code >= 500:
+                try:
+                    from cognicion.autonoma.self_debug import registrar_fallo
+
+                    registrar_fallo(
+                        origen="middleware.http",
+                        status_http=int(response.status_code),
+                        mensaje=f"{request.method} {path}",
+                        path=path,
+                        auto_reparar=True,
+                    )
+                except Exception:
+                    pass
             if SEGURIDAD_HABILITADA:
                 from cognicion.seguridad import obtener_motor
 
@@ -781,6 +817,26 @@ def _tools_conectividad_payload() -> dict:
         return {"active": False, "error": type(exc).__name__}
 
 
+def _self_debug_salud_payload() -> dict:
+    """Snapshot ligero de autodiagnóstico para /api/salud (fail-soft)."""
+    try:
+        from cognicion.autonoma.self_debug import estado_self_debug
+
+        st = estado_self_debug()
+        health = st.get("health") or {}
+        return {
+            "active": True,
+            "version": st.get("version"),
+            "protocol": st.get("protocol"),
+            "muta_fuentes": False,
+            "score": health.get("score"),
+            "stats": st.get("stats"),
+            "ok": bool(health.get("ok")),
+        }
+    except Exception as exc:
+        return {"active": False, "error": type(exc).__name__}
+
+
 def _salud_payload() -> dict:
     """Estado técnico de salud (JSON / Render / SystemGuard)."""
     ver = _leer_version_json()
@@ -897,6 +953,7 @@ def _salud_payload() -> dict:
         },
         "comic_engine": comic,
         "tools": _tools_conectividad_payload(),
+        "self_debug": _self_debug_salud_payload(),
         "sistema_inmune": {
             "active": bool(sce.get("active")),
             "protocol": "IDENTIDAD_PROPIEDAD_SEGURIDAD_INMUNE",
@@ -2465,7 +2522,7 @@ def api_identidad() -> dict:
     from cognicion.web import estado_web_architect
 
     inmune = estado_sistema_inmune()
-    return {
+    out = {
         **estado_identidad(),
         "web_architect": estado_web_architect(),
         "sistema_inmune": {
@@ -2475,6 +2532,50 @@ def api_identidad() -> dict:
             "modulos_centrales": inmune.get("modulos_centrales"),
         },
     }
+    try:
+        from cognicion.core_identity_engine import obtener_identity_engine
+
+        eng = obtener_identity_engine().estado()
+        if isinstance(eng.get("metacognicion"), dict):
+            out["metacognicion"] = eng["metacognicion"]
+    except Exception:
+        pass
+    return out
+
+
+@app.get("/api/metacognicion")
+@app.get("/api/metacognicion/estado")
+def api_metacognicion_estado() -> dict:
+    """Inventario de auto-consciencia: capas, límites, motores (sin secretos)."""
+    from cognicion.autonoma.metacognicion import estado_capacidades
+
+    return estado_capacidades()
+
+
+@app.post("/api/metacognicion/explicar")
+def api_metacognicion_explicar(
+    capacidad: str = "llm",
+    error: str = "",
+    status_http: int | None = None,
+) -> dict:
+    """Diagnóstico metacognitivo + registro Self-Debug (no muta fuentes)."""
+    from cognicion.autonoma.metacognicion import registrar_y_explicar
+
+    return registrar_y_explicar(
+        capacidad=(capacidad or "llm").strip().lower(),
+        origen="api.metacognicion.explicar",
+        error=error,
+        status_http=status_http,
+        auto_reparar=True,
+    )
+
+
+@app.get("/api/auditoria-cruzada")
+def api_auditoria_cruzada() -> dict:
+    """Auditoría cruzada Salomón ⇄ Cursor — veredicto de despliegue."""
+    from cognicion.autonoma.auditoria_cruzada import ejecutar_auditoria_cruzada
+
+    return ejecutar_auditoria_cruzada()
 
 
 @app.get("/api/inmune")
@@ -3365,6 +3466,40 @@ def api_smart_router_estado() -> dict:
     from cognicion.orquesta.smart_router import estado_smart_router
 
     return estado_smart_router()
+
+
+@app.get("/api/health")
+@app.get("/api/self-debug/estado")
+def api_self_debug_estado() -> dict:
+    """Health-check + Self-Debug (llaves/motores) — no expone secretos."""
+    from cognicion.autonoma.self_debug import estado_self_debug
+
+    return estado_self_debug()
+
+
+@app.post("/api/self-debug/ciclo")
+def api_self_debug_ciclo(reparar: bool = True) -> dict:
+    """Ciclo de autodiagnóstico + autoreparación segura (no muta fuentes)."""
+    from cognicion.autonoma.self_debug import ciclo_autodiagnostico
+
+    return ciclo_autodiagnostico(reparar=reparar)
+
+
+@app.post("/api/self-debug/registrar")
+def api_self_debug_registrar(
+    origen: str = "manual",
+    mensaje: str = "",
+    status_http: int | None = None,
+) -> dict:
+    """Registra un fallo observado (p.ej. multimedia) para ledger + reparación."""
+    from cognicion.autonoma.self_debug import registrar_fallo
+
+    return registrar_fallo(
+        origen=origen or "manual",
+        mensaje=mensaje,
+        status_http=status_http,
+        auto_reparar=True,
+    )
 
 
 @app.post("/api/media/editar_video")
