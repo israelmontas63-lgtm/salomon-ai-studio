@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T14:20:00Z",
-  "timestamp": 1753194000,
-  "version": "110.22.16",
+  "timestamp_iso": "2026-07-22T16:20:00Z",
+  "timestamp": 1753201200,
+  "version": "110.22.17",
   "channel": "main",
-  "label": "camera-controls-container-mandatory",
+  "label": "global-negative-back-align",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "CAMERA_CONTROLS_INJECT",
-  "notes": "v110.22.16 — Mandatory #camera-controls-container with btn-back/btn-flip/btn-capture; globals closeCamera/flipCamera/captureImage."
+  "protocol": "GLOBAL_NEGATIVE_BACK",
+  "notes": "v110.22.17 — Back aligned with settings 36px; Global Negative: layer pop or exitSystem on home."
 }

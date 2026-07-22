@@ -1,4 +1,4 @@
-/* Salomón AI — Neutralizador Universal (Back nav chat) · z-index máximo */
+/* Salomón AI — Back alineado con Ajustes + Global Negative siempre armado */
 
 .header-nav {
   display: flex;
@@ -14,32 +14,38 @@
   justify-content: flex-end;
 }
 
+/* Misma altura vertical que #btn-settings (celda del grid .header) */
 #header-nav-start {
   position: relative;
   z-index: 100010;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  align-self: center;
 }
 
 .back-btn,
 #btn-nav-back {
-  position: fixed;
-  top: calc(14px + env(safe-area-inset-top, 0px));
-  left: 14px;
-  width: 40px;
-  height: 40px;
+  /* Dentro del header — NO fixed flotante desalineado */
+  position: static;
+  top: auto;
+  left: auto;
+  width: 36px; /* = .profile-btn / #btn-settings */
+  height: 36px;
   border-radius: 50%;
   border: 2px solid #d4af37;
-  background: rgba(0, 0, 0, 0.92);
+  background: #000000;
   color: #c0c0c0;
   display: grid;
   place-items: center;
   padding: 0;
   cursor: pointer;
   z-index: 100010;
-  box-shadow: 0 3px 12px rgba(212, 175, 55, 0.22);
-  opacity: 0.4;
-  pointer-events: none;
+  box-shadow: 0 3px 12px rgba(212, 175, 55, 0.2);
+  /* Global Negative: siempre visible y táctil */
+  opacity: 1 !important;
+  pointer-events: auto !important;
   transition:
-    opacity 0.12s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.12s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.12s cubic-bezier(0.4, 0, 0.2, 1),
     border-color 0.12s cubic-bezier(0.4, 0, 0.2, 1),
@@ -51,20 +57,20 @@
 #btn-nav-back.is-active,
 body.has-back-context #btn-nav-back,
 body.neutralizer-armed #btn-nav-back {
-  opacity: 1;
+  opacity: 1 !important;
   pointer-events: auto !important;
   box-shadow: 0 4px 16px rgba(212, 175, 55, 0.4);
   background: rgba(0, 0, 0, 0.95);
 }
 
-.back-btn:active.is-active,
-#btn-nav-back.is-active:active {
+.back-btn:active,
+#btn-nav-back:active {
   transform: scale(0.94);
 }
 
 .back-btn__icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   display: block;
   pointer-events: none;
 }
@@ -75,7 +81,7 @@ body.control-layer-open #header-nav-start {
   z-index: 100010;
 }
 
-/* En cámara: el ✕ del visor (#btn-back dentro del container) manda; nav chat se oculta */
+/* En cámara: el ✕ del visor (#btn-back) manda; flecha del chat se oculta */
 body.vision-immersive #btn-nav-back,
 body.vision-immersive #header-nav-start {
   opacity: 0 !important;
@@ -83,7 +89,7 @@ body.vision-immersive #header-nav-start {
   visibility: hidden !important;
 }
 
-body.ai-active #btn-nav-back.is-active,
+body.ai-active #btn-nav-back,
 body.ai-active.neutralizer-armed #btn-nav-back {
   pointer-events: auto !important;
   opacity: 1 !important;
