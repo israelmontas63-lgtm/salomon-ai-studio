@@ -207,21 +207,6 @@
       },
       true
     );
-
-    document.addEventListener(
-      "pointerup",
-      function (ev) {
-        var t = ev.target;
-        if (!t || !t.closest) return;
-        var hit = t.closest("#btn-cam, #btn-aa, #btn-settings, #btn-nav-back");
-        if (!hit) return;
-        /* refuerzo móvil: algunos WebViews tragan click */
-        if (ev.pointerType === "touch") {
-          handle(hit.id, ev);
-        }
-      },
-      true
-    );
   }
 
   /** Capa 3 — UI / z-index (refuerzo runtime) */
