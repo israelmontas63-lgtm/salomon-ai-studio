@@ -3,7 +3,7 @@
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v88";
+const CACHE = "salomon-premium-v90";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -13,6 +13,7 @@ const PRECACHE = [
   "/static/css/camera_overlay.css",
   "/static/css/vision.css",
   "/static/css/camera_full.css",
+  "/static/css/camera_hud.css",
   "/static/css/camera_toggle_ui.css",
   "/static/css/input_styles.css",
   "/static/css/update_styles.css",

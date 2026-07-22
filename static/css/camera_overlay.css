@@ -15,11 +15,10 @@
 }
 
 /*
-  Giro: oculto hasta tocar cámara; entonces se despliega HACIA ARRIBA
-  (~18px / 5mm de aire), mismo eje horizontal que el botón cámara.
+  Giro del DOCK (no el #btn-flip del visor): oculto hasta activar cámara.
 */
-.btn-flip,
-#btn-flip {
+.cam-wrap .btn-flip,
+#btn-dock-flip {
   position: absolute;
   left: 50%;
   bottom: calc(100% + 18px);
@@ -46,7 +45,8 @@
   transform: translateX(-50%) translateY(8px) scale(0.75);
 }
 
-.btn-flip img {
+.cam-wrap .btn-flip img,
+#btn-dock-flip img {
   width: 18px;
   height: 18px;
   display: block;
@@ -54,13 +54,14 @@
 }
 
 .cam-wrap.is-active .btn-flip,
-.cam-wrap.is-active #btn-flip {
+.cam-wrap.is-active #btn-dock-flip {
   opacity: 1;
   pointer-events: auto;
   transform: translateX(-50%) translateY(0) scale(1);
 }
 
-.btn-flip:active {
+.cam-wrap .btn-flip:active,
+#btn-dock-flip:active {
   transform: translateX(-50%) scale(0.92);
 }
 

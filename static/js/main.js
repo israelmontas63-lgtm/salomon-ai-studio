@@ -107,7 +107,9 @@
 
   function wireLazyTriggers() {
     var btnCam = document.getElementById("btn-cam");
-    var btnFlip = document.getElementById("btn-flip");
+    var btnFlip =
+      document.getElementById("btn-dock-flip") ||
+      document.getElementById("btn-flip");
     var btnAa = document.getElementById("btn-aa");
 
     if (btnCam) {

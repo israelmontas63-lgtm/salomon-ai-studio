@@ -26,13 +26,26 @@
 
     init() {
       this.btnCam = document.getElementById("btn-cam");
-      this.btnFlip = document.getElementById("btn-flip");
+      this.btnFlip =
+        document.getElementById("btn-dock-flip") ||
+        document.getElementById("btn-flip");
       this.camWrap = document.getElementById("cam-wrap");
       this.stage = document.getElementById("camera-stage");
       this.video = document.getElementById("camera-video");
       const smart = document.getElementById("smart-button");
 
       if (!this.btnCam || !this.video || !this.stage) return;
+
+      /* Globales onclick del HUD obligatorio */
+      window.closeCamera = function () {
+        return CameraLogic.closeCamera();
+      };
+      window.flipCamera = function () {
+        if (CameraLogic.isActive()) return CameraLogic.flipCamera();
+      };
+      window.captureImage = function () {
+        if (CameraLogic.isActive()) return CameraLogic.disparar();
+      };
 
       this.btnCam.addEventListener("click", (e) => {
         if (document.body.classList.contains("control-layer-open")) return;
@@ -73,6 +86,9 @@
         );
       }
 
+      /* HUD obligatorio: inyectar/asegurar en DOM al init y en cada apertura */
+      this._ensureCameraControls();
+
       this._emit(States.IDLE);
 
       // Portero: apagar cámara solo si la IA no pide mantener ojos (visión+voz)
@@ -94,6 +110,59 @@
 
     isSelfie() {
       return this.facingMode === "user";
+    },
+
+    _ensureCameraControls() {
+      var stage = this.stage || document.getElementById("camera-stage");
+      if (!stage) return null;
+      var box = document.getElementById("camera-controls-container");
+      if (!box) {
+        box = document.createElement("div");
+        box.id = "camera-controls-container";
+        box.setAttribute(
+          "style",
+          "position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9998;"
+        );
+        box.innerHTML =
+          '<button id="btn-back" type="button" onclick="closeCamera()" style="position: absolute; top: 24px; left: 24px; pointer-events: auto; z-index: 9999; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 20px;">✕</button>' +
+          '<button id="btn-flip" type="button" onclick="flipCamera()" style="position: absolute; top: 24px; right: 24px; pointer-events: auto; z-index: 9999; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🔄</button>' +
+          '<button id="btn-capture" type="button" onclick="captureImage()" style="position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); pointer-events: auto; z-index: 9999; background: white; border: 4px solid rgba(0,0,0,0.3); border-radius: 50%; width: 72px; height: 72px; box-shadow: 0 4px 10px rgba(0,0,0,0.4);"></button>';
+        stage.appendChild(box);
+      }
+      /* Refuerzo táctil por si el navegador bloquea onclick inline */
+      var back = box.querySelector("#btn-back");
+      var flip = box.querySelector("#btn-flip");
+      var capture = box.querySelector("#btn-capture");
+      var self = this;
+      if (back && !back.dataset.bound) {
+        back.dataset.bound = "1";
+        back.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          self.closeCamera();
+        });
+      }
+      if (flip && !flip.dataset.bound) {
+        flip.dataset.bound = "1";
+        flip.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (self.isActive()) self.flipCamera();
+        });
+      }
+      if (capture && !capture.dataset.bound) {
+        capture.dataset.bound = "1";
+        capture.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (self.isActive()) self.disparar();
+        });
+      }
+      return box;
+    },
+
+    _bindCameraHud() {
+      this._ensureCameraControls();
     },
 
     async toggleCamera() {
@@ -127,6 +196,7 @@
         // UI inmediata — emitir CAMARA_ACTIVA solo cuando el video tiene frames
         if (this.camWrap) this.camWrap.classList.add("is-active");
         if (this.stage) this.stage.classList.add("is-visible");
+        this._ensureCameraControls();
         await this._startStream(this.facingMode);
         await this._waitForVideoReady(2500);
         this._emit(States.CAMARA_ACTIVA);

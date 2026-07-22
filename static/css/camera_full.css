@@ -1,195 +1,55 @@
-/* Salomón AI — Pantalla de Visión Inmersiva (modo gasolinera) */
+/**
+ * Visión inmersiva — solo stage full-screen.
+ * Los 3 controles viven en #camera-controls-container (camera_hud.css).
+ * Created by Israel Monta - Salomón AI Studio
+ */
 
-/* Stage a pantalla completa */
-body.vision-immersive .camera-stage {
-  position: fixed;
-  inset: 0;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  aspect-ratio: auto;
-  border-radius: 0;
-  border: none;
-  transform: none;
-  z-index: 9000;
-  opacity: 1;
-  pointer-events: auto;
-  box-shadow: none;
-  background: #000;
-  transition: opacity 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-body.vision-immersive .camera-stage.is-visible {
-  transform: none;
-  opacity: 1;
+body.vision-immersive .camera-stage,
+body.vision-immersive #camera-stage.is-visible {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  transform: none !important;
+  z-index: 9000 !important;
+  opacity: 1 !important;
+  background: #000 !important;
 }
 
 body.vision-immersive .camera-stage video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
 }
 
-/* Ocultar absolutamente todo lo que no sea el trío */
-body.vision-immersive .header,
 body.vision-immersive .chat,
-body.vision-immersive .composer,
 body.vision-immersive .brand,
 body.vision-immersive .profiles,
-body.vision-immersive .header-spacer,
 body.vision-immersive #header-nav-end,
 body.vision-immersive #btn-aa,
-body.vision-immersive #side-aa {
+body.vision-immersive #side-aa,
+body.vision-immersive .input-layer {
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
-/* nav_bar_container: HUD inferior único (sin flotantes sobre el video) */
-body.vision-immersive #nav_bar_container,
-body.vision-immersive .control-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: none;
-  transform: none;
-  z-index: 9100;
-  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.55) 55%);
-  border: none;
-  padding: 0 20px calc(28px + env(safe-area-inset-bottom, 0px));
-  min-height: 0;
-  display: grid !important;
-  grid-template-columns: 1fr auto 1fr !important;
-  align-items: end;
-  justify-content: unset;
-  column-gap: 0;
-  gap: 0;
-  pointer-events: none;
-}
-
-body.vision-immersive #nav_bar_container > *,
-body.vision-immersive .control-bar > * {
-  pointer-events: auto;
-}
-
-body.vision-immersive #side-aa {
+body.vision-immersive .bottom-dock,
+body.vision-immersive #nav_bar_container {
+  opacity: 0 !important;
+  visibility: hidden !important;
   pointer-events: none !important;
 }
 
-/* Cluster cámara: wrap relativo; Giro se despliega arriba al activar */
-body.vision-immersive .control-side:has(#cam-wrap),
-body.vision-immersive #cam-wrap {
-  display: grid !important;
-  place-items: center;
-  position: relative;
-}
-
-body.vision-immersive #cam-wrap {
-  width: 52px;
-  height: 52px;
-  overflow: visible;
-}
-
-body.vision-immersive #btn-cam {
-  width: 52px;
-  height: 52px;
-  border: 2px solid rgba(212, 175, 55, 0.95);
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
-  position: relative;
-  z-index: 1;
-}
-
-body.vision-immersive #btn-cam img {
-  width: 22px;
-  height: 22px;
-}
-
-/* Botón central — anclado al centro matemático del viewport */
-body.vision-immersive .smart-button,
-body.vision-immersive #smart-button {
-  position: relative;
-  left: auto;
-  right: auto;
-  bottom: auto;
-  transform: none !important;
-  margin: 0 auto !important;
-  justify-self: center;
-  grid-column: 2;
-  width: 80px;
-  height: 80px;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 2px solid #d4af37;
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25), 0 8px 28px rgba(0, 0, 0, 0.5);
-  z-index: 9120;
-}
-
-body.vision-immersive #side-close {
-  grid-column: 1;
-  justify-self: start;
-}
-
-body.vision-immersive #side-aa {
-  grid-column: 3;
-  justify-self: end;
-}
-
-/* Giro: despliegue vertical hacia arriba (~18px / 5mm), mismo eje X */
-body.vision-immersive .btn-flip,
-body.vision-immersive #btn-flip {
-  position: absolute !important;
-  left: 50% !important;
-  bottom: calc(100% + 18px) !important;
-  top: auto !important;
-  right: auto !important;
-  width: 40px;
-  height: 40px;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 15;
-  margin: 0 !important;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 2px solid #d4af37;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  transform: translateX(-50%) translateY(8px) scale(0.75) !important;
-}
-
-body.vision-immersive .cam-wrap.is-active .btn-flip,
-body.vision-immersive .cam-wrap.is-active #btn-flip {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  transform: translateX(-50%) translateY(0) scale(1) !important;
-}
-
-body.vision-immersive .btn-flip img {
-  width: 18px;
-  height: 18px;
-}
-
-/* Badge ojos: más discreto en inmersivo */
-body.vision-immersive .camera-stage.is-visible::before {
-  top: calc(22px + env(safe-area-inset-top, 0px));
-  left: 18px;
-  z-index: 9150;
-}
-
-/* Entrada suave del body immersive */
-body.vision-immersive .phone {
-  background: #000;
-}
-
+body.vision-immersive .phone,
 body.vision-immersive {
-  background: #000;
-  overflow: hidden;
+  background: #000 !important;
+  overflow: hidden !important;
+}
+
+body.vision-immersive .camera-stage.is-visible::before {
+  display: none !important;
+  content: none !important;
 }

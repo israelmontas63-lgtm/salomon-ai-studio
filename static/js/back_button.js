@@ -9,7 +9,7 @@
 
   var Neutralizer = {
     init() {
-      var btn = document.getElementById("btn-back");
+      var btn = document.getElementById("btn-nav-back") || document.querySelector(".back-btn");
       if (!btn) return;
       btn.setAttribute("data-role", "universal-neutralizer");
       btn.setAttribute("aria-label", "Neutralizar capa / Volver");
@@ -48,7 +48,7 @@
     },
 
     _sync() {
-      var btn = document.getElementById("btn-back");
+      var btn = document.getElementById("btn-nav-back") || document.querySelector(".back-btn");
       if (!btn) return;
       var active = this.hasActiveLayer();
       btn.classList.toggle("is-active", active);

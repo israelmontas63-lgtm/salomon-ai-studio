@@ -1,4 +1,4 @@
-/* Salomón AI — Neutralizador Universal (Back) · z-index máximo */
+/* Salomón AI — Neutralizador Universal (Back nav chat) · z-index máximo */
 
 .header-nav {
   display: flex;
@@ -14,17 +14,13 @@
   justify-content: flex-end;
 }
 
-/*
-  Capa maestra: siempre por encima de cámara (9xxx), control layer (100000)
-  y cualquier HUD flotante.
-*/
 #header-nav-start {
   position: relative;
   z-index: 100010;
 }
 
 .back-btn,
-#btn-back {
+#btn-nav-back {
   position: fixed;
   top: calc(14px + env(safe-area-inset-top, 0px));
   left: 14px;
@@ -52,9 +48,9 @@
 }
 
 .back-btn.is-active,
-#btn-back.is-active,
-body.has-back-context #btn-back,
-body.neutralizer-armed #btn-back {
+#btn-nav-back.is-active,
+body.has-back-context #btn-nav-back,
+body.neutralizer-armed #btn-nav-back {
   opacity: 1;
   pointer-events: auto !important;
   box-shadow: 0 4px 16px rgba(212, 175, 55, 0.4);
@@ -62,7 +58,7 @@ body.neutralizer-armed #btn-back {
 }
 
 .back-btn:active.is-active,
-#btn-back.is-active:active {
+#btn-nav-back.is-active:active {
   transform: scale(0.94);
 }
 
@@ -73,30 +69,22 @@ body.neutralizer-armed #btn-back {
   pointer-events: none;
 }
 
-/* Por encima del control layer abierto */
-body.control-layer-open #btn-back,
+body.control-layer-open #btn-nav-back,
 body.control-layer-open #header-nav-start {
   pointer-events: auto !important;
   z-index: 100010;
 }
 
-/* Sobre cámara inmersiva / HUD */
-body.vision-immersive #btn-back,
-body.vision-immersive #btn-back.is-active,
+/* En cámara: el ✕ del visor (#btn-back dentro del container) manda; nav chat se oculta */
+body.vision-immersive #btn-nav-back,
 body.vision-immersive #header-nav-start {
-  visibility: visible !important;
-  display: grid !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  z-index: 100010 !important;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
 }
 
-/* Neutralizador también puede cancelar modo IA (no destruye el núcleo) */
-body.ai-active #btn-back.is-active,
-body.ai-active.neutralizer-armed #btn-back {
+body.ai-active #btn-nav-back.is-active,
+body.ai-active.neutralizer-armed #btn-nav-back {
   pointer-events: auto !important;
   opacity: 1 !important;
   z-index: 100010 !important;

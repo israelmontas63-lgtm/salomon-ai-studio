@@ -1,6 +1,6 @@
 /**
  * Salomón AI — Pantalla de Visión Inmersiva
- * Toggle: oculta chat/UI; deja video full-screen + trío (gatillo, giro, cerrar).
+ * Activa body.vision-immersive; el HUD vive en #camera-controls-container.
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
@@ -29,13 +29,11 @@
           stage.classList.add("is-visible", "is-immersive");
           stage.setAttribute("aria-hidden", "false");
         }
-        const flip = document.getElementById("btn-flip");
-        if (flip) flip.tabIndex = 0;
-        // Ocultar restos no cubiertos por CSS
-        this._setHidden(
-          ["header", "chat", "form-chat", "btn-aa"],
-          true
-        );
+        if (window.SalomonCamera && window.SalomonCamera._ensureCameraControls) {
+          window.SalomonCamera._ensureCameraControls();
+        }
+        // NO ocultar el HUD. Solo chat / Aa.
+        this._setHidden(["chat", "form-chat", "btn-aa"], true);
       });
     },
 
@@ -52,12 +50,7 @@
           stage.classList.remove("is-immersive");
           stage.setAttribute("aria-hidden", "true");
         }
-        const flip = document.getElementById("btn-flip");
-        if (flip) flip.tabIndex = -1;
-        this._setHidden(
-          ["header", "chat", "form-chat", "btn-aa"],
-          false
-        );
+        this._setHidden(["chat", "form-chat", "btn-aa"], false);
       });
     },
 
