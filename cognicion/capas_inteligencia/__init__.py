@@ -100,9 +100,10 @@ LAYER_CATALOG: list[dict[str, Any]] = [
             "cognicion/cola.py",
             "cognicion/core_salomon_master_neural_engine.py",
             "cognicion/orquesta/agentes_paralelos.py",
+            "cognicion/orquesta/smart_router.py",
             "cognicion/orquestador.py",
         ],
-        "apis": ["/api/intelligence/layers", "/api/neural/master"],
+        "apis": ["/api/intelligence/layers", "/api/neural/master", "/api/smart-router/estado"],
     },
     {
         "id": 7,

@@ -69,7 +69,7 @@ def texto_a_voz(texto: str) -> ResultadoTTS:
 
 
 def _tts_para_respuesta(texto: str) -> ResultadoTTS:
-    """Chat/PWA: en Free Tier o TTS_ASYNC no bloquea el texto."""
+    """Chat/PWA: si TTS_ASYNC, diferir; si no, sintetizar en línea."""
     if TTS_ASYNC:
         return ResultadoTTS(tts_disponible=False, error=None, motor="deferred")
     return texto_a_voz(texto)
@@ -691,10 +691,14 @@ Responde siempre en prosa natural, como si esos datos ya formaran parte de tu co
         if TTS_ASYNC:
             tts = ResultadoTTS(tts_disponible=False)
             meta_extra["tts_pendiente"] = True
+            meta_extra["tts_async"] = True
         else:
             tts = _tts_para_respuesta(respuesta_texto)
             if tts.error:
                 meta_extra["tts_error"] = tts.error
+            # Si el sync falla, el frontend aún puede pedir /api/tts
+            if not tts.tts_disponible and (respuesta_texto or "").strip():
+                meta_extra["tts_pendiente"] = True
 
         metadata = {
             "sesion_id": self._sesion_id,

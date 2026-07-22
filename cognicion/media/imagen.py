@@ -37,6 +37,7 @@ def generar_imagen(
     size: str = DALLE_SIZE_DEFAULT,
     quality: str = "standard",
     estilo_marca: bool = True,
+    usar_manager: bool = True,
 ) -> dict[str, Any]:
     """Única ruta: ServiceManager (Fal→Replicate) luego DALL·E. Sin simulación en ejecución."""
     texto = (prompt or "").strip()
@@ -50,19 +51,20 @@ def generar_imagen(
             "sin texto ilegible, calidad premium."
         )
 
-    # 1) Ruta neuronal (Fal / Replicate)
-    try:
-        from cognicion.servicios import obtener_manager
+    media_err = None
+    # 1) Ruta neuronal (Fal / Replicate) — omitible para evitar recursión desde manager
+    if usar_manager:
+        try:
+            from cognicion.servicios import obtener_manager
 
-        mgr = obtener_manager()
-        if mgr.activo("media"):
-            out = mgr.generar_activo(prompt_api, video=False)
-            if out.get("exito"):
-                return out
-    except Exception as exc:
-        media_err = f"{type(exc).__name__}"
-    else:
-        media_err = None
+            mgr = obtener_manager()
+            if mgr.activo("media"):
+                out = mgr.generar_activo(prompt_api, video=False)
+                if out.get("exito"):
+                    return out
+                media_err = str(out.get("error") or "media_fail")
+        except Exception as exc:
+            media_err = f"{type(exc).__name__}"
 
     # 2) OpenAI DALL·E (respaldo real)
     if OPENAI_API_KEY:

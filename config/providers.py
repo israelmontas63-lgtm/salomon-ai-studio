@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Provider Pattern — selección dinámica de servicios según la tarea.
+Provider Pattern — Smart Router / Failover absoluto.
 
-Cadena oficial (Render):
-  LLM        → GEMINI → DEEPSEEK → GROQ → OPENAI
-  MEDIA      → FAL → REPLICATE
-  STT        → DEEPGRAM
-  TTS        → ELEVENLABS → CARTESIA (única cadena; PWA usa /api/tts)
-  EMBEDDINGS → COHERE
-  WEB        → TAVILY → EXA → respaldo
-  SBI        → SBI_ENABLED + SBI_MODE
+Cadenas oficiales:
+  LLM   → GEMINI → DEEPSEEK → OPENROUTER → CEREBRAS → MISTRAL → GROQ → OPENAI
+  MEDIA → FAL → REPLICATE → OPENAI(DALL·E)
+  VIDEO → FAL → REPLICATE
+  STT   → DEEPGRAM
+  TTS   → ELEVENLABS → CARTESIA
+  EMBED → COHERE
+  WEB   → TAVILY → EXA
+  SBI   → SBI_ENABLED + SBI_MODE
 """
 
 from __future__ import annotations
@@ -22,9 +23,11 @@ from typing import Any
 class Servicio(str, Enum):
     LLM = "llm"
     MEDIA = "media"
+    VIDEO = "video"
     STT = "stt"
     TTS = "tts"
     EMBEDDINGS = "embeddings"
+    WEB = "web"
     SBI = "sbi"
 
 
@@ -53,6 +56,9 @@ def inventario_claves() -> dict[str, str]:
     raw = {
         "GEMINI_API_KEY": S.GEMINI_API_KEY,
         "DEEPSEEK_API_KEY": getattr(S, "DEEPSEEK_API_KEY", ""),
+        "OPENROUTER_API_KEY": getattr(S, "OPENROUTER_API_KEY", ""),
+        "CEREBRAS_API_KEY": getattr(S, "CEREBRAS_API_KEY", ""),
+        "MISTRAL_API_KEY": getattr(S, "MISTRAL_API_KEY", ""),
         "GROQ_API_KEY": S.GROQ_API_KEY,
         "OPENAI_API_KEY": S.OPENAI_API_KEY,
         "COHERE_API_KEY": S.COHERE_API_KEY,
@@ -80,7 +86,7 @@ def inventario_claves() -> dict[str, str]:
 
 
 def cadenas() -> dict[Servicio, list[ProviderSlot]]:
-    """Cadenas de prioridad por tarea (Provider Pattern)."""
+    """Cadenas de prioridad por tarea (Provider Pattern + Smart Router)."""
     import settings as S
 
     return {
@@ -92,10 +98,32 @@ def cadenas() -> dict[Servicio, list[ProviderSlot]]:
                 _presente(getattr(S, "DEEPSEEK_API_KEY", "")),
                 True,
             ),
+            ProviderSlot(
+                "openrouter",
+                "OPENROUTER_API_KEY",
+                _presente(getattr(S, "OPENROUTER_API_KEY", "")),
+            ),
+            ProviderSlot(
+                "cerebras",
+                "CEREBRAS_API_KEY",
+                _presente(getattr(S, "CEREBRAS_API_KEY", "")),
+            ),
+            ProviderSlot(
+                "mistral",
+                "MISTRAL_API_KEY",
+                _presente(getattr(S, "MISTRAL_API_KEY", "")),
+            ),
             ProviderSlot("groq", "GROQ_API_KEY", _presente(S.GROQ_API_KEY), True),
             ProviderSlot("openai", "OPENAI_API_KEY", _presente(S.OPENAI_API_KEY), True),
         ],
         Servicio.MEDIA: [
+            ProviderSlot("fal", "FAL_KEY", _presente(S.FAL_KEY)),
+            ProviderSlot(
+                "replicate", "REPLICATE_API_TOKEN", _presente(S.REPLICATE_API_TOKEN)
+            ),
+            ProviderSlot("openai", "OPENAI_API_KEY", _presente(S.OPENAI_API_KEY)),
+        ],
+        Servicio.VIDEO: [
             ProviderSlot("fal", "FAL_KEY", _presente(S.FAL_KEY)),
             ProviderSlot(
                 "replicate", "REPLICATE_API_TOKEN", _presente(S.REPLICATE_API_TOKEN)
@@ -108,7 +136,6 @@ def cadenas() -> dict[Servicio, list[ProviderSlot]]:
             ProviderSlot(
                 "elevenlabs",
                 "ELEVENLABS_API_KEY",
-                # Key basta: Voice ID vacío → resolver Adam canónico en runtime.
                 _presente(S.ELEVENLABS_API_KEY),
             ),
             ProviderSlot(
@@ -119,6 +146,14 @@ def cadenas() -> dict[Servicio, list[ProviderSlot]]:
         ],
         Servicio.EMBEDDINGS: [
             ProviderSlot("cohere", "COHERE_API_KEY", _presente(S.COHERE_API_KEY)),
+        ],
+        Servicio.WEB: [
+            ProviderSlot(
+                "tavily", "TAVILY_API_KEY", _presente(getattr(S, "TAVILY_API_KEY", ""))
+            ),
+            ProviderSlot(
+                "exa", "EXA_API_KEY", _presente(getattr(S, "EXA_API_KEY", ""))
+            ),
         ],
         Servicio.SBI: [
             ProviderSlot(
@@ -151,7 +186,7 @@ def validar_entorno(*, strict: bool | None = None) -> dict[str, Any]:
     """
     Valida claves críticas.
 
-    Crítico: al menos UNA de GEMINI / GROQ / OPENAI.
+    Crítico: al menos UNA de GEMINI / DEEPSEEK / GROQ / OPENAI / OPENROUTER.
     Si strict=True (o PROVIDERS_STRICT), lanza ProviderConfigError.
     """
     import settings as S
@@ -170,7 +205,7 @@ def validar_entorno(*, strict: bool | None = None) -> dict[str, Any]:
     errores: list[str] = []
     if not llm_ok:
         errores.append(
-            "Falta clave LLM crítica: configure GEMINI_API_KEY, GROQ_API_KEY u OPENAI_API_KEY"
+            "Falta clave LLM: GEMINI / DEEPSEEK / OPENROUTER / GROQ / OPENAI"
         )
 
     sbi_mode = (S.SBI_MODE or "soft").strip().lower()

@@ -35,9 +35,28 @@ TOOL_KEYS = (
     "DEEPSEEK_API_KEY",
     "DEEPSEEK_MODEL",
     "DEEPSEEK_BASE_URL",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_MODEL",
+    "CEREBRAS_API_KEY",
+    "CEREBRAS_MODEL",
+    "MISTRAL_API_KEY",
+    "MISTRAL_MODEL",
     "TAVILY_API_KEY",
     "TAVILY_SEARCH_DEPTH",
     "EXA_API_KEY",
+    "ELEVENLABS_API_KEY",
+    "ELEVENLABS_VOICE_ID",
+    "DEEPGRAM_API_KEY",
+    "FAL_KEY",
+    "REPLICATE_API_TOKEN",
+    "REPLICATE_API_KEY",
+    "OPENAI_API_KEY",
+    "GROQ_API_KEY",
+    "COHERE_API_KEY",
+    "GEMINI_API_KEY",
+    "TTS_ASYNC",
+    "MEDIA_ASYNC_DEFAULT",
+    "MODO_EJECUCION",
 )
 
 
@@ -93,13 +112,35 @@ def _tools_payload() -> dict[str, str]:
     defaults = {
         "DEEPSEEK_MODEL": "deepseek-chat",
         "DEEPSEEK_BASE_URL": "https://api.deepseek.com",
+        "OPENROUTER_MODEL": "deepseek/deepseek-chat",
+        "CEREBRAS_MODEL": "llama-3.3-70b",
+        "MISTRAL_MODEL": "mistral-small-latest",
         "TAVILY_SEARCH_DEPTH": "advanced",
+        "ELEVENLABS_VOICE_ID": "pNInz6obpgDQGcFmaJgB",
+        "TTS_ASYNC": "false",
+        "MEDIA_ASYNC_DEFAULT": "false",
+        "MODO_EJECUCION": "true",
     }
+    # REPLICATE: prefer TOKEN canónico; si solo hay KEY, sincronizar ambas.
     for k in TOOL_KEYS:
         v = (os.getenv(k) or "").strip() or defaults.get(k, "")
-        if not v and k.endswith("_API_KEY"):
-            missing.append(k)
-        elif v:
+        if k == "REPLICATE_API_TOKEN" and not v:
+            v = (os.getenv("REPLICATE_API_KEY") or "").strip()
+        if k == "REPLICATE_API_KEY" and not v:
+            v = (os.getenv("REPLICATE_API_TOKEN") or "").strip()
+        if not v and k.endswith("_API_KEY") and k not in (
+            "REPLICATE_API_KEY",  # alias opcional
+        ):
+            # No abortar por opcionales; solo marcar críticas
+            if k in (
+                "DEEPSEEK_API_KEY",
+                "ELEVENLABS_API_KEY",
+                "FAL_KEY",
+                "TAVILY_API_KEY",
+            ):
+                missing.append(k)
+            continue
+        if v:
             out[k] = v
     if missing:
         raise SystemExit("[Render] Faltan en .env local: " + ", ".join(missing))

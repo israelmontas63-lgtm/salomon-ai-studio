@@ -70,6 +70,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/llm/reload-env",
         "/api/llm/probe-deepseek",
         "/api/tools/conectividad",
+        "/api/smart-router/estado",
         "/api/proveedores",
         "/api/bca/estado",
         "/api/tunel/estado",
@@ -3276,23 +3277,26 @@ def api_arsenal_generar_imagen(body: ArsenalImagenRequest) -> dict:
 
 @app.post("/api/media/generar_imagen")
 def api_media_generar_imagen(body: GenerarImagenRequest) -> dict:
-    """Genera imagen HD — routing Colsub (Flux/MJ) o grafo."""
+    """Genera imagen HD — Smart Router (Fal → Replicate → DALL·E) sin restricciones."""
     if body.usar_routing:
-        from cognicion.media.media_engine import bridge_colsub_media
+        from cognicion.orquesta.smart_router import generar_imagen_con_failover
 
-        pack = bridge_colsub_media(body.prompt, hint="imagen_hd")
-        res = pack.get("resultado") or {}
+        pack = generar_imagen_con_failover(body.prompt)
+        res = pack if isinstance(pack, dict) else {}
         return {
-            "exito": bool(pack.get("exito")),
+            "exito": bool(res.get("exito")),
             "ruta_grafo": None,
-            "routing": pack.get("routing"),
+            "routing": res.get("via") or "smart_router",
             "respuesta": (
-                f"Motor {res.get('motor')} · calidad {res.get('calidad')}. "
-                f"{res.get('url_relativa') or ''}"
-            ),
+                f"Motor {res.get('motor') or 'media'} · HD. "
+                f"{res.get('url_relativa') or res.get('url') or ''}"
+            ).strip(),
             "resultado": res,
+            "url": res.get("url_relativa") or res.get("url"),
+            "imagen_base64": res.get("imagen_base64"),
             "session_id": body.session_id,
             "error": res.get("error"),
+            "cadena": res.get("cadena"),
         }
 
     from cognicion.grafo import ejecutar_grafo
@@ -3330,6 +3334,37 @@ def api_media_generar_imagen(body: GenerarImagenRequest) -> dict:
         "session_id": body.session_id,
         "error": resultado.get("error"),
     }
+
+
+class GenerarVideoRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=4000)
+    session_id: str | None = None
+    duracion_s: int = Field(default=20, ge=15, le=30)
+
+
+@app.post("/api/media/generar_video")
+def api_media_generar_video(body: GenerarVideoRequest) -> dict:
+    """Genera clip de video HD 15–30s (Fal Smart Router)."""
+    from cognicion.orquesta.smart_router import generar_video_con_failover
+
+    pack = generar_video_con_failover(body.prompt, duracion_s=body.duracion_s)
+    return {
+        "exito": bool(pack.get("exito")),
+        "resultado": pack,
+        "url": pack.get("url_relativa") or pack.get("url"),
+        "session_id": body.session_id,
+        "error": pack.get("error"),
+        "duracion_s": body.duracion_s,
+        "cadena": pack.get("cadena"),
+    }
+
+
+@app.get("/api/smart-router/estado")
+def api_smart_router_estado() -> dict:
+    """Inventario de llaves + cadenas de failover (sin secretos)."""
+    from cognicion.orquesta.smart_router import estado_smart_router
+
+    return estado_smart_router()
 
 
 @app.post("/api/media/editar_video")

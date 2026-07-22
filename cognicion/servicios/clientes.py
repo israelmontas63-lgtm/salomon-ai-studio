@@ -93,6 +93,51 @@ def cliente_deepseek() -> Any:
     return _cache_get("deepseek", _build)
 
 
+def cliente_openrouter() -> Any:
+    from settings import OPENROUTER_API_KEY, OPENROUTER_BASE_URL
+
+    if not OPENROUTER_API_KEY:
+        raise ClienteNoDisponible("OPENROUTER_API_KEY no configurada")
+
+    def _build():
+        from openai import OpenAI
+
+        base = (OPENROUTER_BASE_URL or "").strip() or "https://openrouter.ai/api/v1"
+        return OpenAI(api_key=OPENROUTER_API_KEY, base_url=base)
+
+    return _cache_get("openrouter", _build)
+
+
+def cliente_cerebras() -> Any:
+    from settings import CEREBRAS_API_KEY, CEREBRAS_BASE_URL
+
+    if not CEREBRAS_API_KEY:
+        raise ClienteNoDisponible("CEREBRAS_API_KEY no configurada")
+
+    def _build():
+        from openai import OpenAI
+
+        base = (CEREBRAS_BASE_URL or "").strip() or "https://api.cerebras.ai/v1"
+        return OpenAI(api_key=CEREBRAS_API_KEY, base_url=base)
+
+    return _cache_get("cerebras", _build)
+
+
+def cliente_mistral() -> Any:
+    from settings import MISTRAL_API_KEY, MISTRAL_BASE_URL
+
+    if not MISTRAL_API_KEY:
+        raise ClienteNoDisponible("MISTRAL_API_KEY no configurada")
+
+    def _build():
+        from openai import OpenAI
+
+        base = (MISTRAL_BASE_URL or "").strip() or "https://api.mistral.ai/v1"
+        return OpenAI(api_key=MISTRAL_API_KEY, base_url=base)
+
+    return _cache_get("mistral", _build)
+
+
 def cliente_cohere() -> Any:
     """cohere.ClientV2 o wrapper httpx — embeddings / RAG."""
     from settings import COHERE_API_KEY
@@ -426,6 +471,9 @@ class _ReplicateHttp:
 FACTORY: dict[str, Callable[[], Any]] = {
     "gemini": cliente_gemini,
     "deepseek": cliente_deepseek,
+    "openrouter": cliente_openrouter,
+    "cerebras": cliente_cerebras,
+    "mistral": cliente_mistral,
     "openai": cliente_openai,
     "groq": cliente_groq,
     "cohere": cliente_cohere,

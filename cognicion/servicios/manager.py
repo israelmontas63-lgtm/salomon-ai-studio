@@ -166,40 +166,84 @@ class ServiceManager(ServiceRegistry):
         prompt: str,
         *,
         video: bool = False,
+        duracion_s: int = 20,
     ) -> dict[str, Any]:
-        """Generación real de imagen/video — sin placeholder."""
+        """Generación real de imagen/video HD — Fal → Replicate → DALL·E."""
         p = (prompt or "").strip()
         if not p:
             return {"exito": False, "error": "prompt_vacio"}
 
         if video:
+            dur = max(15, min(30, int(duracion_s or 20)))
+            errores: list[str] = []
             try:
                 pack = self.media_run(
                     fal_model=FAL_VIDEO_MODEL,
-                    fal_args={"prompt": p},
+                    fal_args={"prompt": p, "prompt_optimizer": True},
                     replicate_model=None,
                     replicate_input=None,
                 )
-                return _normalizar_media(pack, tipo="video")
+                out = _normalizar_media(pack, tipo="video")
+                if out.get("exito"):
+                    out["duracion_objetivo_s"] = dur
+                    return out
+                errores.append(str(out.get("error") or "fal_video_fail"))
             except Exception as exc:
-                return {"exito": False, "error": type(exc).__name__, "motor": "fal/replicate"}
+                errores.append(type(exc).__name__)
+            return {
+                "exito": False,
+                "error": "video_failover_agotado",
+                "detalle": errores,
+                "motor": "fal",
+                "duracion_objetivo_s": dur,
+            }
 
         try:
             pack = self.media_run(
                 fal_model=FAL_IMAGE_MODEL,
-                fal_args={"prompt": p, "image_size": "landscape_4_3"},
+                fal_args={"prompt": p, "image_size": "landscape_16_9", "num_inference_steps": 28},
                 replicate_model=REPLICATE_IMAGE_MODEL,
                 replicate_input={"prompt": p},
             )
-            return _normalizar_media(pack, tipo="imagen")
+            out = _normalizar_media(pack, tipo="imagen")
+            if out.get("exito"):
+                return out
         except Exception as exc:
             evento(_log, "media_fail", error=type(exc).__name__)
+            pack_err = type(exc).__name__
+        else:
+            pack_err = out.get("error") if isinstance(out, dict) else "media_fail"
+
+        # Failover DALL·E (OpenAI) — sin reentrar al manager (anti-recursión)
+        try:
+            from cognicion.media.imagen import generar_imagen
+
+            dalle = generar_imagen(
+                p, size="1792x1024", quality="hd", usar_manager=False
+            )
+            if dalle.get("exito") or dalle.get("imagen_base64") or dalle.get("url"):
+                self._ultimo["media"] = "openai"
+                return {
+                    "exito": True,
+                    **dalle,
+                    "motor": dalle.get("motor") or "openai",
+                    "via": "dalle_failover",
+                }
+        except Exception as exc:
+            evento(_log, "dalle_fail", error=type(exc).__name__)
             return {
                 "exito": False,
                 "error": type(exc).__name__,
+                "previo": pack_err,
                 "motor": self.activo(Servicio.MEDIA) or "none",
-                "aviso": "FAL_KEY / REPLICATE_API_TOKEN requeridas para media real",
             }
+
+        return {
+            "exito": False,
+            "error": pack_err or "media_sin_resultado",
+            "motor": self.activo(Servicio.MEDIA) or "none",
+            "aviso": "FAL_KEY / REPLICATE / OPENAI requeridas para media real",
+        }
 
     # ── Memoria (Cohere embeddings) ─────────────────────────────────────────
 

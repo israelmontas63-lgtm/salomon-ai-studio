@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T05:15:00Z",
-  "timestamp": 1753161300,
-  "version": "110.21.17",
+  "timestamp_iso": "2026-07-22T06:00:00Z",
+  "timestamp": 1753164000,
+  "version": "110.22.2",
   "channel": "main",
-  "label": "deepseek-saldo-probe",
+  "label": "zen-empatia-smart-router-deploy",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "TOOLS_FULL_CONNECT",
-  "notes": "v110.21.17 — DeepSeek saldo probe endpoint; Render env keys for DeepSeek/Exa; sync tools script."
+  "protocol": "ZEN_NEURONAL_8_CAPAS",
+  "notes": "v110.22.2 — Empatía ZEN serena; Smart Router failover; L6 prefetch; deploy Render consciente."
 }

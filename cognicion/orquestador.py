@@ -190,6 +190,19 @@ class MotorCognicion:
         }
         self._ultimo_plan = meta["cognicion"]
 
+        # Cognición paralela (L6): peinar en segundo plano SIN bloquear el turno.
+        # El resultado se consume más abajo si ya está listo; si no, queda para el siguiente ciclo.
+        try:
+            from cognicion.capas_inteligencia.layer_06_autonomy import (
+                schedule_background_verification,
+            )
+
+            meta["cognicion"]["layer_06_prefetch"] = schedule_background_verification(
+                entrada, session_id=self.session_id
+            )
+        except Exception as exc:
+            meta["cognicion"]["layer_06_prefetch_error"] = type(exc).__name__
+
         # Ancla factual de fecha/hora (RD) — evita alucinación y Error 49 por reloj
         try:
             from cognicion.tiempo_local import bloque_tiempo_sistema, menciona_fecha_hora

@@ -63,8 +63,14 @@ def _cfg_media() -> dict[str, Any]:
 
     return {
         "calidad_forzada": getattr(st, "MEDIA_CALIDAD_FORZADA", "pro_ultra"),
-        "flux_url": getattr(st, "FLUX_API_URL", "").strip(),
-        "flux_key": _secreto("FLUX_API_KEY", "FLUX_API_KEY"),
+        "flux_url": getattr(st, "FLUX_API_URL", "").strip()
+        or "https://fal.run/fal-ai/flux/dev",
+        # Alias: FAL_KEY es el secreto real; FLUX_API_KEY es legacy/Colsub.
+        "flux_key": (
+            _secreto("FLUX_API_KEY", "FLUX_API_KEY")
+            or _secreto("FAL_KEY", "FAL_KEY")
+            or str(getattr(st, "FAL_KEY", "") or "").strip()
+        ),
         "flux_model": getattr(st, "FLUX_MODEL", "flux-1-pro").strip(),
         "midjourney_url": getattr(st, "MIDJOURNEY_API_URL", "").strip(),
         "midjourney_key": _secreto("MIDJOURNEY_API_KEY", "MIDJOURNEY_API_KEY"),

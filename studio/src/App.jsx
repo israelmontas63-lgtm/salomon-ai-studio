@@ -80,20 +80,18 @@ export default function App() {
           audioMime: data.audio_mime || "audio/wav",
         };
       }
-      const asyncTts =
-        data?.metadata?.tts_pendiente ||
-        import.meta.env.VITE_TTS_ASYNC === "true";
-      if (data?.texto && asyncTts) {
+      // Hotfix: siempre sintetizar si hay texto sin audio (voz obligatoria).
+      if (data?.texto) {
         try {
           const tts = await sintetizarVoz(data.texto);
           if (tts?.audio_base64) {
             return {
               audioBase64: tts.audio_base64,
-              audioMime: tts.audio_mime || "audio/wav",
+              audioMime: tts.audio_mime || "audio/mpeg",
             };
           }
         } catch {
-          /* Cartesia Sonic-3.5 / TTS opcional — no bloquea el chat */
+          /* ElevenLabs / TTS opcional — no bloquea el chat */
         }
       }
     } catch {
@@ -133,7 +131,7 @@ export default function App() {
   );
 
   const pushAiMessage = useCallback(
-    (text, audioBase64 = null, audioMime = "audio/wav") => {
+    (text, audioBase64 = null, audioMime = "audio/wav", imageSrc = null) => {
       const id = nextId();
       const safeText = text == null ? "" : String(text);
       setMessages((prev) => [
@@ -146,6 +144,7 @@ export default function App() {
           saved: false,
           audioBase64,
           audioMime,
+          imageSrc: imageSrc || null,
         },
       ]);
 
@@ -191,9 +190,18 @@ export default function App() {
       setMessages((prev) => [...prev, { id: nextId(), role: "user", text }]);
     },
     onAiText: (text, data) => {
-      const id = pushAiMessageRef.current?.(text);
+      const imageSrc =
+        data?.resultado?.url_relativa ||
+        data?.url ||
+        data?.resultado?.url ||
+        (data?.resultado?.imagen_base64
+          ? `data:image/png;base64,${data.resultado.imagen_base64}`
+          : data?.imagen_base64
+            ? `data:image/png;base64,${data.imagen_base64}`
+            : null);
+      const id = pushAiMessageRef.current?.(text, null, "audio/wav", imageSrc);
       if (id && data) attachAudioRef.current?.(id, data);
-      if (data?.resultado?.imagen_base64) {
+      if (imageSrc) {
         showVoiceHint("Imagen lista");
       }
     },

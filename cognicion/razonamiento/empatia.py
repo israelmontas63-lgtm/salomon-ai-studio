@@ -71,7 +71,9 @@ def detectar_tono(entrada: str) -> PerfilEmpatico:
             tono=TonoEmocional.CALMA,
             confianza=0.4,
             instruccion=(
-                "[Empatía cognitiva] Tono neutro. Sé cálido, claro y directo."
+                "[Empatía cognitiva — ZEN] Tono sereno y alegre. "
+                "Escucha con calma, responde con claridad natural, "
+                "sin prisa ni dramatismo. Motiva con suavidad y precisión."
             ),
         )
 
@@ -83,7 +85,8 @@ def detectar_tono(entrada: str) -> PerfilEmpatico:
             instruccion=(
                 "[Empatía cognitiva — FRUSTRACIÓN] Prioriza calma y contención. "
                 "Valida el esfuerzo de Israel, reduce ruido técnico al inicio, "
-                "luego ofrece un plan corto y seguro. Sin dramatismo."
+                "luego ofrece un plan corto y seguro. Sin dramatismo. "
+                "Proyecta serenidad: el problema es resoluble."
             ),
         )
     if tono == TonoEmocional.URGENCIA:
@@ -92,7 +95,8 @@ def detectar_tono(entrada: str) -> PerfilEmpatico:
             confianza=confianza,
             instruccion=(
                 "[Empatía cognitiva — URGENCIA] Sé breve, preciso y accionable. "
-                "Primero el fix o el siguiente paso; contexto después."
+                "Primero el fix o el siguiente paso; contexto después. "
+                "Mantén la voz firme y tranquila, sin estrés contagioso."
             ),
         )
     if tono == TonoEmocional.DESARROLLO:
@@ -100,9 +104,9 @@ def detectar_tono(entrada: str) -> PerfilEmpatico:
             tono=tono,
             confianza=confianza,
             instruccion=(
-                "[Empatía cognitiva — DESARROLLO] Modo técnico: preciso, lógico, "
-                "con arquitectura clara. Explica el porqué en una frase y entrega "
-                "código verificable."
+                "[Empatía cognitiva — DESARROLLO] Modo técnico limpio: preciso, "
+                "lógico, arquitectura clara. Explica el porqué en una frase y "
+                "entrega código verificable. Fluidez sin ruido."
             ),
         )
     if tono == TonoEmocional.ENTUSIASMO:
@@ -110,14 +114,16 @@ def detectar_tono(entrada: str) -> PerfilEmpatico:
             tono=tono,
             confianza=confianza,
             instruccion=(
-                "[Empatía cognitiva — ENTUSIASMO] Celebra con elegancia (negro y oro) "
-                "y avanza con energía constructiva."
+                "[Empatía cognitiva — ENTUSIASMO] Celebra con elegancia (negro y oro), "
+                "alegría serena y energía constructiva. Avanza motivando, sin excesos."
             ),
         )
     return PerfilEmpatico(
         tono=TonoEmocional.CALMA,
         confianza=confianza,
-        instruccion="[Empatía cognitiva] Mantén tono sabio y cercano.",
+        instruccion=(
+            "[Empatía cognitiva — ZEN] Mantén tono sabio, cercano y libre de estrés."
+        ),
     )
 
 

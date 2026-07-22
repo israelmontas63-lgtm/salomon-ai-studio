@@ -18,7 +18,7 @@ services:
       - key: BOOT_LIGHT
         value: "true"
       - key: MEDIA_ASYNC_DEFAULT
-        value: "true"
+        value: "false"
       - key: MEDIA_HTTP_TIMEOUT
         value: "45"
       - key: MAX_SESIONES_RAM
@@ -65,7 +65,7 @@ services:
       - key: CARTESIA_MODEL_ID
         value: "sonic-3.5"
       - key: TTS_ASYNC
-        value: "true"
+        value: "false"
       # Adam Voice ID — case-sensitive ('n' minúscula en NInz; F en GcF)
       - key: ELEVENLABS_VOICE_ID
         value: "pNInz6obpgDQGcFmaJgB"

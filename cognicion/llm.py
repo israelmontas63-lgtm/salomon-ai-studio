@@ -12,6 +12,9 @@ from settings import (
     DEEPSEEK_API_KEY,
     DEEPSEEK_BASE_URL,
     DEEPSEEK_MODEL,
+    CEREBRAS_API_KEY,
+    CEREBRAS_BASE_URL,
+    CEREBRAS_MODEL,
     GEMINI_API_KEY,
     GEMINI_MODEL,
     GEMINI_MODELOS_RESPALDO,
@@ -22,10 +25,16 @@ from settings import (
     LLM_LOCAL_FALLBACK,
     LLM_TEMPERATURE,
     LLM_TOP_P,
+    MISTRAL_API_KEY,
+    MISTRAL_BASE_URL,
+    MISTRAL_MODEL,
     MODEL_PROVIDER,
     OPENAI_API_KEY,
     OPENAI_BASE_URL,
     OPENAI_MODEL,
+    OPENROUTER_API_KEY,
+    OPENROUTER_BASE_URL,
+    OPENROUTER_MODEL,
 )
 
 from cognicion.registro import evento, obtener_logger
@@ -174,6 +183,9 @@ def _env_key(*names: str) -> str:
         "OPENAI_API_KEY": OPENAI_API_KEY,
         "GROQ_API_KEY": GROQ_API_KEY,
         "DEEPSEEK_API_KEY": DEEPSEEK_API_KEY,
+        "OPENROUTER_API_KEY": OPENROUTER_API_KEY,
+        "CEREBRAS_API_KEY": CEREBRAS_API_KEY,
+        "MISTRAL_API_KEY": MISTRAL_API_KEY,
     }
     for name in names:
         val = (mapping.get(name) or "").strip()
@@ -231,12 +243,18 @@ def estado_llm() -> dict[str, Any]:
         "keys": {
             "gemini": bool(_env_key("GEMINI_API_KEY")),
             "deepseek": bool(_env_key("DEEPSEEK_API_KEY")),
+            "openrouter": bool(_env_key("OPENROUTER_API_KEY")),
+            "cerebras": bool(_env_key("CEREBRAS_API_KEY")),
+            "mistral": bool(_env_key("MISTRAL_API_KEY")),
             "openai": bool(_env_key("OPENAI_API_KEY")),
             "groq": bool(_env_key("GROQ_API_KEY")),
         },
         "models": {
             "gemini": GEMINI_MODEL,
             "deepseek": DEEPSEEK_MODEL,
+            "openrouter": OPENROUTER_MODEL,
+            "cerebras": CEREBRAS_MODEL,
+            "mistral": MISTRAL_MODEL,
             "openai": OPENAI_MODEL,
             "groq": GROQ_MODEL,
         },
@@ -1075,6 +1093,114 @@ class DeepSeekProvider:
         raise NotImplementedError("DeepSeek no soporta visión en este conector")
 
 
+class _OpenAICompatProvider:
+    """Plantilla OpenAI-compatible (OpenRouter / Cerebras / Mistral)."""
+
+    nombre: str = "compat"
+    _env_name: str = ""
+    _default_model: str = ""
+    _default_base: str = ""
+    _temp_cap: float = 0.5
+
+    def disponible(self) -> bool:
+        return bool(_env_key(self._env_name))
+
+    def _cliente(self):
+        from openai import OpenAI
+
+        key = _env_key(self._env_name)
+        if not key:
+            raise _falta_clave(self.nombre)
+        base = (os.getenv(f"{self.nombre.upper()}_BASE_URL") or self._default_base or "").strip()
+        return OpenAI(
+            api_key=key,
+            base_url=base or self._default_base,
+            timeout=max(5.0, float(_LLM_HTTP_TIMEOUT_MS) / 1000.0),
+        )
+
+    def _modelo(self, model_name: str | None) -> str:
+        return (model_name or self._default_model or "").strip() or self._default_model
+
+    def chat_con_historial(
+        self,
+        mensaje: str,
+        historial: list[dict],
+        system_instruction: str,
+        model_name: str | None = None,
+    ) -> str:
+        if not self.disponible():
+            raise _falta_clave(self.nombre)
+        try:
+            client = self._cliente()
+            gen = _config_generacion()
+            temp = min(float(gen["temperature"]), float(self._temp_cap))
+            print(
+                f"[LLM] {self.nombre} chat.completions.create temp={temp}",
+                flush=True,
+            )
+            respuesta = client.chat.completions.create(
+                model=self._modelo(model_name),
+                messages=_mensajes_openai_style(
+                    mensaje, historial, system_instruction, label=self.nombre
+                ),
+                temperature=temp,
+                top_p=gen["top_p"],
+            )
+            return (respuesta.choices[0].message.content or "").strip()
+        except Exception as exc:
+            raise _anclar_error_proveedor(exc, provider=self.nombre) from exc
+
+    def generar_texto(self, prompt: str, model_name: str | None = None) -> str:
+        if not self.disponible():
+            raise _falta_clave(self.nombre)
+        try:
+            client = self._cliente()
+            gen = _config_generacion()
+            temp = min(float(gen["temperature"]), float(self._temp_cap))
+            respuesta = client.chat.completions.create(
+                model=self._modelo(model_name),
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temp,
+                top_p=gen["top_p"],
+            )
+            return (respuesta.choices[0].message.content or "").strip()
+        except Exception as exc:
+            raise _anclar_error_proveedor(exc, provider=self.nombre) from exc
+
+    def analizar_imagen(
+        self,
+        prompt: str,
+        imagen_bytes: bytes,
+        mime_type: str = "image/png",
+        model_name: str | None = None,
+    ) -> str:
+        raise NotImplementedError(f"{self.nombre} no soporta visión en este conector")
+
+
+class OpenRouterProvider(_OpenAICompatProvider):
+    nombre = "openrouter"
+    _env_name = "OPENROUTER_API_KEY"
+    _default_model = OPENROUTER_MODEL
+    _default_base = OPENROUTER_BASE_URL or "https://openrouter.ai/api/v1"
+    _temp_cap = 0.4
+
+
+class CerebrasProvider(_OpenAICompatProvider):
+    nombre = "cerebras"
+    _env_name = "CEREBRAS_API_KEY"
+    _default_model = CEREBRAS_MODEL
+    _default_base = CEREBRAS_BASE_URL or "https://api.cerebras.ai/v1"
+    _temp_cap = 0.45
+
+
+class MistralProvider(_OpenAICompatProvider):
+    nombre = "mistral"
+    _env_name = "MISTRAL_API_KEY"
+    _default_model = MISTRAL_MODEL
+    _default_base = MISTRAL_BASE_URL or "https://api.mistral.ai/v1"
+    _temp_cap = 0.4
+
+
 class LocalProvider:
     """Respaldo sin nube — usa conectores y memoria ya enriquecidas."""
 
@@ -1108,6 +1234,9 @@ class LocalProvider:
 _PROVEEDORES: dict[str, ModelProvider] = {
     "gemini": GeminiProvider(),
     "deepseek": DeepSeekProvider(),
+    "openrouter": OpenRouterProvider(),
+    "cerebras": CerebrasProvider(),
+    "mistral": MistralProvider(),
     "groq": GroqProvider(),
     "openai": OpenAIProvider(),
     "local": LocalProvider(),
@@ -1238,10 +1367,20 @@ def proveedor_respaldo_disponible() -> str | None:
 
 
 def _orden_fallback(desde: str, preferir: str | None = None) -> list[str]:
-    # Cadena oficial: Gemini → DeepSeek (lógica) → Groq → OpenAI → local
-    # Si preferir=deepseek (razonamiento/código), DeepSeek abre la cascada.
+    # Smart Router: preferido → gemini → deepseek → openrouter → cerebras → mistral → groq → openai → local
     cabeza = (preferir or desde or "gemini").strip().lower()
-    preferidos = [cabeza, desde, "gemini", "deepseek", "groq", "openai", "local"]
+    preferidos = [
+        cabeza,
+        desde,
+        "gemini",
+        "deepseek",
+        "openrouter",
+        "cerebras",
+        "mistral",
+        "groq",
+        "openai",
+        "local",
+    ]
     orden: list[str] = []
     for nombre in preferidos:
         if nombre and nombre not in orden:
@@ -1295,6 +1434,9 @@ def _ejecutar_con_respaldo(
             principal.nombre,
             "gemini",
             "deepseek",
+            "openrouter",
+            "cerebras",
+            "mistral",
             "groq",
             "local",
             "openai",
@@ -1302,6 +1444,9 @@ def _ejecutar_con_respaldo(
         orden = []
         for n in prefer_list:
             if n and n not in orden:
+                orden.append(n)
+        for n in listar_proveedores():
+            if n not in orden:
                 orden.append(n)
 
     for indice, nombre in enumerate(orden):
@@ -1417,6 +1562,19 @@ def _modelo_para_proveedor(proveedor: ModelProvider, model_name: str | None) -> 
         if "deepseek" in m or m in ("deepseek-chat", "deepseek-reasoner", "deepseek-coder"):
             return raw
         return None
+    if nombre == "openrouter":
+        # OpenRouter acepta ids tipo vendor/model
+        if "/" in m or "deepseek" in m or "llama" in m or "mistral" in m or "qwen" in m:
+            return raw
+        return OPENROUTER_MODEL
+    if nombre == "cerebras":
+        if any(x in m for x in ("llama", "qwen", "gpt-oss", "cerebras")):
+            return raw
+        return CEREBRAS_MODEL
+    if nombre == "mistral":
+        if "mistral" in m or "mixtral" in m or "codestral" in m:
+            return raw
+        return MISTRAL_MODEL
     if nombre == "groq":
         if any(x in m for x in ("llama", "mixtral", "gemma", "qwen", "deepseek")):
             return raw

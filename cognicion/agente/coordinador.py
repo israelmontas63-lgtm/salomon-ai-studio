@@ -81,11 +81,23 @@ def coordinar(mensaje: str, **kwargs: Any) -> dict[str, Any]:
             return {**meta, "exito": out.get("ok"), "agente": "Agent_Guard", "resultado": out}
 
         if rol == "visual":
-            # Free Tier: preferir encolado async para no bloquear el turno
+            # Hotfix: con motores reales (Fal/Replicate/OpenAI) generar en sync.
+            # Async solo si no hay claves (UI aún no hace poll fiable de jobs).
             try:
-                from settings import MEDIA_ASYNC_DEFAULT, RENDER_FREE_TIER
+                from settings import (
+                    FAL_KEY,
+                    MEDIA_ASYNC_DEFAULT,
+                    OPENAI_API_KEY,
+                    REPLICATE_API_TOKEN,
+                    RENDER_FREE_TIER,
+                )
 
-                if MEDIA_ASYNC_DEFAULT or RENDER_FREE_TIER:
+                tiene_motor = bool(
+                    (FAL_KEY or "").strip()
+                    or (REPLICATE_API_TOKEN or "").strip()
+                    or (OPENAI_API_KEY or "").strip()
+                )
+                if MEDIA_ASYNC_DEFAULT and RENDER_FREE_TIER and not tiene_motor:
                     from cognicion.media.jobs_async import encolar_media
 
                     job = encolar_media(mensaje, hint="imagen_hd")

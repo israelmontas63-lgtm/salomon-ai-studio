@@ -63,13 +63,26 @@ CARTESIA_SAMPLE_RATE = int(os.getenv("CARTESIA_SAMPLE_RATE", "44100") or "44100"
 # Compatibilidad de flags de orquestación (sin motores legacy)
 TTS_RATE = int(os.getenv("TTS_RATE", "185"))
 TTS_VOLUME = float(os.getenv("TTS_VOLUME", "0.95"))
-TTS_ASYNC = os.getenv(
-    "TTS_ASYNC",
-    # Free Tier Render: nunca bloquear /api/chat esperando ElevenLabs (proxy ~30s)
-    "true" if os.getenv("RENDER_FREE_TIER", "true").strip().lower() in ("1", "true", "yes", "on") else "false",
-).strip().lower() in ("1", "true", "yes", "on")
+# Hotfix voz: con ElevenLabs activo, NO diferir por defecto (Salomón debe hablar).
+# Override explícito: TTS_ASYNC=true|false en .env / Render.
+_eleven_presente = bool(os.getenv("ELEVENLABS_API_KEY", "").strip())
+_tts_async_default = (
+    "false"
+    if _eleven_presente
+    else (
+        "true"
+        if os.getenv("RENDER_FREE_TIER", "true").strip().lower() in ("1", "true", "yes", "on")
+        else "false"
+    )
+)
+TTS_ASYNC = os.getenv("TTS_ASYNC", _tts_async_default).strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
 # Tope duro de espera TTS en rutas síncronas (segundos)
-TTS_SYNC_TIMEOUT_S = float(os.getenv("TTS_SYNC_TIMEOUT_S", "8"))
+TTS_SYNC_TIMEOUT_S = float(os.getenv("TTS_SYNC_TIMEOUT_S", "12"))
 
 # ── OpenAI (proveedor alternativo) ───────────────────────────────────────
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
@@ -82,6 +95,34 @@ DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat").strip() or "deepse
 DEEPSEEK_BASE_URL = (
     os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com").strip()
     or "https://api.deepseek.com"
+)
+
+# ── OpenRouter / Cerebras / Mistral (LLM failover OpenAI-compatible) ─────
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
+OPENROUTER_MODEL = (
+    os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip()
+    or "deepseek/deepseek-chat"
+)
+OPENROUTER_BASE_URL = (
+    os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip()
+    or "https://openrouter.ai/api/v1"
+)
+CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY", "").strip()
+CEREBRAS_MODEL = (
+    os.getenv("CEREBRAS_MODEL", "llama-3.3-70b").strip() or "llama-3.3-70b"
+)
+CEREBRAS_BASE_URL = (
+    os.getenv("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1").strip()
+    or "https://api.cerebras.ai/v1"
+)
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "").strip()
+MISTRAL_MODEL = (
+    os.getenv("MISTRAL_MODEL", "mistral-small-latest").strip()
+    or "mistral-small-latest"
+)
+MISTRAL_BASE_URL = (
+    os.getenv("MISTRAL_BASE_URL", "https://api.mistral.ai/v1").strip()
+    or "https://api.mistral.ai/v1"
 )
 
 # ── Groq (OpenAI-compatible, gratis sin tarjeta) ───────────────────────────
@@ -285,9 +326,17 @@ RENDER_FREE_TIER = os.getenv("RENDER_FREE_TIER", "true").strip().lower() in (
 MAX_SESIONES_RAM = int(os.getenv("MAX_SESIONES_RAM", "4" if RENDER_FREE_TIER else "8"))
 MEDIA_HTTP_TIMEOUT = float(os.getenv("MEDIA_HTTP_TIMEOUT", "45"))
 MEDIA_HTTP_TIMEOUT_POLL = float(os.getenv("MEDIA_HTTP_TIMEOUT_POLL", "30"))
-MEDIA_ASYNC_DEFAULT = os.getenv("MEDIA_ASYNC_DEFAULT", "true").strip().lower() in (
-    "1", "true", "yes", "on",
+# Hotfix imagen: con Fal/Replicate/OpenAI, generar en sync (UI no hace poll de jobs).
+_media_keys = bool(
+    (os.getenv("FAL_KEY") or "").strip()
+    or (os.getenv("REPLICATE_API_TOKEN") or "").strip()
+    or (os.getenv("REPLICATE_API_KEY") or "").strip()
+    or (os.getenv("OPENAI_API_KEY") or "").strip()
 )
+MEDIA_ASYNC_DEFAULT = os.getenv(
+    "MEDIA_ASYNC_DEFAULT",
+    "false" if _media_keys else "true",
+).strip().lower() in ("1", "true", "yes", "on")
 BOOT_LIGHT = os.getenv("BOOT_LIGHT", "true" if RENDER_FREE_TIER else "false").strip().lower() in (
     "1", "true", "yes", "on",
 )

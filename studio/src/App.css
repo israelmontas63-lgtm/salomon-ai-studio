@@ -79,3 +79,12 @@
   from { opacity: 0; transform: translateX(-50%) translateY(6px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+.bubble__image {
+  display: block;
+  max-width: 100%;
+  width: min(100%, 420px);
+  margin-top: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 169, 98, 0.25);
+}

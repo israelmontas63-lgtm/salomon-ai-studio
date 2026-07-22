@@ -29,6 +29,14 @@ export default function ChatBody({
             ].join(" ")}
           >
             <div className="bubble__text">{m.text}</div>
+            {m.imageSrc ? (
+              <img
+                className="bubble__image"
+                src={m.imageSrc}
+                alt="Imagen generada por Salomón"
+                loading="lazy"
+              />
+            ) : null}
             {m.role === "ai" && (
               <button
                 type="button"
