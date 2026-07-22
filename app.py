@@ -3293,14 +3293,30 @@ def api_media_estado() -> dict:
     from cognicion.media.media_engine import estado_media_routing
     from cognicion.media.video import OPERACIONES, _moviepy_disponible
     from cognicion.multimodal import MEDIA_PROGRESS_BUDGET_MS, estado_multimodal
-    from settings import MEDIA_PROMPT_ENHANCER, OPENAI_API_KEY
+    from settings import (
+        CARTESIA_API_KEY,
+        DEEPGRAM_API_KEY,
+        ELEVENLABS_API_KEY,
+        FAL_KEY,
+        MEDIA_PROMPT_ENHANCER,
+        OPENAI_API_KEY,
+        REPLICATE_API_TOKEN,
+    )
 
     routing = estado_media_routing()
     ej = routing.get("routing_ejemplo") or {}
     mm = estado_multimodal()
+    keys = {
+        "fal": bool((FAL_KEY or "").strip()),
+        "replicate": bool((REPLICATE_API_TOKEN or "").strip()),
+        "openai": bool((OPENAI_API_KEY or "").strip()),
+        "elevenlabs_tts": bool((ELEVENLABS_API_KEY or "").strip()),
+        "cartesia_tts": bool((CARTESIA_API_KEY or "").strip()),
+        "deepgram_stt": bool((DEEPGRAM_API_KEY or "").strip()),
+    }
     return {
         "protocolo": "MULTIMODAL_CORE",
-        "version": "70.0.0",
+        "version": "70.1.0",
         "hub": routing.get("hub"),
         "calidad_forzada": routing.get("calidad_forzada"),
         "forzar_pro": routing.get("forzar_pro"),
@@ -3309,20 +3325,37 @@ def api_media_estado() -> dict:
         "motores": routing.get("motores"),
         "imagen": {
             "motor_legacy": "dall-e-3" if OPENAI_API_KEY else "local_placeholder",
-            "openai_configurada": bool(OPENAI_API_KEY),
+            "openai_configurada": keys["openai"],
+            "fal_configurada": keys["fal"],
+            "replicate_configurada": keys["replicate"],
             "routing": ej.get("imagen"),
+            "listo": keys["fal"] or keys["replicate"] or keys["openai"],
         },
         "video": {
             "moviepy": _moviepy_disponible(),
             "operaciones": sorted(OPERACIONES),
             "routing": ej.get("video"),
+            "listo": keys["fal"] or keys["replicate"] or _moviepy_disponible(),
+        },
+        "audio": {
+            "tts": keys["elevenlabs_tts"] or keys["cartesia_tts"],
+            "stt": keys["deepgram_stt"],
+            "cadena_tts": ["elevenlabs", "cartesia"],
+            "cadena_stt": ["deepgram"],
         },
         "postproceso": ej.get("post"),
         "keys_configuradas": {
-            k: bool((v or {}).get("configurado"))
-            for k, v in (routing.get("motores") or {}).items()
+            **{
+                k: bool((v or {}).get("configurado"))
+                for k, v in (routing.get("motores") or {}).items()
+            },
+            **keys,
         },
         "multimodal": mm,
+        "operativo": bool(
+            (keys["fal"] or keys["replicate"] or keys["openai"])
+            and (keys["elevenlabs_tts"] or keys["cartesia_tts"] or keys["deepgram_stt"])
+        ),
     }
 
 

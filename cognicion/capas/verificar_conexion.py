@@ -77,6 +77,7 @@ def verificar_conexion_maestra() -> dict[str, Any]:
     # Capa 4 — búsqueda
     try:
         from cognicion.busqueda.agente import (
+            _buscar_exa,
             _buscar_respaldo,
             _buscar_tavily,
             buscar_web,
@@ -88,11 +89,12 @@ def verificar_conexion_maestra() -> dict[str, Any]:
         assert not respuesta_parece_limite_o_vacia("Clima estable en Madrid.")
         capas["4_busqueda"] = {
             "ok": True,
-            "cascade": ["tavily", "wikipedia", "duckduckgo", "noticias"],
+            "cascade": ["tavily", "exa", "wikipedia", "duckduckgo", "noticias"],
             "module": "cognicion.busqueda.agente",
             "apis": [
                 buscar_web.__name__,
                 _buscar_tavily.__name__,
+                _buscar_exa.__name__,
                 _buscar_respaldo.__name__,
                 resumir_estilo_salomon.__name__,
             ],

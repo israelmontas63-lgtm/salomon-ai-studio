@@ -3,11 +3,12 @@
 Provider Pattern — selección dinámica de servicios según la tarea.
 
 Cadena oficial (Render):
-  LLM        → GEMINI → GROQ → OPENAI
+  LLM        → GEMINI → DEEPSEEK → GROQ → OPENAI
   MEDIA      → FAL → REPLICATE
   STT        → DEEPGRAM
   TTS        → ELEVENLABS → CARTESIA (única cadena; PWA usa /api/tts)
   EMBEDDINGS → COHERE
+  WEB        → TAVILY → EXA → respaldo
   SBI        → SBI_ENABLED + SBI_MODE
 """
 
@@ -51,6 +52,7 @@ def inventario_claves() -> dict[str, str]:
 
     raw = {
         "GEMINI_API_KEY": S.GEMINI_API_KEY,
+        "DEEPSEEK_API_KEY": getattr(S, "DEEPSEEK_API_KEY", ""),
         "GROQ_API_KEY": S.GROQ_API_KEY,
         "OPENAI_API_KEY": S.OPENAI_API_KEY,
         "COHERE_API_KEY": S.COHERE_API_KEY,
@@ -60,6 +62,8 @@ def inventario_claves() -> dict[str, str]:
         "FAL_KEY": S.FAL_KEY,
         "REPLICATE_API_TOKEN": S.REPLICATE_API_TOKEN,
         "CARTESIA_API_KEY": getattr(S, "CARTESIA_API_KEY", ""),
+        "TAVILY_API_KEY": getattr(S, "TAVILY_API_KEY", ""),
+        "EXA_API_KEY": getattr(S, "EXA_API_KEY", ""),
         "SBI_ENABLED": "true" if S.SBI_ENABLED else "false",
         "SBI_MODE": S.SBI_MODE,
     }
@@ -82,6 +86,12 @@ def cadenas() -> dict[Servicio, list[ProviderSlot]]:
     return {
         Servicio.LLM: [
             ProviderSlot("gemini", "GEMINI_API_KEY", _presente(S.GEMINI_API_KEY), True),
+            ProviderSlot(
+                "deepseek",
+                "DEEPSEEK_API_KEY",
+                _presente(getattr(S, "DEEPSEEK_API_KEY", "")),
+                True,
+            ),
             ProviderSlot("groq", "GROQ_API_KEY", _presente(S.GROQ_API_KEY), True),
             ProviderSlot("openai", "OPENAI_API_KEY", _presente(S.OPENAI_API_KEY), True),
         ],

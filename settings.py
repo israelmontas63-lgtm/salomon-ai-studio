@@ -76,6 +76,14 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "").strip()
 
+# ── DeepSeek (razonamiento / lógica / depuración — OpenAI-compatible) ─────
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "").strip()
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat").strip() or "deepseek-chat"
+DEEPSEEK_BASE_URL = (
+    os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com").strip()
+    or "https://api.deepseek.com"
+)
+
 # ── Groq (OpenAI-compatible, gratis sin tarjeta) ───────────────────────────
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant").strip()
@@ -206,10 +214,17 @@ else:
         "on",
     )
 
-# ── Búsqueda web (Tavily preferido; DDG/noticias como respaldo) ────────────
+# ── Búsqueda web (Tavily + Exa → Wikipedia/DDG) ───────────────────────────
 # Cortex absoluto: por defecto OFF. La web solo entra con frase canónica
 # («Busca en la web sobre…») vía autoriza_web — nunca por heurística factual.
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "").strip()
+EXA_API_KEY = os.getenv("EXA_API_KEY", "").strip()
+# advanced = extracción profunda (vista de águila); basic = más rápido
+TAVILY_SEARCH_DEPTH = (
+    os.getenv("TAVILY_SEARCH_DEPTH", "advanced").strip().lower() or "advanced"
+)
+if TAVILY_SEARCH_DEPTH not in ("basic", "advanced"):
+    TAVILY_SEARCH_DEPTH = "advanced"
 BUSQUEDA_WEB_AUTO = os.getenv("BUSQUEDA_WEB_AUTO", "false").strip().lower() in (
     "1",
     "true",

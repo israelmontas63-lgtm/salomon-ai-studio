@@ -74,16 +74,32 @@ class SalomonMasterNeuralEngine:
         inv["TAVILY_API_KEY"] = (
             f"set:{len(S.TAVILY_API_KEY)}c" if S.TAVILY_API_KEY else "missing"
         )
+        inv["EXA_API_KEY"] = (
+            f"set:{len(S.EXA_API_KEY)}c" if getattr(S, "EXA_API_KEY", "") else "missing"
+        )
+        inv["DEEPSEEK_API_KEY"] = (
+            f"set:{len(S.DEEPSEEK_API_KEY)}c"
+            if getattr(S, "DEEPSEEK_API_KEY", "")
+            else "missing"
+        )
 
         llm_ok = any(
             inv.get(k, "missing") != "missing"
-            for k in ("GEMINI_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY")
+            for k in (
+                "GEMINI_API_KEY",
+                "DEEPSEEK_API_KEY",
+                "GROQ_API_KEY",
+                "OPENAI_API_KEY",
+            )
         )
         media_ok = any(
             inv.get(k, "missing") != "missing"
             for k in ("FAL_KEY", "REPLICATE_API_TOKEN", "OPENAI_API_KEY")
         )
-        web_ok = inv.get("TAVILY_API_KEY", "missing") != "missing"
+        web_ok = any(
+            inv.get(k, "missing") != "missing"
+            for k in ("TAVILY_API_KEY", "EXA_API_KEY")
+        )
         # DuckDuckGo no requiere key — web siempre parcialmente disponible
         web_ok = True if web_ok else True
 

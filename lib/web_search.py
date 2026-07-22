@@ -12,16 +12,19 @@ from cognicion.busqueda.agente import (
     necesita_busqueda_web,
     responder_con_busqueda,
 )
-from settings import BUSQUEDA_WEB_AUTO, TAVILY_API_KEY
+from settings import BUSQUEDA_WEB_AUTO, EXA_API_KEY, TAVILY_API_KEY, TAVILY_SEARCH_DEPTH
 
 
 def estado_conectividad() -> dict[str, Any]:
     return {
         "modulo": "web_search_agent",
-        "version": "1.3",
+        "version": "1.4",
         "activo": True,
         "busqueda_web_auto": BUSQUEDA_WEB_AUTO,
         "tavily_key": bool((TAVILY_API_KEY or "").strip()),
+        "tavily_search_depth": TAVILY_SEARCH_DEPTH,
+        "exa_key": bool((EXA_API_KEY or "").strip()),
+        "cascade": ["tavily", "exa", "wikipedia", "duckduckgo", "noticias"],
         "fallback_ddg": True,
     }
 

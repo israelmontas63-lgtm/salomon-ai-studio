@@ -18,7 +18,7 @@ from typing import Any, Final
 
 import httpx
 
-from settings import TAVILY_API_KEY
+from settings import EXA_API_KEY, TAVILY_API_KEY, TAVILY_SEARCH_DEPTH
 
 _MARCADORES_LIMITE: Final[tuple[str, ...]] = (
     "límite de uso",
@@ -118,6 +118,7 @@ class CircuitBreaker:
 
 
 _breaker_tavily = CircuitBreaker("tavily")
+_breaker_exa = CircuitBreaker("exa", failure_threshold=3, recovery_timeout_s=40.0)
 _breaker_respaldo = CircuitBreaker("respaldo", failure_threshold=4, recovery_timeout_s=30.0)
 
 
@@ -237,8 +238,11 @@ def _buscar_tavily(consulta: str, max_results: int = 5) -> dict[str, Any] | None
                     json={
                         "api_key": TAVILY_API_KEY,
                         "query": consulta,
-                        "search_depth": "basic",
+                        "search_depth": TAVILY_SEARCH_DEPTH
+                        if TAVILY_SEARCH_DEPTH in ("basic", "advanced")
+                        else "advanced",
                         "include_answer": True,
+                        "include_raw_content": TAVILY_SEARCH_DEPTH == "advanced",
                         "max_results": max_results,
                     },
                 )
@@ -301,6 +305,100 @@ def _buscar_tavily(consulta: str, max_results: int = 5) -> dict[str, Any] | None
             return {"motor": "tavily", "error": last_err, "consulta": consulta}
 
     return {"motor": "tavily", "error": last_err, "consulta": consulta}
+
+
+def _buscar_exa(consulta: str, max_results: int = 5) -> dict[str, Any] | None:
+    """Exa.ai — búsqueda semántica + extracción de contenido (vista de águila)."""
+    if not EXA_API_KEY:
+        return None
+    if not _breaker_exa.allow():
+        return {
+            "motor": "exa",
+            "error": "circuit_open",
+            "consulta": consulta,
+            "circuit": _breaker_exa.status(),
+        }
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            r = client.post(
+                "https://api.exa.ai/search",
+                headers={
+                    "x-api-key": EXA_API_KEY,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "query": consulta,
+                    "type": "auto",
+                    "num_results": max_results,
+                    "contents": {
+                        "text": {"max_characters": 1800},
+                        "highlights": {"max_characters": 400},
+                    },
+                },
+            )
+            if r.status_code in (401, 403):
+                _breaker_exa.record_failure()
+                return {"motor": "exa", "error": f"http_{r.status_code}", "consulta": consulta}
+            if r.status_code in (429, 502, 503):
+                _breaker_exa.record_failure()
+                return {"motor": "exa", "error": f"http_{r.status_code}", "consulta": consulta}
+            r.raise_for_status()
+            payload = r.json()
+            data = payload if isinstance(payload, dict) else {}
+
+        resultados: list[dict[str, str]] = []
+        fragmentos: list[str] = []
+        for item in data.get("results") or []:
+            if not isinstance(item, dict):
+                continue
+            text = ""
+            contents = item.get("text") or item.get("contents") or ""
+            if isinstance(contents, dict):
+                text = str(contents.get("text") or "")
+            elif isinstance(contents, str):
+                text = contents
+            highlights = item.get("highlights")
+            if isinstance(highlights, list) and highlights:
+                text = text or " ".join(str(h) for h in highlights[:3])
+            snippet = _texto_util(text or item.get("summary") or "", limite=500)
+            norm = _normalizar_resultado(
+                {
+                    "titulo": item.get("title") or item.get("url") or "",
+                    "url": item.get("url") or "",
+                    "snippet": snippet,
+                }
+            )
+            if norm:
+                resultados.append(norm)
+                if snippet:
+                    fragmentos.append(snippet[:350])
+
+        if not resultados:
+            _breaker_exa.record_failure()
+            return {
+                "motor": "exa",
+                "error": "sin_contenido_util",
+                "consulta": consulta,
+                "resultados": [],
+            }
+
+        _breaker_exa.record_success()
+        respuesta = ""
+        if fragmentos:
+            respuesta = " · ".join(fragmentos[:3])[:1200]
+        return {
+            "motor": "exa",
+            "consulta": consulta,
+            "respuesta_directa": respuesta,
+            "resultados": resultados,
+        }
+    except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPError) as exc:
+        _breaker_exa.record_failure()
+        return {"motor": "exa", "error": type(exc).__name__, "consulta": consulta}
+    except Exception as exc:
+        _breaker_exa.record_failure()
+        return {"motor": "exa", "error": type(exc).__name__, "consulta": consulta}
 
 
 def _buscar_respaldo(consulta: str) -> dict[str, Any]:
@@ -437,9 +535,8 @@ def _buscar_respaldo(consulta: str) -> dict[str, Any]:
 
 def buscar_web(consulta: str) -> dict[str, Any]:
     """
-    Cascada síncrona: Tavily (reintentos + breaker) → respaldo Wikipedia/DDG/noticias.
-    Timeouts cortos para no bloquear el hilo Flask/FastAPI.
-    Fail-soft: nunca propaga excepciones al caller.
+    Cascada síncrona: Tavily (advanced) → Exa (extracción) → Wikipedia/DDG/noticias.
+    Timeouts cortos para no bloquear el hilo FastAPI. Fail-soft.
     """
     t0 = time.perf_counter()
     try:
@@ -457,6 +554,8 @@ def buscar_web(consulta: str) -> dict[str, Any]:
                 }
             )
 
+        avisos: list[str] = []
+
         tavily = _buscar_tavily(q)
         if tavily and not tavily.get("error") and (
             tavily.get("respuesta_directa") or tavily.get("resultados")
@@ -464,10 +563,24 @@ def buscar_web(consulta: str) -> dict[str, Any]:
             pack = {"exito": True, **tavily}
             pack["elapsed_ms"] = _finite_float((time.perf_counter() - t0) * 1000)
             return _json_safe(pack)
+        if tavily and tavily.get("error"):
+            avisos.append(f"tavily:{tavily['error']}")
+
+        exa = _buscar_exa(q)
+        if exa and not exa.get("error") and (
+            exa.get("respuesta_directa") or exa.get("resultados")
+        ):
+            pack = {"exito": True, **exa}
+            if avisos:
+                pack["avisos"] = avisos
+            pack["elapsed_ms"] = _finite_float((time.perf_counter() - t0) * 1000)
+            return _json_safe(pack)
+        if exa and exa.get("error"):
+            avisos.append(f"exa:{exa['error']}")
 
         respaldo = _buscar_respaldo(q)
-        if tavily and tavily.get("error"):
-            respaldo["aviso_tavily"] = tavily["error"]
+        if avisos:
+            respaldo["avisos"] = avisos
         respaldo["exito"] = bool(
             respaldo.get("respuesta_directa") or respaldo.get("resultados")
         )
@@ -614,6 +727,7 @@ def responder_con_busqueda(
             "motor": (datos.get("motor") if isinstance(datos, dict) else None),
             "circuit_breakers": {
                 "tavily": _breaker_tavily.status(),
+                "exa": _breaker_exa.status(),
                 "respaldo": _breaker_respaldo.status(),
             },
         }
@@ -624,6 +738,7 @@ def estado_circuit_breakers() -> dict[str, Any]:
     return _json_safe(
         {
             "tavily": _breaker_tavily.status(),
+            "exa": _breaker_exa.status(),
             "respaldo": _breaker_respaldo.status(),
         }
     )

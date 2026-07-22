@@ -9,6 +9,9 @@ import traceback
 from typing import Any, Callable, Protocol
 
 from settings import (
+    DEEPSEEK_API_KEY,
+    DEEPSEEK_BASE_URL,
+    DEEPSEEK_MODEL,
     GEMINI_API_KEY,
     GEMINI_MODEL,
     GEMINI_MODELOS_RESPALDO,
@@ -146,6 +149,7 @@ def _env_key(*names: str) -> str:
         "GEMINI_API_KEY": GEMINI_API_KEY,
         "OPENAI_API_KEY": OPENAI_API_KEY,
         "GROQ_API_KEY": GROQ_API_KEY,
+        "DEEPSEEK_API_KEY": DEEPSEEK_API_KEY,
     }
     for name in names:
         val = (mapping.get(name) or "").strip()
@@ -159,7 +163,7 @@ def _falta_clave(provider: str) -> Exception:
 
     msg = (
         f"Falta API key del proveedor '{provider}'. "
-        "Configura GEMINI_API_KEY / OPENAI_API_KEY / GROQ_API_KEY en Render Environment."
+        "Configura GEMINI_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY / GROQ_API_KEY."
     )
     exc = RuntimeError(msg)
     pack = format_error_response(
@@ -176,6 +180,7 @@ def _falta_clave(provider: str) -> Exception:
     print(
         f"[LLM] ERROR 42 — sin clave para {provider}. "
         f"GEMINI={bool(_env_key('GEMINI_API_KEY'))} "
+        f"DEEPSEEK={bool(_env_key('DEEPSEEK_API_KEY'))} "
         f"OPENAI={bool(_env_key('OPENAI_API_KEY'))} "
         f"GROQ={bool(_env_key('GROQ_API_KEY'))}",
         flush=True,
@@ -201,11 +206,13 @@ def estado_llm() -> dict[str, Any]:
         "hist_max_turns": _HIST_MAX_TURNS,
         "keys": {
             "gemini": bool(_env_key("GEMINI_API_KEY")),
+            "deepseek": bool(_env_key("DEEPSEEK_API_KEY")),
             "openai": bool(_env_key("OPENAI_API_KEY")),
             "groq": bool(_env_key("GROQ_API_KEY")),
         },
         "models": {
             "gemini": GEMINI_MODEL,
+            "deepseek": DEEPSEEK_MODEL,
             "openai": OPENAI_MODEL,
             "groq": GROQ_MODEL,
         },
@@ -899,6 +906,92 @@ class GroqProvider:
         raise NotImplementedError("Groq no soporta visión en este proveedor")
 
 
+class DeepSeekProvider:
+    """DeepSeek — motor de razonamiento lógico / depuración (API OpenAI-compatible)."""
+
+    nombre = "deepseek"
+
+    def disponible(self) -> bool:
+        return bool(_env_key("DEEPSEEK_API_KEY"))
+
+    def _cliente(self):
+        from openai import OpenAI
+
+        key = _env_key("DEEPSEEK_API_KEY")
+        if not key:
+            raise _falta_clave("deepseek")
+        base = (os.getenv("DEEPSEEK_BASE_URL") or DEEPSEEK_BASE_URL or "").strip()
+        return OpenAI(
+            api_key=key,
+            base_url=base or "https://api.deepseek.com",
+            timeout=max(5.0, float(_LLM_HTTP_TIMEOUT_MS) / 1000.0),
+        )
+
+    def _mensajes_openai(
+        self,
+        mensaje: str,
+        historial: list[dict],
+        system_instruction: str,
+    ) -> list[dict[str, str]]:
+        return _mensajes_openai_style(
+            mensaje, historial, system_instruction, label="deepseek"
+        )
+
+    def chat_con_historial(
+        self,
+        mensaje: str,
+        historial: list[dict],
+        system_instruction: str,
+        model_name: str | None = None,
+    ) -> str:
+        if not self.disponible():
+            raise _falta_clave("deepseek")
+        try:
+            client = self._cliente()
+            gen = _config_generacion()
+            # Razonamiento: temperatura ligeramente más baja
+            temp = min(float(gen["temperature"]), 0.35)
+            print(
+                f"[LLM] DeepSeek chat.completions.create temp={temp}",
+                flush=True,
+            )
+            respuesta = client.chat.completions.create(
+                model=model_name or DEEPSEEK_MODEL,
+                messages=self._mensajes_openai(mensaje, historial, system_instruction),
+                temperature=temp,
+                top_p=gen["top_p"],
+            )
+            return (respuesta.choices[0].message.content or "").strip()
+        except Exception as exc:
+            raise _anclar_error_proveedor(exc, provider="deepseek") from exc
+
+    def generar_texto(self, prompt: str, model_name: str | None = None) -> str:
+        if not self.disponible():
+            raise _falta_clave("deepseek")
+        try:
+            client = self._cliente()
+            gen = _config_generacion()
+            temp = min(float(gen["temperature"]), 0.35)
+            respuesta = client.chat.completions.create(
+                model=model_name or DEEPSEEK_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temp,
+                top_p=gen["top_p"],
+            )
+            return (respuesta.choices[0].message.content or "").strip()
+        except Exception as exc:
+            raise _anclar_error_proveedor(exc, provider="deepseek") from exc
+
+    def analizar_imagen(
+        self,
+        prompt: str,
+        imagen_bytes: bytes,
+        mime_type: str = "image/png",
+        model_name: str | None = None,
+    ) -> str:
+        raise NotImplementedError("DeepSeek no soporta visión en este conector")
+
+
 class LocalProvider:
     """Respaldo sin nube — usa conectores y memoria ya enriquecidas."""
 
@@ -931,6 +1024,7 @@ class LocalProvider:
 
 _PROVEEDORES: dict[str, ModelProvider] = {
     "gemini": GeminiProvider(),
+    "deepseek": DeepSeekProvider(),
     "groq": GroqProvider(),
     "openai": OpenAIProvider(),
     "local": LocalProvider(),
@@ -1047,8 +1141,8 @@ def proveedor_respaldo_disponible() -> str | None:
 
 
 def _orden_fallback(desde: str) -> list[str]:
-    # Cadena oficial Render: Gemini → Groq → OpenAI → local
-    preferidos = [desde, "gemini", "groq", "openai", "local"]
+    # Cadena oficial: Gemini → DeepSeek (lógica) → Groq → OpenAI → local
+    preferidos = [desde, "gemini", "deepseek", "groq", "openai", "local"]
     orden: list[str] = []
     for nombre in preferidos:
         if nombre not in orden:
@@ -1092,7 +1186,7 @@ def _ejecutar_con_respaldo(ejecutar: Callable[[ModelProvider], str]) -> str:
     # Free Tier: Gemini → Groq (rápido) → local. OpenAI al final (más lento).
     orden = _orden_fallback(principal.nombre)
     if _render_free:
-        prefer = [principal.nombre, "gemini", "groq", "local", "openai"]
+        prefer = [principal.nombre, "gemini", "deepseek", "groq", "local", "openai"]
         orden = []
         for n in prefer:
             if n not in orden:
@@ -1201,6 +1295,10 @@ def _modelo_para_proveedor(proveedor: ModelProvider, model_name: str | None) -> 
 
     if nombre == "openai":
         if m.startswith(("gpt-", "o1", "o3", "o4", "chatgpt")):
+            return raw
+        return None
+    if nombre == "deepseek":
+        if "deepseek" in m or m in ("deepseek-chat", "deepseek-reasoner", "deepseek-coder"):
             return raw
         return None
     if nombre == "groq":

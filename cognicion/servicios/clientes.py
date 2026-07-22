@@ -77,6 +77,22 @@ def cliente_groq() -> Any:
     return _cache_get("groq", _build)
 
 
+def cliente_deepseek() -> Any:
+    """OpenAI-compatible apuntando a DeepSeek (razonamiento / lógica)."""
+    from settings import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL
+
+    if not DEEPSEEK_API_KEY:
+        raise ClienteNoDisponible("DEEPSEEK_API_KEY no configurada")
+
+    def _build():
+        from openai import OpenAI
+
+        base = (DEEPSEEK_BASE_URL or "").strip() or "https://api.deepseek.com"
+        return OpenAI(api_key=DEEPSEEK_API_KEY, base_url=base)
+
+    return _cache_get("deepseek", _build)
+
+
 def cliente_cohere() -> Any:
     """cohere.ClientV2 o wrapper httpx — embeddings / RAG."""
     from settings import COHERE_API_KEY
@@ -409,6 +425,7 @@ class _ReplicateHttp:
 
 FACTORY: dict[str, Callable[[], Any]] = {
     "gemini": cliente_gemini,
+    "deepseek": cliente_deepseek,
     "openai": cliente_openai,
     "groq": cliente_groq,
     "cohere": cliente_cohere,
