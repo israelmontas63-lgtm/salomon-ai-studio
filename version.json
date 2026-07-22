@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T16:50:00Z",
-  "timestamp": 1753203000,
-  "version": "110.22.18",
+  "timestamp_iso": "2026-07-22T17:30:00Z",
+  "timestamp": 1753205400,
+  "version": "110.22.19",
   "channel": "main",
-  "label": "hotfix-dead-ui-camera-stage-layout",
+  "label": "reconnect-all-buttons-hit-repair",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "UI_HOTFIX",
-  "notes": "v110.22.18 — Fix dead UI: camera-stage out of flex flow when idle; remove about:blank exitSystem."
+  "protocol": "UI_HIT_REPAIR",
+  "notes": "v110.22.19 — Nuclear hit-repair: camera-stage display:none when idle; ui_boot_reconnect wires cam/aa/settings/back; clear stuck body classes."
 }

@@ -30,12 +30,30 @@
   <link rel="stylesheet" href="/static/css/update_styles.css" />
   <link rel="stylesheet" href="/static/css/settings_layer.css" />
   <link rel="stylesheet" href="/static/css/chat_history_drawer.css" />
-  <link rel="stylesheet" href="/static/css/back_button.css?v=110.22.18" />
+  <link rel="stylesheet" href="/static/css/back_button.css?v=110.22.19" />
   <link rel="stylesheet" href="/static/css/bottom_bar_ux.css?v=110.22.13" />
   <link rel="stylesheet" href="/static/css/camera_full.css?v=110.22.14" />
-  <link rel="stylesheet" href="/static/css/camera_hud.css?v=110.22.18" />
+  <link rel="stylesheet" href="/static/css/camera_hud.css?v=110.22.19" />
+  <link rel="stylesheet" href="/static/css/ui_hit_repair.css?v=110.22.19" />
 </head>
 <body>
+  <script>
+    /* Limpieza inmediata de capas atascadas (antes de CSS diferido) */
+    (function () {
+      try {
+        document.documentElement.classList.add("salomon-boot");
+        if (document.body) {
+          document.body.classList.remove(
+            "vision-immersive",
+            "input-sheet-open",
+            "control-layer-open",
+            "ai-active",
+            "camera-ui-elevated"
+          );
+        }
+      } catch (e) {}
+    })();
+  </script>
   <div class="phone app-viewport">
     <header class="header">
       <!-- Estándar móvil: Back arriba-izquierda -->
@@ -157,6 +175,7 @@
     };
   </script>
   <script src="/static/js/pwa-register.js" defer></script>
+  <script src="/static/js/ui_boot_reconnect.js?v=110.22.19" defer></script>
   <script src="/static/js/bottom_bar_ux.js?v=110.22.13" defer></script>
   <!-- Performance Overhaul: bootstrap UI → lazy load del resto -->
   <script src="/static/js/main.js" defer></script>

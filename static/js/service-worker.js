@@ -3,7 +3,7 @@
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v92";
+const CACHE = "salomon-premium-v93";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -20,6 +20,8 @@ const PRECACHE = [
   "/static/css/settings_layer.css",
   "/static/css/chat_history_drawer.css",
   "/static/css/back_button.css",
+  "/static/css/ui_hit_repair.css",
+  "/static/css/bottom_bar_ux.css",
   "/static/js/main.js",
   "/static/js/app.js",
   "/static/js/ui_controller.js",
@@ -36,6 +38,7 @@ const PRECACHE = [
   "/static/js/settings_manager.js",
   "/static/js/chat_history_drawer.js",
   "/static/js/back_button.js",
+  "/static/js/ui_boot_reconnect.js",
   "/static/js/ai_state_lock.js",
   "/static/js/components/SmartButton.js",
   "/static/js/voice_layer.js",
@@ -155,10 +158,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // JS crítico: network-first (evita PWA con módulos viejos tras deploy)
-  if (path.startsWith("/static/js/")) {
+  // JS + CSS críticos: network-first (evita PWA con UI muerta tras deploy)
+  if (path.startsWith("/static/js/") || path.startsWith("/static/css/")) {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: "no-store" })
         .then((res) => {
           if (res && res.ok) {
             const copy = res.clone();
@@ -171,7 +174,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // CSS/assets: stale-while-revalidate
+  // assets: stale-while-revalidate
   if (isStaticLayer(path)) {
     event.respondWith(
       caches.match(req).then((hit) => {

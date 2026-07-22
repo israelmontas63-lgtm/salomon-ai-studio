@@ -1,0 +1,55 @@
+/**
+ * Reparación de hit-testing — todos los controles táctiles recuperan clics.
+ * Created by Israel Monta - Salomón AI Studio
+ */
+
+/* Stage cámara en reposo: fuera del árbol de interacción */
+#camera-stage:not(.is-visible),
+#camera-stage.camera-container:not(.is-visible),
+.camera-stage:not(.is-visible) {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
+}
+
+/* Dock y botones principales: siempre encima y clicables en home */
+.bottom-dock,
+footer#nav_bar_container,
+#nav_bar_container {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 100055 !important;
+}
+
+#btn-cam,
+#btn-aa,
+#btn-settings,
+#btn-nav-back,
+#btn-dock-flip,
+#smart-button,
+.bottom-dock #smart-button,
+.dock-center-btn {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 100060 !important;
+}
+
+/* No dejar el phone entero sin clics salvo control-layer explícito abierto */
+body:not(.control-layer-open) .phone,
+body:not(.control-layer-open) .app-viewport {
+  pointer-events: auto !important;
+}
+
+/* Durante cámara: dock se oculta; HUD del visor manda */
+body.vision-immersive .bottom-dock,
+body.vision-immersive #nav_bar_container {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

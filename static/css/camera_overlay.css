@@ -65,8 +65,9 @@
   transform: translateX(-50%) scale(0.92);
 }
 
-/* Preview de cámara */
+/* Preview de cámara — oculto hasta .is-visible (no captura clics en home) */
 .camera-stage {
+  display: none;
   position: fixed;
   left: 50%;
   bottom: calc(160px + env(safe-area-inset-bottom, 0px));
@@ -85,6 +86,7 @@
 }
 
 .camera-stage.is-visible {
+  display: block;
   opacity: 1;
   pointer-events: auto;
   transform: translateX(-50%) scale(1);

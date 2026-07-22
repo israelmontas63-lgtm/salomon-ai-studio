@@ -4,10 +4,11 @@
  * Created by Israel Monta - Salomón AI Studio
  */
 
-/* REPOSO: fuera del flujo flex — no aplasta chat/dock */
+/* REPOSO: display none — cero hit-test, cero layout */
 #camera-stage,
 #camera-stage.camera-container,
 .camera-stage {
+  display: none !important;
   position: fixed !important;
   left: 0 !important;
   top: 0 !important;
@@ -16,12 +17,10 @@
   margin: 0 !important;
   padding: 0 !important;
   border: none !important;
-  border-radius: 0 !important;
-  overflow: hidden !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
-  z-index: -1 !important;
+  z-index: -9999 !important;
   transform: none !important;
   background: #000 !important;
 }
@@ -30,6 +29,7 @@
 body.vision-immersive #camera-stage,
 #camera-stage.is-visible,
 .camera-stage.is-visible {
+  display: block !important;
   inset: 0 !important;
   left: 0 !important;
   top: 0 !important;
@@ -42,7 +42,6 @@ body.vision-immersive #camera-stage,
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
-  display: block !important;
   border: none !important;
   border-radius: 0 !important;
   transform: none !important;
