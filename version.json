@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T04:55:00Z",
-  "timestamp": 1753160100,
-  "version": "110.21.16",
+  "timestamp_iso": "2026-07-22T05:15:00Z",
+  "timestamp": 1753161300,
+  "version": "110.21.17",
   "channel": "main",
-  "label": "deepseek-prefer-exa-camelcase",
+  "label": "deepseek-saldo-probe",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "TOOLS_FULL_CONNECT",
-  "notes": "v110.21.16 — DeepSeek preferred for reasoning/code; Exa camelCase fix; /api/tools/conectividad."
+  "notes": "v110.21.17 — DeepSeek saldo probe endpoint; Render env keys for DeepSeek/Exa; sync tools script."
 }

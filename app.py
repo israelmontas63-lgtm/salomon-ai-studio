@@ -68,6 +68,7 @@ RUTAS_API_PUBLICAS = frozenset(
         "/api/version",
         "/api/llm/status",
         "/api/llm/reload-env",
+        "/api/llm/probe-deepseek",
         "/api/tools/conectividad",
         "/api/proveedores",
         "/api/bca/estado",
@@ -1195,13 +1196,30 @@ def salud_detalle() -> dict:
 
 
 @app.get("/api/llm/status")
-def api_llm_status() -> dict:
+def api_llm_status(probe: bool = False) -> dict:
     """Diagnóstico LLM sin secretos — keys presentes, timeouts, proveedor."""
-    from cognicion.llm import estado_llm
+    from cognicion.llm import estado_llm, probe_deepseek
 
     st = estado_llm()
     st["ok"] = bool(st.get("disponible") or any((st.get("keys") or {}).values()))
+    if probe:
+        st["deepseek_probe"] = probe_deepseek()
+        st["ok"] = bool(st["ok"] and (st["deepseek_probe"].get("ok") or not (st.get("keys") or {}).get("deepseek")))
+        # Si hay key DeepSeek, el probe debe pasar para ok estricto
+        if (st.get("keys") or {}).get("deepseek"):
+            st["ok"] = bool(st["deepseek_probe"].get("ok"))
     return st
+
+
+@app.post("/api/llm/probe-deepseek")
+def api_llm_probe_deepseek() -> dict:
+    """Ping real a DeepSeek: valida key + saldo (200 = operativo)."""
+    from cognicion.llm import probe_deepseek, recargar_entorno_llm
+
+    recargar_entorno_llm()
+    pack = probe_deepseek()
+    pack["reloaded"] = True
+    return pack
 
 
 @app.post("/api/llm/reload-env")

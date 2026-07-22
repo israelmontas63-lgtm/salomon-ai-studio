@@ -246,6 +246,57 @@ def estado_llm() -> dict[str, Any]:
     }
 
 
+def probe_deepseek(timeout_s: float = 12.0) -> dict[str, Any]:
+    """
+    Comprobación real de saldo/clave DeepSeek (sin exponer secretos).
+    Un HTTP 200 con texto útil = saldo activo y key válida.
+    """
+    import time
+
+    t0 = time.perf_counter()
+    _deepseek_circuit_cerrar()
+    prov = DeepSeekProvider()
+    if not _env_key("DEEPSEEK_API_KEY"):
+        return {
+            "ok": False,
+            "provider": "deepseek",
+            "error": "missing_key",
+            "ms": 0.0,
+        }
+    if not prov.disponible():
+        return {
+            "ok": False,
+            "provider": "deepseek",
+            "error": "circuit_or_unavailable",
+            "ms": 0.0,
+        }
+    try:
+        # Timeout vía cliente OpenAI ya configurado; mensaje mínimo
+        texto = (prov.generar_texto("Responde solo: PONG") or "").strip()
+        ms = round((time.perf_counter() - t0) * 1000, 1)
+        ok = bool(texto) and "insufficient" not in texto.lower()
+        return {
+            "ok": ok,
+            "provider": "deepseek",
+            "model": DEEPSEEK_MODEL,
+            "saldo_activo": ok,
+            "respuesta_len": len(texto),
+            "ms": ms,
+        }
+    except Exception as exc:
+        _marcar_saldo_deepseek(exc)
+        ms = round((time.perf_counter() - t0) * 1000, 1)
+        detail = str(exc).lower()
+        return {
+            "ok": False,
+            "provider": "deepseek",
+            "saldo_activo": False,
+            "error": type(exc).__name__,
+            "payment_required": "402" in detail or "insufficient" in detail,
+            "ms": ms,
+        }
+
+
 def recargar_entorno_llm() -> dict[str, Any]:
     """
     Recarga .env (override) + reinicia clientes LLM cacheados.
