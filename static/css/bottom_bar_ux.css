@@ -1,0 +1,64 @@
+/**
+ * Bottom bar UX (templates/index.html) — elevación + modos estilo WhatsApp.
+ * Created by Israel Monta - Salomón AI Studio
+ */
+
+:root {
+  --salomon-controls-lift: 28px;
+  --salomon-controls-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --salomon-controls-dur: 0.3s;
+}
+
+#nav_bar_container,
+.control-bar.nav-bar-container {
+  transform: translate3d(0, 0, 0);
+  transition: transform var(--salomon-controls-dur) var(--salomon-controls-ease);
+  will-change: transform;
+  touch-action: manipulation;
+}
+
+#nav_bar_container.is-controls-elevated,
+html.salomon-controls-elevated #nav_bar_container,
+.control-bar.is-controls-elevated {
+  transform: translate3d(0, calc(-1 * var(--salomon-controls-lift)), 0);
+}
+
+/* Modo texto: foco en input; secundarios (flip) fuera */
+html.salomon-ui-mode-text #btn-flip,
+html.salomon-ui-mode-text .btn-flip {
+  opacity: 0;
+  pointer-events: none;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity var(--salomon-controls-dur) var(--salomon-controls-ease);
+}
+
+html.salomon-ui-mode-text #input-layer {
+  z-index: 90;
+}
+
+/* Modo voz: barra limpia, input cerrado visualmente */
+html.salomon-ui-mode-voice #input-layer:not(.is-open),
+html.salomon-ui-mode-voice #btn-flip {
+  opacity: 0;
+  pointer-events: none;
+}
+
+html.salomon-ui-mode-voice #smart-button {
+  box-shadow: 0 8px 28px rgba(212, 175, 55, 0.5);
+}
+
+/* Modo cámara: input oculto con fluidez (WhatsApp multimedia) */
+html.salomon-ui-mode-camera #input-layer,
+body.vision-immersive #input-layer {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translate(-50%, 110%) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #nav_bar_container,
+  .control-bar.nav-bar-container {
+    transition: none !important;
+  }
+}
