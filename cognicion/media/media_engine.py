@@ -71,7 +71,8 @@ def _cfg_media() -> dict[str, Any]:
             or _secreto("FAL_KEY", "FAL_KEY")
             or str(getattr(st, "FAL_KEY", "") or "").strip()
         ),
-        "flux_model": getattr(st, "FLUX_MODEL", "flux-1-pro").strip(),
+        "flux_model": getattr(st, "FLUX_MODEL", "fal-ai/flux/dev").strip()
+        or "fal-ai/flux/dev",
         "midjourney_url": getattr(st, "MIDJOURNEY_API_URL", "").strip(),
         "midjourney_key": _secreto("MIDJOURNEY_API_KEY", "MIDJOURNEY_API_KEY"),
         "runway_url": getattr(st, "RUNWAY_API_URL", "").strip()
@@ -174,8 +175,6 @@ def seleccionar_motor(tarea: TareaMedia, cfg: dict[str, Any] | None = None) -> d
                 key, url = cfg["flux_key"], cfg["flux_url"]
             if key:
                 modelo = cfg["flux_model"] if motor == "flux" else "midjourney-ultra"
-                if forzar and motor == "flux" and "pro" not in modelo.lower():
-                    modelo = "flux-1-pro"
                 return {
                     "motor": motor,
                     "modelo": modelo,
@@ -247,32 +246,62 @@ def _guardar_bytes(datos: bytes, carpeta: Path, prefijo: str, ext: str) -> Path:
 
 
 def _llamar_flux(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
-    """Flux.1 Pro vía gateway configurable (fal / replicate / custom)."""
+    """Flux vía fal.run — auth Key + payload alineado (sin Bearer erróneo)."""
     key = cfg["flux_key"]
     if not key:
         return {"exito": False, "error": "flux_api_key_ausente"}
-    url = cfg["flux_url"] or "https://fal.run/fal-ai/flux-pro"
+    # URL canónica: el path ES el modelo (flux/dev o flux-pro)
+    modelo = (cfg.get("flux_model") or "flux/dev").strip()
+    if modelo.startswith("fal-ai/"):
+        path = modelo
+    elif "pro" in modelo.lower():
+        path = "fal-ai/flux-pro"
+    else:
+        path = "fal-ai/flux/dev"
+    url = (cfg.get("flux_url") or "").strip() or f"https://fal.run/{path}"
+    if "fal.run" in url and not url.rstrip("/").endswith(path.split("/")[-1]) and "flux" not in url:
+        url = f"https://fal.run/{path}"
+
     headers = {
         "Authorization": f"Key {key}",
         "Content-Type": "application/json",
     }
-    # También soportar Bearer
-    if key.startswith("sk-") or len(key) > 40:
-        headers["Authorization"] = f"Bearer {key}"
     payload = {
         "prompt": prompt,
         "image_size": "landscape_16_9",
         "num_inference_steps": 28,
         "guidance_scale": 3.5,
         "enable_safety_checker": True,
-        "model": cfg["flux_model"],
-        "quality": "ultra",
+        "num_images": 1,
     }
     try:
-        with httpx.Client(timeout=_http_timeout()) as client:
-            r = client.post(url, json=payload, headers=headers)
-            r.raise_for_status()
+        import time
+
+        last_exc: Exception | None = None
+        data = None
+        for delay in (0.0, 1.5, 3.5):
+            if delay:
+                time.sleep(delay)
+            with httpx.Client(timeout=_http_timeout()) as client:
+                r = client.post(url, json=payload, headers=headers)
+            if r.status_code in (429, 500, 502, 503, 504):
+                last_exc = Exception(f"http_{r.status_code}:{r.text[:160]}")
+                continue
+            if r.status_code >= 400:
+                return {
+                    "exito": False,
+                    "motor": "flux",
+                    "error": f"http_{r.status_code}:{r.text[:240]}",
+                    "status_http": r.status_code,
+                }
             data = r.json()
+            break
+        if data is None:
+            return {
+                "exito": False,
+                "motor": "flux",
+                "error": str(last_exc or "flux_sin_respuesta"),
+            }
         # Normalizar respuestas comunes
         b64 = None
         img_url = None
@@ -295,14 +324,14 @@ def _llamar_flux(prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
                 raw = client.get(img_url).content
         if not raw:
             return {"exito": False, "error": "flux_sin_imagen", "raw": str(data)[:300]}
-        path = _guardar_bytes(raw, _DIR_GEN, "flux", "png")
+        path_out = _guardar_bytes(raw, _DIR_GEN, "flux", "png")
         return {
             "exito": True,
             "motor": "flux",
-            "modelo": cfg["flux_model"],
+            "modelo": path,
             "calidad": "pro_ultra",
-            "ruta": str(path),
-            "url_relativa": f"/media/generadas/{path.name}",
+            "ruta": str(path_out),
+            "url_relativa": f"/media/generadas/{path_out.name}",
             "imagen_base64": base64.b64encode(raw).decode("ascii"),
             "mime": "image/png",
         }

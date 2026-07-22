@@ -193,6 +193,19 @@ def clasificar(
         return ErrorSalomon(42, _causa_corta(texto, CODIGOS[42]), tipo=tipo, detalle=texto[:240])
 
     if any(x in blob for x in ("permission", "403", "forbidden", "access denied")):
+        # 403 de saldo (Fal locked/exhausted) no es permiso — es cuota/billing
+        if any(
+            x in blob
+            for x in (
+                "exhausted",
+                "balance",
+                "insufficient",
+                "billing",
+                "credit",
+                "top up",
+            )
+        ):
+            return ErrorSalomon(44, _causa_corta(texto, CODIGOS[44]), tipo=tipo, detalle=texto[:240])
         return ErrorSalomon(43, _causa_corta(texto, CODIGOS[43]), tipo=tipo, detalle=texto[:240])
 
     if any(
@@ -204,6 +217,15 @@ def clasificar(
             "too many requests",
             "resourceexhausted",
             "resource_exhausted",
+            "exhausted balance",
+            "insufficient credit",
+            "insufficient balance",
+            "payment required",
+            "402",
+            "billing hard limit",
+            "billing_hard_limit",
+            "top up your balance",
+            "purchase credit",
         )
     ):
         return ErrorSalomon(44, _causa_corta(texto, CODIGOS[44]), tipo=tipo, detalle=texto[:240])

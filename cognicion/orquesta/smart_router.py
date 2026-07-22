@@ -4,7 +4,7 @@ Smart Router — orquestación total + failover de APIs (Salomón AI).
 
 Capa centralizada: mapea cada API key a su motor y rota sin tumbar la app.
   LLM   → gemini → deepseek → openrouter → cerebras → mistral → groq → openai → local
-  MEDIA → fal → replicate → openai (DALL·E)
+  MEDIA → fal → replicate → openai (DALL·E) → gemini (flash-image)
   TTS   → elevenlabs → cartesia
   STT   → deepgram
   WEB   → tavily → exa → respaldo
@@ -122,7 +122,7 @@ def cadenas_failover() -> dict[str, list[str]]:
         ],
         "llm_rapido": ["groq", "cerebras", "gemini", "mistral", "openrouter", "openai", "local"],
         "llm_vision": ["gemini", "openai", "local"],
-        "media_imagen": ["fal", "replicate", "openai"],
+        "media_imagen": ["fal", "replicate", "openai", "gemini"],
         "media_video": ["fal", "replicate"],
         "tts": ["elevenlabs", "cartesia"],
         "stt": ["deepgram"],
@@ -295,31 +295,78 @@ def generar_imagen_con_failover(prompt: str) -> dict[str, Any]:
     except Exception as exc:
         errores.append(f"bridge:{type(exc).__name__}")
 
-    # 3) OpenAI DALL·E directo
-    if "openai" in cadena:
+    # 3) OpenAI DALL·E / Gemini (vía generar_imagen sin manager)
+    if any(m in cadena for m in ("openai", "gemini")):
         try:
             from cognicion.media.imagen import generar_imagen
 
             dalle = generar_imagen(p, usar_manager=False)
             if dalle.get("exito") or dalle.get("imagen_base64") or dalle.get("url"):
-                evento(_log, "smart_router_media_ok", motor="openai", via="dalle")
+                evento(
+                    _log,
+                    "smart_router_media_ok",
+                    motor=dalle.get("motor") or "openai",
+                    via="dalle_gemini",
+                )
                 return {
                     "exito": True,
                     **dalle,
                     "motor": dalle.get("motor") or "openai",
                     "cadena": cadena,
-                    "via": "smart_router.dalle",
+                    "via": "smart_router.dalle_gemini",
                 }
-            errores.append(f"dalle:{dalle.get('error') or 'fail'}")
+            errores.append(f"dalle_gemini:{dalle.get('error') or 'fail'}")
+            if dalle.get("detalle"):
+                errores.append(f"detalle:{dalle.get('detalle')}")
         except Exception as exc:
-            errores.append(f"dalle:{type(exc).__name__}")
+            errores.append(f"dalle_gemini:{type(exc).__name__}:{exc}"[:200])
+
+    # Tipificar: saldo/cuota → 44; media → 23; nunca 49 opaco
+    blob = " ".join(errores).lower()
+    codigo = 23
+    if any(
+        x in blob
+        for x in (
+            "exhausted",
+            "insufficient",
+            "402",
+            "429",
+            "quota",
+            "billing",
+            "balance",
+            "credit",
+        )
+    ):
+        codigo = 44
+    elif any(x in blob for x in ("401", "403", "unauthorized", "forbidden", "invalid token")):
+        codigo = 42
+
+    mensaje_israel = None
+    try:
+        from cognicion.autonoma.metacognicion import registrar_y_explicar
+
+        pack_m = registrar_y_explicar(
+            capacidad="media_imagen",
+            origen="smart_router.generar_imagen",
+            error="; ".join(errores)[:500] or "media_failover_agotado",
+            auto_reparar=True,
+        )
+        mensaje_israel = pack_m.get("mensaje_israel")
+    except Exception:
+        mensaje_israel = (
+            "Israel, no puedo generar la imagen ahora: Fal (saldo), Replicate (crédito) "
+            "y OpenAI/Gemini (cuota/billing) fallaron. Recarga fal.ai / replicate.com "
+            "o espera reset de cuota Gemini — sin romper el núcleo."
+        )
 
     return {
         "exito": False,
         "error": "media_failover_agotado",
-        "detalle": errores[:6],
+        "error_codigo": codigo,
+        "detalle": errores[:8],
         "cadena": cadena,
-        "aviso": "Todos los motores de imagen fallaron; reintenta en unos segundos.",
+        "aviso": mensaje_israel,
+        "muta_fuentes": False,
     }
 
 

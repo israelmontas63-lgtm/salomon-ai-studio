@@ -403,19 +403,51 @@ class _FalHttp:
         self.api_key = api_key
 
     def run(self, model_id: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        import time
+
         import httpx
 
-        r = httpx.post(
-            f"https://fal.run/{model_id}",
-            headers={
-                "Authorization": f"Key {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            json=arguments,
-            timeout=180.0,
-        )
-        r.raise_for_status()
-        return r.json()
+        # Fal autentica con "Key <id:secret>" — nunca Bearer (provoca 401).
+        headers = {
+            "Authorization": f"Key {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        # Payload limpio: el modelo vive en la URL, no en el body.
+        args = dict(arguments or {})
+        args.pop("model", None)
+        args.pop("quality", None)
+        url = f"https://fal.run/{model_id.lstrip('/')}"
+        last_exc: Exception | None = None
+        for attempt, delay in enumerate((0.0, 1.2, 2.8, 6.0)):
+            if delay:
+                time.sleep(delay)
+            try:
+                r = httpx.post(url, headers=headers, json=args, timeout=180.0)
+                if r.status_code in (429, 500, 502, 503, 504):
+                    last_exc = httpx.HTTPStatusError(
+                        f"fal_http_{r.status_code}",
+                        request=r.request,
+                        response=r,
+                    )
+                    continue
+                if r.status_code >= 400:
+                    # Propagar cuerpo (saldo/auth) para clasificar Error 23/44, no 49
+                    detail = (r.text or "")[:400]
+                    raise httpx.HTTPStatusError(
+                        f"fal_http_{r.status_code}:{detail}",
+                        request=r.request,
+                        response=r,
+                    )
+                return r.json()
+            except httpx.HTTPStatusError:
+                raise
+            except Exception as exc:
+                last_exc = exc
+                if attempt >= 3:
+                    break
+        if last_exc:
+            raise last_exc
+        raise RuntimeError("fal_sin_respuesta")
 
 
 class _ReplicateHttp:
@@ -423,49 +455,88 @@ class _ReplicateHttp:
         self.api_token = api_token
 
     def run(self, model: str, input_data: dict[str, Any]) -> Any:
-        import httpx
         import time
 
-        r = httpx.post(
-            "https://api.replicate.com/v1/predictions",
-            headers={
-                "Authorization": f"Bearer {self.api_token}",
-                "Content-Type": "application/json",
-                "Prefer": "wait",
-            },
-            json={"version": model, "input": input_data},
-            timeout=180.0,
-        )
-        if r.status_code >= 400:
-            # Algunos modelos usan owner/name en vez de version hash
-            r = httpx.post(
-                "https://api.replicate.com/v1/models/"
-                + model.replace(":", "/predictions").split("/predictions")[0]
-                + "/predictions",
-                headers={
-                    "Authorization": f"Bearer {self.api_token}",
-                    "Content-Type": "application/json",
-                    "Prefer": "wait",
-                },
-                json={"input": input_data},
-                timeout=180.0,
-            )
-        r.raise_for_status()
-        data = r.json()
-        # Prefer: wait puede devolver completed; si no, poll breve
-        for _ in range(30):
-            if data.get("status") in ("succeeded", "failed", "canceled"):
-                break
-            url = data.get("urls", {}).get("get")
-            if not url:
-                break
-            time.sleep(1.0)
-            data = httpx.get(
-                url,
-                headers={"Authorization": f"Bearer {self.api_token}"},
-                timeout=60.0,
-            ).json()
-        return data.get("output", data)
+        import httpx
+
+        headers = {
+            "Authorization": f"Bearer {self.api_token}",
+            "Content-Type": "application/json",
+            "Prefer": "wait",
+        }
+        # Preferir endpoint owner/name (modelos tipo black-forest-labs/flux-schnell)
+        model_path = (model or "").strip().lstrip("/")
+        if ":" in model_path and "/" not in model_path.split(":", 1)[0]:
+            # version hash legado
+            endpoints = [
+                (
+                    "https://api.replicate.com/v1/predictions",
+                    {"version": model_path, "input": input_data or {}},
+                )
+            ]
+        else:
+            owner_name = model_path.split(":")[0]
+            endpoints = [
+                (
+                    f"https://api.replicate.com/v1/models/{owner_name}/predictions",
+                    {"input": input_data or {}},
+                ),
+                (
+                    "https://api.replicate.com/v1/predictions",
+                    {"version": model_path, "input": input_data or {}},
+                ),
+            ]
+
+        last_err: Exception | None = None
+        for url, payload in endpoints:
+            for delay in (0.0, 1.5, 3.5):
+                if delay:
+                    time.sleep(delay)
+                try:
+                    r = httpx.post(url, headers=headers, json=payload, timeout=180.0)
+                    if r.status_code in (429, 500, 502, 503, 504):
+                        last_err = httpx.HTTPStatusError(
+                            f"replicate_http_{r.status_code}",
+                            request=r.request,
+                            response=r,
+                        )
+                        continue
+                    if r.status_code >= 400:
+                        detail = (r.text or "")[:400]
+                        raise httpx.HTTPStatusError(
+                            f"replicate_http_{r.status_code}:{detail}",
+                            request=r.request,
+                            response=r,
+                        )
+                    data = r.json()
+                    for _ in range(40):
+                        if data.get("status") in ("succeeded", "failed", "canceled"):
+                            break
+                        get_url = (data.get("urls") or {}).get("get")
+                        if not get_url:
+                            break
+                        time.sleep(1.0)
+                        data = httpx.get(
+                            get_url,
+                            headers={"Authorization": f"Bearer {self.api_token}"},
+                            timeout=60.0,
+                        ).json()
+                    if data.get("status") == "failed":
+                        raise RuntimeError(
+                            f"replicate_failed:{data.get('error') or data}"
+                        )
+                    return data.get("output", data)
+                except httpx.HTTPStatusError as exc:
+                    # 402/401/403: no reintentar en bucle
+                    code = getattr(exc.response, "status_code", 0) or 0
+                    if code in (401, 402, 403, 404, 422):
+                        raise
+                    last_err = exc
+                except Exception as exc:
+                    last_err = exc
+        if last_err:
+            raise last_err
+        raise RuntimeError("replicate_sin_respuesta")
 
 
 FACTORY: dict[str, Callable[[], Any]] = {

@@ -3391,13 +3391,18 @@ def api_media_generar_imagen(body: GenerarImagenRequest) -> dict:
             "respuesta": (
                 f"Motor {res.get('motor') or 'media'} · HD. "
                 f"{res.get('url_relativa') or res.get('url') or ''}"
-            ).strip(),
+            ).strip()
+            if res.get("exito")
+            else (res.get("aviso") or res.get("error") or "media_fail"),
             "resultado": res,
             "url": res.get("url_relativa") or res.get("url"),
             "imagen_base64": res.get("imagen_base64"),
             "session_id": body.session_id,
             "error": res.get("error"),
+            "error_codigo": res.get("error_codigo") or (None if res.get("exito") else 23),
             "cadena": res.get("cadena"),
+            "aviso": res.get("aviso"),
+            "muta_fuentes": False,
         }
 
     from cognicion.grafo import ejecutar_grafo

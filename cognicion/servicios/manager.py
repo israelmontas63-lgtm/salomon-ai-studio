@@ -201,7 +201,13 @@ class ServiceManager(ServiceRegistry):
         try:
             pack = self.media_run(
                 fal_model=FAL_IMAGE_MODEL,
-                fal_args={"prompt": p, "image_size": "landscape_16_9", "num_inference_steps": 28},
+                fal_args={
+                    "prompt": p,
+                    "image_size": "landscape_16_9",
+                    "num_inference_steps": 28,
+                    "num_images": 1,
+                    "enable_safety_checker": True,
+                },
                 replicate_model=REPLICATE_IMAGE_MODEL,
                 replicate_input={"prompt": p},
             )
@@ -209,8 +215,8 @@ class ServiceManager(ServiceRegistry):
             if out.get("exito"):
                 return out
         except Exception as exc:
-            evento(_log, "media_fail", error=type(exc).__name__)
-            pack_err = type(exc).__name__
+            evento(_log, "media_fail", error=type(exc).__name__, detail=str(exc)[:200])
+            pack_err = f"{type(exc).__name__}:{exc}"[:320]
         else:
             pack_err = out.get("error") if isinstance(out, dict) else "media_fail"
 
@@ -219,31 +225,51 @@ class ServiceManager(ServiceRegistry):
             from cognicion.media.imagen import generar_imagen
 
             dalle = generar_imagen(
-                p, size="1792x1024", quality="hd", usar_manager=False
+                p, size="1024x1024", quality="standard", usar_manager=False
             )
             if dalle.get("exito") or dalle.get("imagen_base64") or dalle.get("url"):
-                self._ultimo["media"] = "openai"
+                self._ultimo["media"] = dalle.get("motor") or "openai"
                 return {
                     "exito": True,
                     **dalle,
                     "motor": dalle.get("motor") or "openai",
-                    "via": "dalle_failover",
+                    "via": "dalle_gemini_failover",
                 }
+            pack_err = f"{pack_err}|{dalle.get('error')}|{dalle.get('detalle')}"
         except Exception as exc:
             evento(_log, "dalle_fail", error=type(exc).__name__)
+            pack_err = f"{pack_err}|{type(exc).__name__}"
+
+        # Metacognición: no Error 49 genérico — saldo/cuota tipificados
+        try:
+            from cognicion.autonoma.metacognicion import registrar_y_explicar
+            from cognicion.errores import clasificar
+
+            err = clasificar(pack_err or "media_fail", pista="imagen fal replicate")
+            meta = registrar_y_explicar(
+                capacidad="media_imagen",
+                origen="manager.generar_activo",
+                error=str(pack_err)[:400],
+                status_http=None,
+                auto_reparar=True,
+            )
             return {
                 "exito": False,
-                "error": type(exc).__name__,
-                "previo": pack_err,
+                "error": pack_err or "media_sin_resultado",
+                "error_codigo": err.codigo if err.codigo != 49 else 23,
                 "motor": self.activo(Servicio.MEDIA) or "none",
+                "aviso": meta.get("mensaje_israel"),
+                "metacognicion": meta.get("diagnostico"),
+                "muta_fuentes": False,
             }
-
-        return {
-            "exito": False,
-            "error": pack_err or "media_sin_resultado",
-            "motor": self.activo(Servicio.MEDIA) or "none",
-            "aviso": "FAL_KEY / REPLICATE / OPENAI requeridas para media real",
-        }
+        except Exception:
+            return {
+                "exito": False,
+                "error": pack_err or "media_sin_resultado",
+                "error_codigo": 23,
+                "motor": self.activo(Servicio.MEDIA) or "none",
+                "aviso": "FAL_KEY / REPLICATE / OPENAI / GEMINI requeridas con saldo activo",
+            }
 
     # ── Memoria (Cohere embeddings) ─────────────────────────────────────────
 
