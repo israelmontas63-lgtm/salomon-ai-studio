@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-22T17:40:00Z",
-  "timestamp": 1753206000,
-  "version": "110.22.20",
+  "timestamp_iso": "2026-07-23T00:40:00Z",
+  "timestamp": 1753231200,
+  "version": "110.22.21",
   "channel": "main",
-  "label": "neuronal-reconnect-protocol-4-layers",
+  "label": "fix-click-hijack-reconnect-native-brain",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "NEURONAL_RECONNECT",
-  "notes": "v110.22.20 — 4-layer reconnect: DOM clear, capture delegation, hit-repair, core brain eager bind."
+  "protocol": "NEURONAL_RECONNECT_SAFE",
+  "notes": "v110.22.21 — REMOVED capture stopPropagation hijack that killed all buttons; clear overlays only; eager camera preload."
 }

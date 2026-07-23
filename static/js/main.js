@@ -188,14 +188,20 @@
     ensureCore()
       .then(function () {
         wireLazyTriggers();
-        // Tras primer paint: input + update (milisegundos)
         afterPaint(function () {
           ensureInputStack();
         });
-        // Cámara: SOLO al toque del usuario (sin prefetch de getUserMedia ni JS de cámara)
+        /* Precarga cámara en idle: evita botón muerto en el primer toque */
+        idle(function () {
+          ensureCameraStack().catch(function () {});
+        }, 600);
       })
-      .catch(function () {
-        /* degradación silenciosa */
+      .catch(function (err) {
+        console.error("[SalomonMain] ensureCore falló", err);
+        /* reintento único */
+        setTimeout(function () {
+          ensureCore().then(wireLazyTriggers).catch(function () {});
+        }, 400);
       });
   }
 
