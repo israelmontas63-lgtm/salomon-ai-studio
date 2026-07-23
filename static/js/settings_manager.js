@@ -42,19 +42,21 @@
         const gear = document.getElementById("btn-settings");
         if (!gear) return;
 
-        // Única entrada al Control Layer — captura aislada
-        gear.addEventListener(
-          "click",
-          (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            this.toggle();
-          },
-          true
-        );
-
-        window.SalomonSettings = this;
+        // Única entrada al Control Layer — si data-brain-bind, el onclick HTML manda
+        if (gear.getAttribute("data-brain-bind") === "1") {
+          window.SalomonSettings = this;
+        } else {
+          gear.addEventListener(
+            "click",
+            (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              this.toggle();
+            },
+            false
+          );
+          window.SalomonSettings = this;
+        }
         window.addEventListener("salomon:build-meta", (ev) => {
           const build = ev.detail && ev.detail.build;
           if (build && this.metaEl) this.setBuildMeta(build);

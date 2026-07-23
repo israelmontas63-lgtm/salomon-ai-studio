@@ -15,15 +15,17 @@
       if (!btn) return;
       btn.setAttribute("data-role", "global-negative");
       btn.setAttribute("aria-label", "Salir del sistema / Cerrar capa");
-      btn.addEventListener(
-        "click",
-        (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          this.onBackTap();
-        },
-        false
-      );
+      if (btn.getAttribute("data-brain-bind") !== "1") {
+        btn.addEventListener(
+          "click",
+          (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.onBackTap();
+          },
+          false
+        );
+      }
       this._sync();
       window.addEventListener("salomon:camera-state", () => this._sync());
       window.addEventListener("salomon:ai-lock", () => this._sync());

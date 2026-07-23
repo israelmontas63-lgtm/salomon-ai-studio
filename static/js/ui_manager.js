@@ -17,6 +17,7 @@
       if (!this.layer || !this.btnAa) return;
 
       this.btnAa.addEventListener("click", (e) => {
+        if (this.btnAa.getAttribute("data-brain-bind") === "1") return;
         e.preventDefault();
         e.stopPropagation();
         // Zero-Conflict: menú herramientas abierto

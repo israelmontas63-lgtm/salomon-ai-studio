@@ -120,20 +120,22 @@
         },
         { passive: true }
       );
-      btnCam.addEventListener(
-        "click",
-        function (e) {
-          if (window.SalomonCamera) return;
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          ensureCameraStack().then(function () {
-            if (window.SalomonCamera && window.SalomonCamera.toggleCamera) {
-              window.SalomonCamera.toggleCamera();
-            }
-          });
-        },
-        true
-      );
+      if (btnCam.getAttribute("data-brain-bind") !== "1") {
+        btnCam.addEventListener(
+          "click",
+          function (e) {
+            if (window.SalomonCamera) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            ensureCameraStack().then(function () {
+              if (window.SalomonCamera && window.SalomonCamera.toggleCamera) {
+                window.SalomonCamera.toggleCamera();
+              }
+            });
+          },
+          true
+        );
+      }
     }
 
     if (btnFlip) {
@@ -154,20 +156,22 @@
         },
         { passive: true }
       );
-      btnAa.addEventListener(
-        "click",
-        function (e) {
-          if (window.SalomonUiManager) return;
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          ensureInputStack().then(function () {
-            if (window.SalomonUiManager && window.SalomonUiManager.toggle) {
-              window.SalomonUiManager.toggle();
-            }
-          });
-        },
-        true
-      );
+      if (btnAa.getAttribute("data-brain-bind") !== "1") {
+        btnAa.addEventListener(
+          "click",
+          function (e) {
+            if (window.SalomonUiManager) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            ensureInputStack().then(function () {
+              if (window.SalomonUiManager && window.SalomonUiManager.toggle) {
+                window.SalomonUiManager.toggle();
+              }
+            });
+          },
+          true
+        );
+      }
     }
 
     var toastBtn = document.getElementById("update-toast-btn");

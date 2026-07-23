@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-23T00:40:00Z",
-  "timestamp": 1753231200,
-  "version": "110.22.21",
+  "timestamp_iso": "2026-07-23T00:50:00Z",
+  "timestamp": 1753231800,
+  "version": "110.22.22",
   "channel": "main",
-  "label": "fix-click-hijack-reconnect-native-brain",
+  "label": "onclick-brain-bind-neurona-por-neurona",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "NEURONAL_RECONNECT_SAFE",
-  "notes": "v110.22.21 — REMOVED capture stopPropagation hijack that killed all buttons; clear overlays only; eager camera preload."
+  "protocol": "BUTTON_BRAIN_BIND",
+  "notes": "v110.22.22 — Direct onclick -> __salomonTap for cam/aa/settings/back/flip; no capture hijack; data-brain-bind skips duplicate listeners."
 }

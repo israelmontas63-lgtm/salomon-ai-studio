@@ -30,11 +30,11 @@
   <link rel="stylesheet" href="/static/css/update_styles.css" />
   <link rel="stylesheet" href="/static/css/settings_layer.css" />
   <link rel="stylesheet" href="/static/css/chat_history_drawer.css" />
-  <link rel="stylesheet" href="/static/css/back_button.css?v=110.22.21" />
+  <link rel="stylesheet" href="/static/css/back_button.css?v=110.22.22" />
   <link rel="stylesheet" href="/static/css/bottom_bar_ux.css?v=110.22.13" />
   <link rel="stylesheet" href="/static/css/camera_full.css?v=110.22.14" />
-  <link rel="stylesheet" href="/static/css/camera_hud.css?v=110.22.21" />
-  <link rel="stylesheet" href="/static/css/ui_hit_repair.css?v=110.22.21" />
+  <link rel="stylesheet" href="/static/css/camera_hud.css?v=110.22.22" />
+  <link rel="stylesheet" href="/static/css/ui_hit_repair.css?v=110.22.22" />
 </head>
 <body>
   <script>
@@ -58,7 +58,7 @@
     <header class="header">
       <!-- Estándar móvil: Back arriba-izquierda -->
       <div class="header-nav header-nav--start" id="header-nav-start">
-        <button type="button" class="back-btn is-active" id="btn-nav-back" aria-label="Salir del sistema / Cerrar capa" data-ui-action="back" data-role="global-negative">
+        <button type="button" class="back-btn is-active" id="btn-nav-back" aria-label="Salir del sistema / Cerrar capa" data-ui-action="back" data-role="global-negative" data-brain-bind="1" onclick="window.__salomonTap&&__salomonTap.back();return false;">
           <svg class="back-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M15.5 5.5L9 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -74,7 +74,7 @@
 
       <!-- Estándar móvil: Ajustes (tuerquita) arriba-derecha -->
       <div class="header-nav header-nav--end profiles" id="header-nav-end">
-        <button type="button" class="profile-btn profile-btn--badge-host" id="btn-settings" aria-label="Herramientas">
+        <button type="button" class="profile-btn profile-btn--badge-host" id="btn-settings" aria-label="Herramientas" data-brain-bind="1" onclick="window.__salomonTap&&__salomonTap.settings();return false;">
           <img src="/static/assets/icon-settings.svg" alt="" />
           <span class="deploy-badge" id="deploy-badge" aria-hidden="true">
             <span class="deploy-badge__dot"></span>
@@ -108,10 +108,10 @@
     >
       <div class="dock-cam-btn control-side nav-bar__cluster" id="side-close">
         <div class="cam-wrap" id="cam-wrap">
-          <button type="button" class="circle-btn" id="btn-cam" aria-label="Cámara" data-ui-action="camera">
+          <button type="button" class="circle-btn" id="btn-cam" aria-label="Cámara" data-ui-action="camera" data-brain-bind="1" onclick="window.__salomonTap&&__salomonTap.cam();return false;">
             <img src="/static/assets/icon-camera.svg" alt="" />
           </button>
-          <button type="button" class="btn-flip" id="btn-dock-flip" aria-label="Girar cámara" tabindex="-1" data-ui-action="flip">
+          <button type="button" class="btn-flip" id="btn-dock-flip" aria-label="Girar cámara" tabindex="-1" data-ui-action="flip" data-brain-bind="1" onclick="window.__salomonTap&&__salomonTap.flip();return false;">
             <img src="/static/assets/icon-flip.svg" alt="" />
           </button>
         </div>
@@ -124,7 +124,7 @@
       </button>
 
       <div class="dock-text-btn control-side nav-bar__cluster" id="side-aa">
-        <button type="button" class="circle-btn" id="btn-aa" aria-label="Texto" data-ui-action="aa_input">Aa</button>
+        <button type="button" class="circle-btn" id="btn-aa" aria-label="Texto" data-ui-action="aa_input" data-brain-bind="1" onclick="window.__salomonTap&&__salomonTap.aa();return false;">Aa</button>
       </div>
     </footer>
 
@@ -176,7 +176,8 @@
   </script>
   <script src="/static/js/pwa-register.js" defer></script>
   <!-- Reconexión neuronal SIN defer: binding inmediato al DOM -->
-  <script src="/static/js/ui_boot_reconnect.js?v=110.22.21"></script>
+  <script src="/static/js/button_brain_bind.js?v=110.22.22"></script>
+  <script src="/static/js/ui_boot_reconnect.js?v=110.22.22"></script>
   <script src="/static/js/bottom_bar_ux.js?v=110.22.13" defer></script>
   <script src="/static/js/main.js" defer></script>
 </body>

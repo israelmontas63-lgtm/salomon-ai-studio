@@ -48,6 +48,7 @@
       };
 
       this.btnCam.addEventListener("click", (e) => {
+        if (this.btnCam.getAttribute("data-brain-bind") === "1") return;
         if (document.body.classList.contains("control-layer-open")) return;
         // request_ui_action: AI_PROCESSING → cámara no recibe encendido
         var gate = window.request_ui_action || (window.SalomonAILock && window.SalomonAILock.request_ui_action);
@@ -59,6 +60,7 @@
 
       if (this.btnFlip) {
         this.btnFlip.addEventListener("click", (e) => {
+          if (this.btnFlip.getAttribute("data-brain-bind") === "1") return;
           if (document.body.classList.contains("control-layer-open")) return;
           var gateFlip =
             window.request_ui_action ||
