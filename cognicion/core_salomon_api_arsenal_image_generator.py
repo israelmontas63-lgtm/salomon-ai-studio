@@ -58,9 +58,9 @@ class SalomonAPIArsenalImageGenerator:
         from config.providers import inventario_claves, cadenas, Servicio
 
         inv = inventario_claves()
-        # Alias frecuentes (Grok ≠ Groq; documentamos ambos)
+        # GROK/XAI no tiene cliente en este stack — no confundir con Groq
         grok_env = bool((os.getenv("GROK_API_KEY") or os.getenv("XAI_API_KEY") or "").strip())
-        inv["GROK_API_KEY"] = "set:alias" if grok_env else "missing"
+        inv["GROK_API_KEY"] = "unused_alias_not_xai" + (":env_present" if grok_env else ":missing")
         inv["GROQ_API_KEY"] = inv.get("GROQ_API_KEY", "missing")
 
         media_chain = cadenas().get(Servicio.MEDIA) or []
@@ -73,8 +73,6 @@ class SalomonAPIArsenalImageGenerator:
         ):
             if inv.get(key, "missing") != "missing":
                 llm_ready.append(name)
-        if grok_env:
-            llm_ready.append("Grok/xAI(env)")
 
         return {
             "action": (

@@ -127,7 +127,21 @@ class OrquestadorMemoriaUnificado:
 
         delta = out["turnos_sqlite"] - out["turnos_hilo"]
         out["delta"] = delta
-        if abs(delta) <= 1:
+
+        # Comparación por contenido (últimos N), no solo conteos
+        def _firma(msgs: list, key_rol: str, key_txt: str, n: int = 8) -> list[str]:
+            out_f: list[str] = []
+            for m in (msgs or [])[-n:]:
+                rol = "usuario" if (m.get(key_rol) or "") == "usuario" else "asistente"
+                txt = (m.get(key_txt) or "")[:200].strip()
+                out_f.append(f"{rol}:{txt}")
+            return out_f
+
+        firma_sql = _firma(sqlite_msgs, "rol", "contenido")
+        firma_hilo = _firma(turnos_h, "rol", "texto")
+        out["firma_match"] = firma_sql == firma_hilo
+
+        if firma_sql == firma_hilo or abs(delta) <= 1:
             out["alineado"] = True
             return out
 

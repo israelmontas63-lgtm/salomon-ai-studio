@@ -165,11 +165,13 @@ def _cargar() -> dict[str, Any]:
 
 def _guardar(data: dict[str, Any]) -> None:
     try:
-        _ARCHIVO.parent.mkdir(parents=True, exist_ok=True)
-        _ARCHIVO.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        from cognicion.memoria.atomic_json import atomic_write_json
+
+        if not atomic_write_json(_ARCHIVO, data):
+            _log.warning(
+                "contexto_personal: atomic_write falló %s",
+                _ARCHIVO,
+            )
     except Exception:
         _log.warning(
             "contexto_personal: fallo al escribir %s",

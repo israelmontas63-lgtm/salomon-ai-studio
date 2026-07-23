@@ -26,6 +26,8 @@ services:
       # Opcional: montar disco persistente y apuntar aquí (Free sin disco = efímero)
       - key: DATA_DIR
         value: "data"
+      - key: CORS_ORIGINS
+        value: "https://salomon-ai-studio-1.onrender.com,http://localhost:8000,http://127.0.0.1:8000"
       - key: COLSUB_MAX_AGENTES
         value: "2"
       - key: COLSUB_MAX_WORKERS
@@ -40,7 +42,19 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
       - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FAL_KEY
         sync: false
       - key: FLUX_API_KEY
         sync: false

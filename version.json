@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-23T01:35:00Z",
-  "timestamp": 1753234500,
-  "version": "110.22.24",
+  "timestamp_iso": "2026-07-23T02:00:00Z",
+  "timestamp": 1753236000,
+  "version": "110.22.25",
   "channel": "main",
-  "label": "pwa-install-immersive-fix",
+  "label": "memory-single-writer-api-hardening",
   "stability": "STABLE_PRODUCTION_READY",
-  "protocol": "BUTTON_BRAIN_BIND",
-  "notes": "v110.22.24 — PWA installability (beforeinstallprompt + Instalar app), SW salomon-premium-v98, /api/pwa/estado honest version/cache, immersive stuck fix (vision OFF clears classes + mid-session watchdog), smart-button brain-bind without click recursion."
+  "protocol": "MEMORY_ORCHESTRATOR_SOT",
+  "notes": "v110.22.25 — Single-writer memory (Orquestador), atomic JSON locks, limpiar_sesion clears hilos/snapshot, CORS explicit origins, shrunk RUTAS_API_PUBLICAS, TTS label ElevenLabs-primary, GOOGLE_API_KEY alias."
 }

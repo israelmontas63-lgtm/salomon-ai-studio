@@ -20,6 +20,9 @@ if _sbi_env.exists():
     load_dotenv(_sbi_env, override=not _ON_RENDER)
 
 # Persistencia: DATA_DIR / SESIONES_DB via env (disco Render o ruta externa)
+# En Render Free el disco es efímero salvo que montes un Persistent Disk y
+# apuntes DATA_DIR=/var/data (o la ruta del mount). Sin eso, SQLite/Chroma/JSON
+# se pierden en cada redeploy.
 _data_env = os.getenv("DATA_DIR", "").strip()
 DATA_DIR = Path(_data_env) if _data_env else (ROOT_DIR / "data")
 CREDENTIALS_DIR = ROOT_DIR / "security" / "credentials"
@@ -34,6 +37,10 @@ except Exception:
 
 # ── Google Gemini ──────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+# Alias oficial Google Cloud / algunos paneles
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "").strip() or GEMINI_API_KEY
+if not GEMINI_API_KEY and GOOGLE_API_KEY:
+    GEMINI_API_KEY = GOOGLE_API_KEY
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite").strip()
 GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash").strip()
 # Free Tier: historial corto (menos latencia / menos contaminación de contexto)

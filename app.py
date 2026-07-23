@@ -63,86 +63,43 @@ _UI_NO_CACHE = {
 _log = obtener_logger("api")
 RUTAS_API_PUBLICAS = frozenset(
     {
+        # Salud / versión / PWA
         "/api/salud",
         "/api/salud/detalle",
         "/api/version",
-        "/api/llm/status",
-        "/api/llm/reload-env",
-        "/api/llm/probe-deepseek",
-        "/api/tools/conectividad",
-        "/api/smart-router/estado",
-        "/api/self-debug/estado",
-        "/api/self-debug/ciclo",
-        "/api/self-debug/registrar",
         "/api/health",
-        "/api/metacognicion",
-        "/api/metacognicion/estado",
-        "/api/auditoria-cruzada",
-        "/api/proveedores",
-        "/api/bca/estado",
-        "/api/tunel/estado",
-        "/api/cognicion/vdcp/estado",
-        "/api/cognicion/cognitive-core",
-        "/api/cognicion/multimodal",
-        "/api/cognicion/vision",
-        "/api/vision/architecture",
-        "/api/vision/brain-bridge",
-        "/api/agentes/estado",
-        "/api/esencia",
-        "/api/sbi/estado",
-        "/api/sbi/challenge",
-        "/api/ejecutivo/estado",
-        "/api/cognitivo/estado",
-        "/api/eficiencia",
-        "/api/identidad",
-        "/api/inmune",
-        "/api/conectividad",
-        "/api/level9",
-        "/api/level9/hot-plug",
-        "/api/level9/rescan",
-        "/api/plugins",
-        "/api/plugins/hot-plug",
-        "/api/plugins/rescan",
-        "/api/auditoria/cruzada",
-        "/api/web/arquitecto",
         "/api/pwa/estado",
-        "/api/auditoria/preflight",
-        "/api/sellado",
-        "/api/sce",
-        "/api/evolucion/30x",
-        "/api/comic/estado",
-        "/api/media/estado",
-        "/api/autonoma/fase1/estado",
-        "/api/nucleo/perceptivo",
+        "/api/motor/estado",
+        "/api/carcasa-check",
+        "/api/llm/status",
+        "/api/proveedores",
+        "/api/identidad",
+        "/api/esencia",
         "/api/mente/conexion",
-        "/api/core/kernel",
-        "/api/core/kernel/init",
+        "/api/nucleo/perceptivo",
+        # Chat / voz / visión — PWA same-origin
         "/api/historial",
         "/api/chats",
         "/api/chat",
+        "/api/chat/nuevo",
         "/api/ai-process",
         "/api/process",
         "/api/ai/lock",
         "/api/ai/central-button",
         "/api/ai/secondary",
         "/api/ai/core-state",
-        "/api/deploy/finalize",
-        "/api/deploy/channels",
-        "/api/deploy/neural-link",
-        "/api/deploy/continuation",
-        "/api/neural/master",
-        "/api/deploy/strict-audit",
-        "/api/intelligence/layers",
-        "/api/intelligence/supervisor",
-        "/api/intelligence/challenge",
-        "/api/deploy/stream",
-        "/api/motor/estado",
-        "/api/chat/nuevo",
-        "/api/proveedores",
         "/api/stt",
         "/api/tts",
         "/api/voice_test",
-        "/api/carcasa-check",
+        "/api/vision/architecture",
+        "/api/vision/brain-bridge",
+        "/api/cognicion/vision",
+        "/api/cognicion/multimodal",
+        "/api/autonoma/fase1",
+        "/api/autonoma/fase1/estado",
+        "/api/autonoma/fase1/stream",
+        "/api/sbi/estado",
+        "/api/sbi/challenge",
     }
 )
 
@@ -286,11 +243,22 @@ async def _app_lifespan(app_ref: FastAPI):
 
 app = FastAPI(title="Salomón AI", version="1.0.0", lifespan=_app_lifespan)
 
+_CORS_DEFAULT = (
+    "https://salomon-ai-studio-1.onrender.com,"
+    "http://localhost:8000,"
+    "http://127.0.0.1:8000,"
+    "http://localhost:5173,"
+    "http://127.0.0.1:5173"
+)
+_CORS_ORIGINS = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", _CORS_DEFAULT).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    # PWA / Render / local — mismo origen no necesita CORS, pero el móvil
-    # a veces abre variantes de host; permitimos amplio para no bloquear.
-    allow_origins=["*"],
+    allow_origins=_CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -486,8 +454,18 @@ def _restaurar_sesion(session_id: str) -> SalomonAI:
 
 
 def _persistir_turno(session_id: str, usuario: str, asistente: str) -> None:
-    guardar_mensaje(session_id, "usuario", usuario)
-    guardar_mensaje(session_id, "asistente", asistente)
+    """Persistencia para rutas SIN cerebro (fase1/inicio). Cerebro ya escribe vía Orquestador."""
+    try:
+        from cognicion.memoria.orquestador_memoria import obtener_orquestador_memoria
+
+        obtener_orquestador_memoria(session_id).guardar_turno(
+            usuario,
+            asistente,
+            aprender=False,
+        )
+    except Exception:
+        guardar_mensaje(session_id, "usuario", usuario)
+        guardar_mensaje(session_id, "asistente", asistente)
 
 
 def _obtener_o_crear_sesion(session_id: str | None) -> tuple[str, SalomonAI]:
@@ -687,11 +665,27 @@ def version_json_file():
 @app.get("/api/version")
 def api_version() -> dict:
     """Build actual en Render — el cliente lo usa para auto-actualizar la PWA."""
-    from settings import CARTESIA_API_KEY, CARTESIA_MODEL_ID, CARTESIA_VOICE_ID
+    from settings import (
+        CARTESIA_API_KEY,
+        CARTESIA_MODEL_ID,
+        CARTESIA_VOICE_ID,
+        ELEVENLABS_API_KEY,
+        ELEVENLABS_MODEL_ID,
+    )
 
     data = _leer_version_json()
-    key_ok = bool((CARTESIA_API_KEY or "").strip())
-    voice_ok = bool((CARTESIA_VOICE_ID or "").strip())
+    eleven_ok = bool((ELEVENLABS_API_KEY or "").strip())
+    cartesia_ok = bool((CARTESIA_API_KEY or "").strip()) and bool(
+        (CARTESIA_VOICE_ID or "").strip()
+    )
+    key_ok = eleven_ok or cartesia_ok
+    voice_ok = eleven_ok or bool((CARTESIA_VOICE_ID or "").strip())
+    tts_env = "ELEVENLABS_API_KEY" if eleven_ok else "CARTESIA_API_KEY"
+    tts_modelo = (
+        (ELEVENLABS_MODEL_ID or "eleven_multilingual_v2")
+        if eleven_ok
+        else (CARTESIA_MODEL_ID or "sonic-3.5")
+    )
 
     # Sello neuronal para la tuerquita (fail-soft honesto)
     sistema: dict = {
@@ -768,12 +762,13 @@ def api_version() -> dict:
         "stability": data.get("stability"),
         "notes": data.get("notes"),
         "sistema": sistema,
-        "tts_env": "CARTESIA_API_KEY",
-        "tts_modelo": CARTESIA_MODEL_ID or "sonic-3.5",
-        "tts_formato": "audio/wav",
+        "tts_env": tts_env,
+        "tts_modelo": tts_modelo,
+        "tts_formato": "audio/mpeg" if eleven_ok else "audio/wav",
         "tts_key": key_ok,
         "tts_voice": voice_ok,
         "tts_configurado": bool(key_ok and voice_ok),
+        "tts_primary": "elevenlabs" if eleven_ok else ("cartesia" if cartesia_ok else "none"),
         "live": True,
         "actualizacion_activa": True,
     }
@@ -1598,12 +1593,9 @@ def api_ai_central_button(body: CentralButtonRequest) -> dict:
     except Exception:
         pass
 
+    # Cerebro/Orquestador ya persistió el turno — no duplicar SQLite/hilos
     if (mensaje or imagen_b64) and brain.get("session_id") and brain.get("texto"):
-        _persistir_turno(
-            brain["session_id"],
-            mensaje or "[foto]",
-            brain.get("texto") or "",
-        )
+        pass
     return pack
 
 
@@ -2021,13 +2013,9 @@ def _chat_core(body: ChatRequest, session_id: str, salomon) -> ChatResponse:
                 (texto_out.rstrip() + "\n\n") if texto_out.strip() else ""
             ) + f"Imagen lista: {imagen_url}"
 
-    # Persistir también turnos solo-imagen (antes se perdían si mensaje vacío)
-    if body.mensaje.strip() or imagen_b64:
-        _persistir_turno(
-            session_id,
-            body.mensaje.strip() or "[foto]",
-            texto_out,
-        )
+    # Persistir: solo si el cerebro no corrió (no debería ocurrir en este path)
+    # procesar_unificado → cerebro.registrar_turno → Orquestador (única escritura)
+    _ = body.mensaje.strip() or imagen_b64
 
     return ChatResponse(
         texto=texto_out,
@@ -2136,13 +2124,15 @@ def autonoma_fase1_stream(body: Fase1Request) -> StreamingResponse:
 @app.options("/api/chat/nuevo")
 def nuevo_chat_options() -> JSONResponse:
     """Preflight CORS — elimina 403/bloqueo en boot del kernel."""
+    origin = _CORS_ORIGINS[0] if _CORS_ORIGINS else "https://salomon-ai-studio-1.onrender.com"
     return JSONResponse(
         content={"ok": True},
         headers={
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": origin,
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Allow-Headers": "*",
             "Access-Control-Max-Age": "86400",
+            "Vary": "Origin",
         },
     )
 
@@ -2178,12 +2168,14 @@ def nuevo_chat(session_id: str | None = None, reiniciar: bool = False) -> JSONRe
         tts_disponible=bool(ciclo.get("tts_disponible")),
     )
     data = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
+    origin = _CORS_ORIGINS[0] if _CORS_ORIGINS else "https://salomon-ai-studio-1.onrender.com"
     return JSONResponse(
         content=data,
         headers={
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": origin,
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Allow-Headers": "*",
+            "Vary": "Origin",
         },
     )
 
@@ -2818,7 +2810,8 @@ def cognicion_vision(body: VisionRequest) -> ChatResponse:
             if not session_id:
                 session_id, _ = _obtener_o_crear_sesion(body.session_id)
             if texto:
-                _persistir_turno(session_id, entrada, texto)
+                # via_brain_bridge → cerebro ya persistió
+                pass
             meta = dict(brain.get("metadata") or {})
             meta["vision_architecture"] = {
                 "focus_mode": pack.get("focus_mode"),
@@ -2844,7 +2837,7 @@ def cognicion_vision(body: VisionRequest) -> ChatResponse:
             imagen_base64=body.imagen_base64,
             imagen_mime=body.imagen_mime,
         )
-        _persistir_turno(session_id, entrada, respuesta.texto)
+        # cerebro.registrar_turno ya persistió
         meta = dict(respuesta.metadata or {})
         meta["vision_architecture"] = {
             "via": "legacy_procesar_entrada",
@@ -2932,7 +2925,6 @@ def cognicion_error(body: ErrorConsolaRequest) -> ChatResponse:
         error_consola=body.error,
         autonomo=body.autonomo,
     )
-    _persistir_turno(session_id, body.mensaje.strip(), respuesta.texto)
     return ChatResponse(
         texto=respuesta.texto,
         exito=respuesta.exito,
@@ -2952,7 +2944,6 @@ def cognicion_agente(body: AgenteRequest) -> ChatResponse:
         error_consola=body.error,
         autonomo=True,
     )
-    _persistir_turno(session_id, body.tarea.strip(), respuesta.texto)
     return ChatResponse(
         texto=respuesta.texto,
         exito=respuesta.exito,

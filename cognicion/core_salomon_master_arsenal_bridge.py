@@ -70,7 +70,7 @@ class SalomonMasterArsenalBridge:
             deep = bool((S.DEEPGRAM_API_KEY or "").strip())
         except Exception:
             gem = _flag("GEMINI_API_KEY")
-            groq = _flag("GROQ_API_KEY", "GROK_API_KEY")
+            groq = _flag("GROQ_API_KEY")  # no alias GROK — no es cliente xAI
             oai = _flag("OPENAI_API_KEY")
             fal = _flag("FAL_KEY")
             rep = _flag("REPLICATE_API_TOKEN", "REPLICATE_API_KEY")

@@ -240,30 +240,44 @@ class MemoryController:
     def _guardar_snapshot_sesion(self, snap: dict[str, Any]) -> bool:
         """Persiste snapshot JSON local. True si OK; False si falla (con warning)."""
         try:
-            _SESSIONS_JSON.parent.mkdir(parents=True, exist_ok=True)
-            root: dict[str, Any] = {}
-            if _SESSIONS_JSON.is_file():
-                try:
-                    loaded = json.loads(_SESSIONS_JSON.read_text(encoding="utf-8"))
-                    if isinstance(loaded, dict):
-                        root = loaded
-                except Exception:
-                    _log.warning(
-                        "memory_controller: snapshot corrupto — recreando root path=%s",
-                        _SESSIONS_JSON,
-                        exc_info=True,
-                    )
+            from cognicion.memoria.atomic_json import locked_update_json
+
+            sid = self.session_id
+
+            def _mut(root: dict[str, Any]) -> dict[str, Any]:
+                if not isinstance(root, dict):
                     root = {}
-            root[self.session_id] = snap
-            _SESSIONS_JSON.write_text(
-                json.dumps(root, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+                root[sid] = snap
+                return root
+
+            locked_update_json(_SESSIONS_JSON, _mut, default={})
             return True
         except Exception:
             _log.warning(
                 "memory_controller: escritura snapshot falló path=%s session=%s",
                 _SESSIONS_JSON,
+                self.session_id,
+                exc_info=True,
+            )
+            return False
+
+    def borrar_snapshot_sesion(self) -> bool:
+        """Quita el slot de esta sesión del JSON de snapshots."""
+        try:
+            from cognicion.memoria.atomic_json import locked_update_json
+
+            sid = self.session_id
+
+            def _mut(root: dict[str, Any]) -> dict[str, Any]:
+                if isinstance(root, dict):
+                    root.pop(sid, None)
+                return root if isinstance(root, dict) else {}
+
+            locked_update_json(_SESSIONS_JSON, _mut, default={})
+            return True
+        except Exception:
+            _log.warning(
+                "memory_controller: borrar snapshot falló session=%s",
                 self.session_id,
                 exc_info=True,
             )

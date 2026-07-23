@@ -55,7 +55,8 @@ class SalomonUniversalKeyDispatcher:
             fal = bool(_env("FAL_KEY"))
             rep = bool(_env("REPLICATE_API_TOKEN", "REPLICATE_API_KEY"))
             gem = bool(_env("GEMINI_API_KEY"))
-            groq = bool(_env("GROQ_API_KEY", "GROK_API_KEY"))
+            # Solo GROQ real — GROK/XAI no es cliente xAI en este stack
+            groq = bool(_env("GROQ_API_KEY"))
             oai = bool(_env("OPENAI_API_KEY"))
 
         return {
@@ -63,6 +64,7 @@ class SalomonUniversalKeyDispatcher:
             "REPLICATE": "set" if rep else "missing",
             "GEMINI_API_KEY": "set" if gem else "missing",
             "GROQ_API_KEY": "set" if groq else "missing",
+            "GROK_API_KEY": "unused_alias_not_xai",
             "OPENAI_API_KEY": "set" if oai else "missing",
             "image_generation_available": bool(fal or rep or oai),
             "llm_available": bool(gem or groq or oai),

@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from mente.arquitectura import mapa_mente
-from mente.hilos import clasificar_area, contexto_hilo, registrar_turno
+from mente.hilos import clasificar_area, contexto_hilo
 from mente.herramientas_perifericas import busqueda_web_si_autorizada, log_mente
 from mente.protocolo_inicio import protocolo_inicio
 
@@ -53,7 +53,7 @@ def procesar_unificado(
     Búsqueda web solo vía periféricos autorizados (no interviene sola).
     """
     area = clasificar_area(mensaje, tiene_imagen=bool(imagen_base64))
-    registrar_turno(session_id, rol="usuario", texto=mensaje, area=area)
+    # Hilos/SQLite: único escritor = Orquestador vía cerebro.registrar_turno
     log_mente("turno area=%s session=%s", area, session_id)
 
     # Periférico: búsqueda encapsulada (casi siempre inactiva)
@@ -95,8 +95,18 @@ def procesar_unificado(
             imagen_url = None
 
         respuesta = _RespErr()
-        texto = respuesta.texto
-        registrar_turno(session_id, rol="asistente", texto=texto, area=area)
+        # Cerebro no corrió: persistir error una sola vez vía orquestador
+        try:
+            from cognicion.memoria.orquestador_memoria import obtener_orquestador_memoria
+
+            obtener_orquestador_memoria(session_id).guardar_turno(
+                mensaje,
+                respuesta.texto,
+                area=area,
+                aprender=False,
+            )
+        except Exception:
+            pass
         return respuesta
 
     # Si hay contexto de hilo/periférico y el motor lo permite vía metadata
@@ -106,9 +116,8 @@ def procesar_unificado(
         respuesta.metadata["mente"]["hilo"] = session_id
         respuesta.metadata["mente"]["busqueda_periferica"] = bool(busq.get("activo"))
         respuesta.metadata["mente"]["conexion"] = "unificada"
+        respuesta.metadata["mente"]["memoria_via"] = "orquestador_cerebro"
 
-    texto = getattr(respuesta, "texto", "") or ""
-    registrar_turno(session_id, rol="asistente", texto=texto, area=area)
     return respuesta
 
 

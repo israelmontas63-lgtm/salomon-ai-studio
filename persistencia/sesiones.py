@@ -343,6 +343,31 @@ def limpiar_sesion(session_id: str | None) -> None:
             "UPDATE sesiones SET actualizada_en = ? WHERE id = ?",
             (datetime.now(timezone.utc).isoformat(), sid),
         )
+    # Proyecciones: hilos + snapshot (sin borrar hechos personales globales)
+    try:
+        from mente.hilos import borrar_hilo
+
+        borrar_hilo(sid)
+    except Exception:
+        pass
+    try:
+        from cognicion.memoria.memory_controller import MemoryController
+
+        MemoryController(sid).borrar_snapshot_sesion()
+    except Exception:
+        pass
+    try:
+        from cognicion.capas_inteligencia.layer_02_memory import cache_invalidate_session
+
+        cache_invalidate_session(sid)
+    except Exception:
+        try:
+            from cognicion.capas_inteligencia import layer_02_memory as l2
+
+            if hasattr(l2, "_ram_history") and isinstance(l2._ram_history, dict):
+                l2._ram_history.pop(sid, None)
+        except Exception:
+            pass
 
 
 def listar_sesiones(

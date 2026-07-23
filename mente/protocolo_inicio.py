@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from mente.arquitectura import asegurar_estructura
-from mente.hilos import cargar_hilo, guardar_hilo, registrar_turno
+from mente.hilos import cargar_hilo, guardar_hilo
 
 
 _SALUDO_CANONICO = (
@@ -65,7 +65,7 @@ def protocolo_inicio(session_id: str) -> dict[str, Any]:
         except Exception:
             pass
 
-    registrar_turno(session_id, rol="asistente", texto=frase, area="razonamiento")
+    # Persistencia del saludo: solo vía app._persistir_turno → Orquestador
 
     audio_base64 = None
     audio_mime = "audio/mpeg"

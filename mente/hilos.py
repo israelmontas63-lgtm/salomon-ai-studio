@@ -67,16 +67,31 @@ def guardar_hilo(hilo: dict[str, Any]) -> None:
     path = _path(str(hilo.get("session_id") or "default"))
     hilo["actualizado_at"] = _utc()
     try:
-        path.write_text(
-            json.dumps(hilo, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        from cognicion.memoria.atomic_json import atomic_write_json
+
+        if not atomic_write_json(path, hilo):
+            _log.warning("mente.hilos: atomic_write falló path=%s", path)
     except Exception:
         _log.warning(
             "mente.hilos: escritura falló path=%s",
             path,
             exc_info=True,
         )
+
+
+def borrar_hilo(session_id: str) -> bool:
+    """Elimina el archivo de hilo de una sesión (reset limpio)."""
+    path = _path(session_id)
+    try:
+        if path.is_file():
+            path.unlink()
+        lock = path.with_suffix(path.suffix + ".lock")
+        if lock.is_file():
+            lock.unlink()
+        return True
+    except Exception:
+        _log.warning("mente.hilos: borrar falló session=%s", session_id, exc_info=True)
+        return False
 
 
 def registrar_turno(
