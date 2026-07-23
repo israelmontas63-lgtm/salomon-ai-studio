@@ -51,12 +51,22 @@
     return load("/static/js/back_button.js");
   }
 
+  function ensureSmart() {
+    if (window.SalomonSmartButton) return Promise.resolve();
+    return Promise.all([
+      load("/static/js/ai_state_lock.js"),
+      load("/static/js/components/SmartButton.js"),
+    ]);
+  }
+
   window.__salomonTap = {
     cam: function () {
       ensureCamera().then(function () {
         if (window.SalomonCamera && window.SalomonCamera.toggleCamera) {
           window.SalomonCamera.toggleCamera();
         }
+      }).catch(function (err) {
+        console.warn("[SalomonBind] cam load failed", err);
       });
     },
     aa: function () {
@@ -64,6 +74,8 @@
         if (window.SalomonUiManager && window.SalomonUiManager.toggle) {
           window.SalomonUiManager.toggle();
         }
+      }).catch(function (err) {
+        console.warn("[SalomonBind] aa load failed", err);
       });
     },
     settings: function () {
@@ -71,6 +83,8 @@
         if (window.SalomonSettings && window.SalomonSettings.toggle) {
           window.SalomonSettings.toggle();
         }
+      }).catch(function (err) {
+        console.warn("[SalomonBind] settings load failed", err);
       });
     },
     back: function () {
@@ -80,6 +94,8 @@
         } else if (window.SalomonBack && window.SalomonBack.neutralize) {
           window.SalomonBack.neutralize();
         }
+      }).catch(function (err) {
+        console.warn("[SalomonBind] back load failed", err);
       });
     },
     flip: function () {
@@ -87,9 +103,23 @@
         if (window.SalomonCamera && window.SalomonCamera.flipCamera) {
           window.SalomonCamera.flipCamera();
         }
+      }).catch(function (err) {
+        console.warn("[SalomonBind] flip load failed", err);
+      });
+    },
+    smart: function () {
+      ensureSmart().then(function () {
+        var el = document.getElementById("smart-button");
+        if (el) {
+          try {
+            el.click();
+          } catch (_) {}
+        }
+      }).catch(function (err) {
+        console.warn("[SalomonBind] smart load failed", err);
       });
     },
   };
 
-  console.info("[SalomonBind] __salomonTap listo (cam/aa/settings/back/flip)");
+  console.info("[SalomonBind] __salomonTap listo (cam/aa/settings/back/flip/smart)");
 })();

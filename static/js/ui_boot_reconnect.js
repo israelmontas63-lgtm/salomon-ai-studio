@@ -19,17 +19,30 @@
     var body = document.body;
     if (!body) return;
 
+    var camAlive =
+      window.SalomonCamera &&
+      window.SalomonCamera.isActive &&
+      window.SalomonCamera.isActive();
+
     body.classList.remove(
-      "vision-immersive",
       "input-sheet-open",
       "control-layer-open",
+      "chat-drawer-open",
       "ai-active",
-      "camera-ui-elevated"
+      "salomon-processing"
     );
-    body.removeAttribute("data-vision");
+    if (!camAlive) {
+      body.classList.remove(
+        "vision-immersive",
+        "vision-mode-active",
+        "camera-ui-elevated"
+      );
+      body.removeAttribute("data-vision");
+    }
+    body.setAttribute("data-ai-active", "false");
 
     var stage = document.getElementById("camera-stage");
-    if (stage) {
+    if (stage && !camAlive) {
       stage.classList.remove(
         "is-visible",
         "is-immersive",
@@ -38,17 +51,28 @@
         "is-selfie"
       );
       stage.setAttribute("aria-hidden", "true");
-      stage.style.cssText =
-        "display:none!important;pointer-events:none!important;width:0!important;height:0!important;z-index:-9999!important;";
+      /* Sin cssText sticky: el CSS (camera_hud) ya oculta :not(.is-visible) */
+      try {
+        stage.removeAttribute("style");
+      } catch (_) {}
     }
 
     var hud = document.getElementById("camera-controls-container");
-    if (hud) hud.style.pointerEvents = "none";
+    if (hud && !camAlive) {
+      try {
+        hud.style.pointerEvents = "none";
+      } catch (_) {}
+    }
 
-    ["control-layer", "chat-drawer"].forEach(function (id) {
+    ["control-layer", "chat-history-drawer", "chat-drawer"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("is-open");
     });
+    try {
+      document.querySelectorAll(".chat-drawer.is-open").forEach(function (el) {
+        el.classList.remove("is-open");
+      });
+    } catch (_) {}
 
     var input = document.getElementById("input-layer");
     if (input) {
@@ -57,19 +81,23 @@
     }
 
     var wrap = document.getElementById("cam-wrap");
-    if (wrap) wrap.classList.remove("is-active", "is-elevated");
+    if (wrap && !camAlive) wrap.classList.remove("is-active", "is-elevated");
 
-    /* Liberar lock de IA atascado (sin destruir el núcleo) */
+    /* Liberar lock de IA atascado (sin destruir cámara activa) */
     try {
       if (
         window.SalomonAILock &&
         window.SalomonAILock.isActive &&
-        window.SalomonAILock.isActive() &&
-        window.SalomonAILock.release
+        window.SalomonAILock.isActive()
       ) {
-        window.SalomonAILock.release("ui_reconnect_boot");
-        log("AI lock liberado");
+        if (window.SalomonAILock.release) {
+          window.SalomonAILock.release("ui_reconnect_boot");
+          log("AI lock liberado");
+        }
       }
+      try {
+        document.body.classList.remove("ai-active", "salomon-processing");
+      } catch (_) {}
     } catch (_) {}
   }
 
@@ -192,9 +220,47 @@
     return repararCapaInicializacionJs();
   }
 
+  function installGlobalErrorNet() {
+    if (window.__salomonErrorNet) return;
+    window.__salomonErrorNet = true;
+    function maybeClearStuck(why) {
+      try {
+        var body = document.body;
+        if (
+          !body ||
+          !(
+            body.classList.contains("ai-active") ||
+            body.classList.contains("salomon-processing")
+          )
+        ) {
+          return;
+        }
+        if (window.SalomonAILock && window.SalomonAILock.clearStuckUiLayers) {
+          window.SalomonAILock.clearStuckUiLayers(why);
+        } else {
+          repararCapaBaseDom();
+        }
+      } catch (_) {}
+    }
+    window.addEventListener("error", function () {
+      maybeClearStuck("window_error");
+    });
+    window.addEventListener("unhandledrejection", function () {
+      maybeClearStuck("unhandledrejection");
+    });
+  }
+
   function boot() {
+    installGlobalErrorNet();
     forzarReconexionBotones().then(function () {
-      setTimeout(repararCapaBaseDom, 500);
+      /* Re-limpia overlays a T+500ms solo si la cámara no está viva */
+      setTimeout(function () {
+        var camAlive =
+          window.SalomonCamera &&
+          window.SalomonCamera.isActive &&
+          window.SalomonCamera.isActive();
+        if (!camAlive) repararCapaBaseDom();
+      }, 500);
     });
   }
 

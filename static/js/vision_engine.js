@@ -79,7 +79,13 @@
      */
     async engageAnalyticalStreaming(prompt) {
       const cam = window.SalomonCamera;
-      if (window.SalomonAILock && window.SalomonAILock.activate) {
+      // Solo reforzar keepCamera si el lock ya existe (dictado). No crear ai-active nuevo.
+      if (
+        window.SalomonAILock &&
+        window.SalomonAILock.isActive &&
+        window.SalomonAILock.isActive() &&
+        window.SalomonAILock.activate
+      ) {
         try {
           window.SalomonAILock.activate("vision_analytical", { keepCamera: true });
         } catch (_) {}

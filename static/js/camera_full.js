@@ -47,8 +47,11 @@
         document.body.removeAttribute("data-vision");
         const stage = document.getElementById("camera-stage");
         if (stage) {
-          stage.classList.remove("is-immersive");
+          stage.classList.remove("is-immersive", "is-visible");
           stage.setAttribute("aria-hidden", "true");
+          try {
+            stage.removeAttribute("style");
+          } catch (_) {}
         }
         this._setHidden(["chat", "form-chat", "btn-aa"], false);
       });

@@ -120,7 +120,10 @@
         },
         { passive: true }
       );
-      if (btnCam.getAttribute("data-brain-bind") !== "1") {
+      var brainCamOk =
+        btnCam.getAttribute("data-brain-bind") === "1" &&
+        typeof window.__salomonTap !== "undefined";
+      if (!brainCamOk) {
         btnCam.addEventListener(
           "click",
           function (e) {
@@ -156,7 +159,10 @@
         },
         { passive: true }
       );
-      if (btnAa.getAttribute("data-brain-bind") !== "1") {
+      var brainAaOk =
+        btnAa.getAttribute("data-brain-bind") === "1" &&
+        typeof window.__salomonTap !== "undefined";
+      if (!brainAaOk) {
         btnAa.addEventListener(
           "click",
           function (e) {
@@ -202,9 +208,14 @@
       })
       .catch(function (err) {
         console.error("[SalomonMain] ensureCore falló", err);
+        wireLazyTriggers();
         /* reintento único */
         setTimeout(function () {
-          ensureCore().then(wireLazyTriggers).catch(function () {});
+          ensureCore()
+            .then(wireLazyTriggers)
+            .catch(function (err2) {
+              console.error("[SalomonMain] ensureCore reintento falló", err2);
+            });
         }, 400);
       });
   }

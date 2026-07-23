@@ -25,9 +25,25 @@
           if (!local) {
             localStorage.setItem(STORAGE_KEY, remote);
           } else if (local !== remote && !this._isLocalDevBuild(remote)) {
-            // Toast + apply (build real cambió)
-            this.applyUpdateNow(remote);
-            return;
+            // Cold boot: notificar y diferir hot-patch (no interrumpir primer paint)
+            window.dispatchEvent(
+              new CustomEvent("salomon:deploy-notify", {
+                detail: {
+                  build: remote,
+                  source: "cold_boot_deferred",
+                  instant: false,
+                },
+              })
+            );
+            var self = this;
+            var defer =
+              window.requestIdleCallback ||
+              function (cb) {
+                setTimeout(cb, 2500);
+              };
+            defer(function () {
+              self.applyUpdateNow(remote);
+            });
           }
           window.dispatchEvent(
             new CustomEvent("salomon:build-meta", { detail: { build: remote } })
@@ -211,6 +227,8 @@
           "/static/css/boton.css",
           "/static/css/settings_layer.css",
           "/static/css/update_styles.css",
+          "/static/css/camera_hud.css",
+          "/static/css/ui_hit_repair.css",
           "/static/js/main.js",
           "/static/js/ai_state_lock.js",
           "/static/js/components/SmartButton.js",
@@ -218,12 +236,17 @@
           "/static/js/update_manager.js",
           "/static/js/realtime_notification_badge.js",
           "/static/js/pwa-register.js",
+          "/static/js/button_brain_bind.js",
+          "/static/js/ui_boot_reconnect.js",
           "/static/js/script.js",
           "/static/js/input_engine.js",
           "/static/js/ui_controller.js",
           "/static/js/camera_logic.js",
+          "/static/js/camera_full.js",
           "/static/js/vision_engine.js",
           "/static/js/vision_mode_trigger.js",
+          "/static/js/back_button.js",
+          "/static/js/ui_manager.js",
           "/static/manifest.json",
           "/manifest.json",
           "/service-worker.js?v=" + Date.now(),

@@ -7,8 +7,33 @@
   "use strict";
 
   var API_CHAT = "/api/chat";
+  var CHAT_TIMEOUT_MS = 45000;
   var busy = false;
   var sessionId = localStorage.getItem("salomon_session_id") || null;
+
+  function fetchWithTimeout(url, opts, ms) {
+    if (window.SalomonAILock && window.SalomonAILock.fetchWithTimeout) {
+      return window.SalomonAILock.fetchWithTimeout(url, opts, ms || CHAT_TIMEOUT_MS);
+    }
+    ms = ms || CHAT_TIMEOUT_MS;
+    opts = opts || {};
+    if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+      return fetch(url, Object.assign({}, opts, { signal: AbortSignal.timeout(ms) }));
+    }
+    return fetch(url, opts);
+  }
+
+  function messageNeedsCameraStack(msg) {
+    if (window.SalomonAILock && window.SalomonAILock.looksVisualMessage) {
+      return !!window.SalomonAILock.looksVisualMessage(msg);
+    }
+    if (window.SalomonVisionModeTrigger && window.SalomonVisionModeTrigger.matches) {
+      return !!window.SalomonVisionModeTrigger.matches(msg);
+    }
+    return /\b(mira|visi[oó]n|c[aá]mara|ojos|macro|micro|foto|imagen)\b/i.test(
+      msg || ""
+    );
+  }
 
   function $(id) {
     return document.getElementById(id);
@@ -157,12 +182,14 @@
       return;
     }
 
-    // Comandos de visión (asegurar stack cámara antes de parsear)
-    try {
-      if (window.SalomonMain && window.SalomonMain.ensureCameraStack) {
-        await window.SalomonMain.ensureCameraStack();
-      }
-    } catch (_) {}
+    // Solo cargar stack de cámara si el mensaje es visual (no bloquear chat normal)
+    if (messageNeedsCameraStack(msg) || window.SalomonVision) {
+      try {
+        if (window.SalomonMain && window.SalomonMain.ensureCameraStack) {
+          await window.SalomonMain.ensureCameraStack();
+        }
+      } catch (_) {}
+    }
     if (window.SalomonVision && window.SalomonVision.parseCommand(msg).handled) {
       addBubble(msg, "user");
       if (input) input.value = "";
@@ -226,7 +253,7 @@
         }
       } catch (_) {}
 
-      var res = await fetch(API_CHAT, {
+      var res = await fetchWithTimeout(API_CHAT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

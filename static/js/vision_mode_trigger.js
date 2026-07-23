@@ -71,69 +71,87 @@
         return { ok: false, blocked: true, reason: "ai_lock" };
       }
 
-      // Refuerzo keepCamera si la IA ya está en dictado
-      if (lock && lock.activate) {
+      // Solo reforzar keepCamera si la IA YA está activa (dictado).
+      // Nunca crear un lock nuevo aquí: dejaba body.ai-active y mataba el dock.
+      if (
+        lock &&
+        lock.isActive &&
+        lock.isActive() &&
+        lock.activate
+      ) {
         lock.activate(source || "vision_mode_trigger", { keepCamera: true });
       }
 
-      await this.ensureCameraStack();
+      try {
+        await this.ensureCameraStack();
 
-      var cam = window.SalomonCamera;
-      if (!cam || !cam.openCamera) {
-        return { ok: false, reason: "camera_unavailable" };
-      }
+        var cam = window.SalomonCamera;
+        if (!cam || !cam.openCamera) {
+          return { ok: false, reason: "camera_unavailable" };
+        }
 
-      if (!cam.isActive || !cam.isActive()) {
-        await cam.openCamera();
-      }
+        if (!cam.isActive || !cam.isActive()) {
+          await cam.openCamera();
+        }
 
-      if (window.SalomonCameraToggleUI && window.SalomonCameraToggleUI.elevate) {
-        window.SalomonCameraToggleUI.elevate();
-      } else {
-        document.body.classList.add("camera-ui-elevated");
-        var wrap = document.getElementById("cam-wrap");
-        if (wrap) wrap.classList.add("is-elevated");
-      }
+        if (window.SalomonCameraToggleUI && window.SalomonCameraToggleUI.elevate) {
+          window.SalomonCameraToggleUI.elevate();
+        } else {
+          document.body.classList.add("camera-ui-elevated");
+          var wrap = document.getElementById("cam-wrap");
+          if (wrap) wrap.classList.add("is-elevated");
+        }
 
-      document.body.classList.add("vision-mode-active", "vision-immersive");
+        document.body.classList.add("vision-mode-active", "vision-immersive");
 
-      window.dispatchEvent(
-        new CustomEvent("salomon:vision-mode", {
-          detail: {
-            active: true,
-            source: source,
-            via: "vision_mode_trigger",
-            analytical: !!analyze,
-          },
-        })
-      );
-
-      // Con cámara lista: abrir canal de fotogramas y describir lo que hay enfrente
-      if (analyze && window.SalomonVision && window.SalomonVision.engageAnalyticalStreaming) {
-        var pack = await window.SalomonVision.engageAnalyticalStreaming(
-          opts.prompt || ANALYZE_PROMPT
+        window.dispatchEvent(
+          new CustomEvent("salomon:vision-mode", {
+            detail: {
+              active: true,
+              source: source,
+              via: "vision_mode_trigger",
+              analytical: !!analyze,
+            },
+          })
         );
-        var texto =
-          (pack && pack.texto) ||
-          (typeof pack === "string" ? pack : "") ||
-          "Sí, Israel — estoy mirando lo que tienes frente a ti.";
+
+        // Con cámara lista: abrir canal de fotogramas y describir lo que hay enfrente
+        if (analyze && window.SalomonVision && window.SalomonVision.engageAnalyticalStreaming) {
+          var pack = await window.SalomonVision.engageAnalyticalStreaming(
+            opts.prompt || ANALYZE_PROMPT
+          );
+          var texto =
+            (pack && pack.texto) ||
+            (typeof pack === "string" ? pack : "") ||
+            "Sí, Israel — estoy mirando lo que tienes frente a ti.";
+          return {
+            ok: true,
+            texto: texto,
+            audio_base64: pack && pack.audio_base64,
+            audio_mime: pack && pack.audio_mime,
+            source: source,
+            analytical: true,
+          };
+        }
+
         return {
           ok: true,
-          texto: texto,
-          audio_base64: pack && pack.audio_base64,
-          audio_mime: pack && pack.audio_mime,
+          texto:
+            "Modo visión activo. Estoy mirando — un momento mientras describo la escena.",
           source: source,
-          analytical: true,
+          analytical: false,
         };
+      } catch (err) {
+        return {
+          ok: false,
+          reason: "engage_error",
+          detail: String((err && err.message) || err || ""),
+        };
+      } finally {
+        try {
+          document.body.classList.remove("salomon-processing");
+        } catch (_) {}
       }
-
-      return {
-        ok: true,
-        texto:
-          "Modo visión activo. Estoy mirando — un momento mientras describo la escena.",
-        source: source,
-        analytical: false,
-      };
     },
 
     /** Para handlers de chat/voz: engage + análisis + mensaje listo */

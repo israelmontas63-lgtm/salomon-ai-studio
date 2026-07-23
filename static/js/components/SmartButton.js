@@ -495,157 +495,178 @@
 
       document.body.classList.add("salomon-processing");
 
-      var result =
-        (window.trigger_ai_core || (L && L.trigger_ai_core) || (L && L.callBrainDirect))
-          ? await (window.trigger_ai_core || L.trigger_ai_core || L.callBrainDirect).call(
-              null,
-              {
-                mensaje: text,
-                reason:
-                  opts.mode === "conversational"
-                    ? "double_tap_ai"
-                    : "single_tap_dictation",
-                keep_lock: keepMic,
-                keep_camera: true,
-                force_tts: true,
-              }
-            )
-          : await this._fallbackFetch(text);
-
-      document.body.classList.remove("salomon-processing");
-
-      var data = (result && result.data) || {};
-      var meta = data.metadata || {};
-      if (meta.ui_action === "engage_analytical_streaming" && Veng) {
-        try {
-          var analytical = await Veng.engageAnalyticalStreaming(text);
-          if (analytical && analytical.texto) {
-            data = Object.assign({}, data, analytical);
-          }
-        } catch (_) {}
-      } else if (meta.ui_action === "disengage_visual_mode" && Veng) {
-        try {
-          await Veng.disengageVisualMode();
-        } catch (_) {}
-      } else if (
-        (meta.activar_modo_vision || meta.ui_action === "open_camera_with_elevation") &&
-        VT &&
-        VT.engage
-      ) {
-        try {
-          var engMeta = await VT.engage({
-            source: "brain_meta",
-            analyze: true,
-          });
-          if (engMeta && engMeta.texto) {
-            data = Object.assign({}, data, engMeta);
-          }
-        } catch (_) {}
-      }
-
-      meta = (data && data.metadata) || {};
-      var cog = meta.cognicion || {};
-      var replyText =
-        (data && data.texto) ||
-        (meta.error_codigo
-          ? "Error " +
-            meta.error_codigo +
-            ": " +
-            (meta.error_causa || cog.error_causa || "fallo técnico")
-          : null) ||
-        data.detail ||
-        (result && result.ok ? "" : null) ||
-        "Error 49: no pude completar la respuesta. ¿Lo intentamos de nuevo?";
-
-      if (chat) {
-        var typingEl = chat.querySelector(".bubble.typing");
-        if (typingEl) typingEl.remove();
-        // vision_local: vision_engine ya escribió la burbuja (sin eco duplicado)
-        if (!(meta && meta.vision_local) && replyText) {
-          var bot = document.createElement("div");
-          bot.className = "bubble bot";
-          var textNode = document.createElement("div");
-          textNode.className = "bubble-text";
-          textNode.textContent = replyText;
-          bot.appendChild(textNode);
-          var imgMeta =
-            data.imagen_url ||
-            (meta.cognicion &&
-              meta.cognicion.imagen_generada &&
-              meta.cognicion.imagen_generada.url) ||
-            meta.imagen_generada_url ||
-            null;
-          if (imgMeta) {
-            var imgEl = document.createElement("img");
-            imgEl.className = "bubble-gen-image";
-            imgEl.src = imgMeta;
-            imgEl.alt = "Imagen generada por Salomón";
-            imgEl.loading = "lazy";
-            bot.appendChild(imgEl);
-          }
-          chat.appendChild(bot);
-          chat.scrollTop = chat.scrollHeight;
-        }
-      }
-
-      if (data.session_id) {
-        localStorage.setItem("salomon_session_id", data.session_id);
-      }
-      if (result && result.ok) {
-        window.dispatchEvent(
-          new CustomEvent("salomon:chat-turn", {
-            detail: {
-              session_id:
-                data.session_id || localStorage.getItem("salomon_session_id"),
-              preview: text,
-              mensaje: text,
-            },
-          })
-        );
-      }
-
-      // Obligatorio en dictado (1 toque): Adam TTS + texto simultáneos
       try {
-        var speakPayload = Object.assign({}, data, {
-          texto: (data && data.texto) || replyText,
-        });
-        if (
-          window.SalomonVoiceLayer &&
-          window.SalomonVoiceLayer.ensureSpeak
-        ) {
-          await window.SalomonVoiceLayer.ensureSpeak(speakPayload);
-        } else if (speakPayload.audio_base64) {
-          var mime = speakPayload.audio_mime || "audio/mpeg";
-          var audio = new Audio(
-            "data:" + mime + ";base64," + speakPayload.audio_base64
-          );
-          audio.play().catch(function () {});
-        }
-      } catch (_) {}
+        var result =
+          (window.trigger_ai_core || (L && L.trigger_ai_core) || (L && L.callBrainDirect))
+            ? await (window.trigger_ai_core || L.trigger_ai_core || L.callBrainDirect).call(
+                null,
+                {
+                  mensaje: text,
+                  reason:
+                    opts.mode === "conversational"
+                      ? "double_tap_ai"
+                      : "single_tap_dictation",
+                  keep_lock: keepMic,
+                  keep_camera: true,
+                  force_tts: true,
+                }
+              )
+            : await this._fallbackFetch(text);
 
-      if (keepMic && prevState === States.CONVERSATIONAL) {
-        this._setState(States.CONVERSATIONAL);
-        this.root.classList.add(
-          "is-ai-locked",
+        var data = (result && result.data) || {};
+        var meta = data.metadata || {};
+        if (meta.ui_action === "engage_analytical_streaming" && Veng) {
+          try {
+            var analytical = await Veng.engageAnalyticalStreaming(text);
+            if (analytical && analytical.texto) {
+              data = Object.assign({}, data, analytical);
+            }
+          } catch (_) {}
+        } else if (meta.ui_action === "disengage_visual_mode" && Veng) {
+          try {
+            await Veng.disengageVisualMode();
+          } catch (_) {}
+        } else if (
+          (meta.activar_modo_vision || meta.ui_action === "open_camera_with_elevation") &&
+          VT &&
+          VT.engage
+        ) {
+          try {
+            var engMeta = await VT.engage({
+              source: "brain_meta",
+              analyze: true,
+            });
+            if (engMeta && engMeta.texto) {
+              data = Object.assign({}, data, engMeta);
+            }
+          } catch (_) {}
+        }
+
+        meta = (data && data.metadata) || {};
+        var cog = meta.cognicion || {};
+        var replyText =
+          (data && data.texto) ||
+          (meta.error_codigo
+            ? "Error " +
+              meta.error_codigo +
+              ": " +
+              (meta.error_causa || cog.error_causa || "fallo técnico")
+            : null) ||
+          data.detail ||
+          (result && result.ok ? "" : null) ||
+          "Error 49: no pude completar la respuesta. ¿Lo intentamos de nuevo?";
+
+        if (chat) {
+          var typingEl = chat.querySelector(".bubble.typing");
+          if (typingEl) typingEl.remove();
+          // vision_local: vision_engine ya escribió la burbuja (sin eco duplicado)
+          if (!(meta && meta.vision_local) && replyText) {
+            var bot = document.createElement("div");
+            bot.className = "bubble bot";
+            var textNode = document.createElement("div");
+            textNode.className = "bubble-text";
+            textNode.textContent = replyText;
+            bot.appendChild(textNode);
+            var imgMeta =
+              data.imagen_url ||
+              (meta.cognicion &&
+                meta.cognicion.imagen_generada &&
+                meta.cognicion.imagen_generada.url) ||
+              meta.imagen_generada_url ||
+              null;
+            if (imgMeta) {
+              var imgEl = document.createElement("img");
+              imgEl.className = "bubble-gen-image";
+              imgEl.src = imgMeta;
+              imgEl.alt = "Imagen generada por Salomón";
+              imgEl.loading = "lazy";
+              bot.appendChild(imgEl);
+            }
+            chat.appendChild(bot);
+            chat.scrollTop = chat.scrollHeight;
+          }
+        }
+
+        if (data.session_id) {
+          localStorage.setItem("salomon_session_id", data.session_id);
+        }
+        if (result && result.ok) {
+          window.dispatchEvent(
+            new CustomEvent("salomon:chat-turn", {
+              detail: {
+                session_id:
+                  data.session_id || localStorage.getItem("salomon_session_id"),
+                preview: text,
+                mensaje: text,
+              },
+            })
+          );
+        }
+
+        // Obligatorio en dictado (1 toque): Adam TTS + texto simultáneos
+        try {
+          var speakPayload = Object.assign({}, data, {
+            texto: (data && data.texto) || replyText,
+          });
+          if (
+            window.SalomonVoiceLayer &&
+            window.SalomonVoiceLayer.ensureSpeak
+          ) {
+            await window.SalomonVoiceLayer.ensureSpeak(speakPayload);
+          } else if (speakPayload.audio_base64) {
+            var mime = speakPayload.audio_mime || "audio/mpeg";
+            var audio = new Audio(
+              "data:" + mime + ";base64," + speakPayload.audio_base64
+            );
+            audio.play().catch(function () {});
+          }
+        } catch (_) {}
+
+        if (keepMic && prevState === States.CONVERSATIONAL) {
+          this._setState(States.CONVERSATIONAL);
+          this.root.classList.add(
+            "is-ai-locked",
+            "is-active",
+            "is-listening",
+            "is-holographic",
+            "is-conversational"
+          );
+          return;
+        }
+
+        this.root.classList.remove(
           "is-active",
           "is-listening",
+          "is-ai-locked",
           "is-holographic",
-          "is-conversational"
+          "is-dictation",
+          "is-conversational",
+          "is-processing"
         );
-        return;
+        this._setState(States.IDLE);
+        if (L && L.isActive() && !keepMic) L.release("dictation_done");
+      } catch (err) {
+        try {
+          console.error("[SmartButton] _callBrain", err);
+        } catch (_) {}
+        if (chat) {
+          var typingFail = chat.querySelector(".bubble.typing");
+          if (typingFail) typingFail.remove();
+        }
+        this.root.classList.remove(
+          "is-active",
+          "is-listening",
+          "is-ai-locked",
+          "is-holographic",
+          "is-dictation",
+          "is-conversational",
+          "is-processing"
+        );
+        this._setState(States.IDLE);
+        if (L && L.isActive() && !keepMic) L.release("dictation_error");
+      } finally {
+        document.body.classList.remove("salomon-processing");
       }
-
-      this.root.classList.remove(
-        "is-active",
-        "is-listening",
-        "is-ai-locked",
-        "is-holographic",
-        "is-dictation",
-        "is-conversational",
-        "is-processing"
-      );
-      this._setState(States.IDLE);
-      if (L && L.isActive() && !keepMic) L.release("dictation_done");
     }
 
     async _fallbackFetch(text) {
@@ -665,7 +686,10 @@
             }
           }
         } catch (_) {}
-        var res = await fetch("/api/ai/central-button", {
+        var fetchFn =
+          (window.SalomonAILock && window.SalomonAILock.fetchWithTimeout) ||
+          fetch;
+        var res = await fetchFn("/api/ai/central-button", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

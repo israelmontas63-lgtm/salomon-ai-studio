@@ -1,9 +1,22 @@
 /**
- * Salomón AI — Service Worker Premium v30 (botón S centrado geométrico)
+ * Salomón AI — Service Worker Premium (alineado a app version)
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v96";
+const CACHE = "salomon-premium-v97";
+
+function cacheMatchFlexible(req) {
+  return caches.match(req).then(function (hit) {
+    if (hit) return hit;
+    try {
+      var u = new URL(req.url);
+      u.search = "";
+      return caches.match(u.pathname);
+    } catch (_) {
+      return undefined;
+    }
+  });
+}
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -166,11 +179,18 @@ self.addEventListener("fetch", (event) => {
         .then((res) => {
           if (res && res.ok) {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
+            const bareCopy = res.clone();
+            caches.open(CACHE).then((c) => {
+              c.put(req, copy);
+              /* también cachear sin query para offline match flexible */
+              try {
+                c.put(new Request(path), bareCopy);
+              } catch (_) {}
+            });
           }
           return res;
         })
-        .catch(() => caches.match(req))
+        .catch(() => cacheMatchFlexible(req))
     );
     return;
   }
@@ -178,7 +198,7 @@ self.addEventListener("fetch", (event) => {
   // assets: stale-while-revalidate
   if (isStaticLayer(path)) {
     event.respondWith(
-      caches.match(req).then((hit) => {
+      cacheMatchFlexible(req).then((hit) => {
         const network = fetch(req).then((res) => {
           if (res && res.ok) {
             const copy = res.clone();

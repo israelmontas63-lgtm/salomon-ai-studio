@@ -42,10 +42,11 @@
         const gear = document.getElementById("btn-settings");
         if (!gear) return;
 
-        // Única entrada al Control Layer — si data-brain-bind, el onclick HTML manda
-        if (gear.getAttribute("data-brain-bind") === "1") {
-          window.SalomonSettings = this;
-        } else {
+        // Si brain-bind + __salomonTap OK → onclick HTML. Si falta Tap → fallback listener.
+        var brainOk =
+          gear.getAttribute("data-brain-bind") === "1" &&
+          typeof window.__salomonTap !== "undefined";
+        if (!brainOk) {
           gear.addEventListener(
             "click",
             (e) => {
@@ -55,8 +56,8 @@
             },
             false
           );
-          window.SalomonSettings = this;
         }
+        window.SalomonSettings = this;
         window.addEventListener("salomon:build-meta", (ev) => {
           const build = ev.detail && ev.detail.build;
           if (build && this.metaEl) this.setBuildMeta(build);

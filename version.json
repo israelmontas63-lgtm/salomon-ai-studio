@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-23T00:50:00Z",
-  "timestamp": 1753231800,
-  "version": "110.22.22",
+  "timestamp_iso": "2026-07-23T01:05:00Z",
+  "timestamp": 1753232700,
+  "version": "110.22.23",
   "channel": "main",
-  "label": "onclick-brain-bind-neurona-por-neurona",
+  "label": "audit-8-layers-ui-unlock",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "BUTTON_BRAIN_BIND",
-  "notes": "v110.22.22 — Direct onclick -> __salomonTap for cam/aa/settings/back/flip; no capture hijack; data-brain-bind skips duplicate listeners."
+  "notes": "v110.22.23 — Audit 8 layers: no vision lock-on-engage, AI watchdog+fetch timeouts, brain-bind fallback listeners, reconnect without sticky cssText, SW v97 flexible offline match, HotPatch includes bind scripts."
 }

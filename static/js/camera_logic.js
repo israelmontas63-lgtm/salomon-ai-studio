@@ -48,7 +48,10 @@
       };
 
       this.btnCam.addEventListener("click", (e) => {
-        if (this.btnCam.getAttribute("data-brain-bind") === "1") return;
+        var brainOk =
+          this.btnCam.getAttribute("data-brain-bind") === "1" &&
+          typeof window.__salomonTap !== "undefined";
+        if (brainOk) return;
         if (document.body.classList.contains("control-layer-open")) return;
         // request_ui_action: AI_PROCESSING → cámara no recibe encendido
         var gate = window.request_ui_action || (window.SalomonAILock && window.SalomonAILock.request_ui_action);
@@ -60,7 +63,10 @@
 
       if (this.btnFlip) {
         this.btnFlip.addEventListener("click", (e) => {
-          if (this.btnFlip.getAttribute("data-brain-bind") === "1") return;
+          var brainFlipOk =
+            this.btnFlip.getAttribute("data-brain-bind") === "1" &&
+            typeof window.__salomonTap !== "undefined";
+          if (brainFlipOk) return;
           if (document.body.classList.contains("control-layer-open")) return;
           var gateFlip =
             window.request_ui_action ||
@@ -197,7 +203,14 @@
       try {
         // UI inmediata — emitir CAMARA_ACTIVA solo cuando el video tiene frames
         if (this.camWrap) this.camWrap.classList.add("is-active");
-        if (this.stage) this.stage.classList.add("is-visible");
+        if (this.stage) {
+          /* Quitar estilos inline del reconnect que bloqueaban .is-visible */
+          try {
+            this.stage.removeAttribute("style");
+          } catch (_) {}
+          this.stage.classList.add("is-visible");
+          this.stage.setAttribute("aria-hidden", "false");
+        }
         this._ensureCameraControls();
         await this._startStream(this.facingMode);
         await this._waitForVideoReady(2500);

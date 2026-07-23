@@ -9,10 +9,82 @@
 
   var API_BRAIN = "/api/ai/central-button";
   var API_UI = "/api/ai/secondary";
+  var FETCH_TIMEOUT_MS = 45000;
+  var LOCK_WATCHDOG_MS = 60000;
   var is_ai_active = false;
   var reason = "";
   var keepCameraAllowed = false;
   var sessionId = localStorage.getItem("salomon_session_id") || null;
+  var watchdogTimer = null;
+
+  function fetchWithTimeout(url, opts, ms) {
+    ms = ms || FETCH_TIMEOUT_MS;
+    opts = opts || {};
+    if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+      return fetch(
+        url,
+        Object.assign({}, opts, { signal: AbortSignal.timeout(ms) })
+      );
+    }
+    var ctrl =
+      typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = null;
+    if (ctrl) {
+      timer = setTimeout(function () {
+        try {
+          ctrl.abort();
+        } catch (_) {}
+      }, ms);
+    }
+    return fetch(
+      url,
+      ctrl ? Object.assign({}, opts, { signal: ctrl.signal }) : opts
+    ).finally(function () {
+      if (timer) clearTimeout(timer);
+    });
+  }
+
+  function clearWatchdog() {
+    if (watchdogTimer) {
+      clearTimeout(watchdogTimer);
+      watchdogTimer = null;
+    }
+  }
+
+  function armWatchdog() {
+    clearWatchdog();
+    watchdogTimer = setTimeout(function () {
+      if (!is_ai_active) return;
+      try {
+        console.warn("[SalomonAILock] watchdog: liberando lock atascado");
+      } catch (_) {}
+      release("watchdog_timeout");
+      try {
+        document.body.classList.remove(
+          "salomon-processing",
+          "ai-active",
+          "vision-immersive"
+        );
+      } catch (_) {}
+    }, LOCK_WATCHDOG_MS);
+  }
+
+  function clearStuckUiLayers(why) {
+    try {
+      document.body.classList.remove(
+        "ai-active",
+        "salomon-processing",
+        "vision-immersive",
+        "vision-mode-active",
+        "camera-ui-elevated",
+        "control-layer-open",
+        "input-sheet-open",
+        "chat-drawer-open"
+      );
+      document.body.setAttribute("data-ai-active", "false");
+    } catch (_) {}
+    if (is_ai_active) release(why || "clear_stuck");
+  }
 
   /** Siempre leer session_id fresco (evita desync tras cambiar chat en el drawer). */
   function currentSessionId() {
@@ -101,6 +173,7 @@
     keepCameraAllowed = keepCamera;
     reason = why || "smart_button";
     setBodyLock(true);
+    armWatchdog();
     try {
       if (window.SalomonUiManager && window.SalomonUiManager.hide) {
         window.SalomonUiManager.hide();
@@ -133,11 +206,15 @@
 
   function release(why) {
     if (!is_ai_active) return false;
+    clearWatchdog();
     is_ai_active = false;
     keepCameraAllowed = false;
     var prev = reason;
     reason = "";
     setBodyLock(false);
+    try {
+      document.body.classList.remove("salomon-processing");
+    } catch (_) {}
     syncServer(false, why || "done");
     emit({ action: "release", reason: why || "done", previous: prev });
     return true;
@@ -258,7 +335,7 @@
         dataOut.imagen_mime = frameMime;
       }
 
-      var res = await fetch(API_BRAIN, {
+      var res = await fetchWithTimeout(API_BRAIN, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataOut),
@@ -295,8 +372,11 @@
       emit({ action: "brain_error", error: String(err && err.message ? err.message : err) });
       return { ok: false, error: "network", detail: String(err) };
     } finally {
+      // keep_lock (mic conversacional) deja el lock; el watchdog lo libera si se atasca
       if (!body.keep_lock) {
         release("trigger_ai_core_done");
+      } else {
+        armWatchdog();
       }
     }
   }
@@ -418,6 +498,8 @@
     prepareVisionPayload: prepareVisionPayload,
     visionChannelActive: visionChannelActive,
     looksVisualMessage: looksVisualMessage,
+    clearStuckUiLayers: clearStuckUiLayers,
+    fetchWithTimeout: fetchWithTimeout,
   };
 
   // API global explícita (especificación de capas)

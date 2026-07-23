@@ -30,11 +30,11 @@
   <link rel="stylesheet" href="/static/css/update_styles.css" />
   <link rel="stylesheet" href="/static/css/settings_layer.css" />
   <link rel="stylesheet" href="/static/css/chat_history_drawer.css" />
-  <link rel="stylesheet" href="/static/css/back_button.css?v=110.22.22" />
+  <link rel="stylesheet" href="/static/css/back_button.css?v=110.22.23" />
   <link rel="stylesheet" href="/static/css/bottom_bar_ux.css?v=110.22.13" />
   <link rel="stylesheet" href="/static/css/camera_full.css?v=110.22.14" />
-  <link rel="stylesheet" href="/static/css/camera_hud.css?v=110.22.22" />
-  <link rel="stylesheet" href="/static/css/ui_hit_repair.css?v=110.22.22" />
+  <link rel="stylesheet" href="/static/css/camera_hud.css?v=110.22.23" />
+  <link rel="stylesheet" href="/static/css/ui_hit_repair.css?v=110.22.23" />
 </head>
 <body>
   <script>
@@ -45,9 +45,12 @@
         if (document.body) {
           document.body.classList.remove(
             "vision-immersive",
+            "vision-mode-active",
             "input-sheet-open",
             "control-layer-open",
+            "chat-drawer-open",
             "ai-active",
+            "salomon-processing",
             "camera-ui-elevated"
           );
         }
@@ -176,9 +179,9 @@
   </script>
   <script src="/static/js/pwa-register.js" defer></script>
   <!-- Reconexión neuronal SIN defer: binding inmediato al DOM -->
-  <script src="/static/js/button_brain_bind.js?v=110.22.22"></script>
-  <script src="/static/js/ui_boot_reconnect.js?v=110.22.22"></script>
-  <script src="/static/js/bottom_bar_ux.js?v=110.22.13" defer></script>
-  <script src="/static/js/main.js" defer></script>
+  <script src="/static/js/button_brain_bind.js?v=110.22.23"></script>
+  <script src="/static/js/ui_boot_reconnect.js?v=110.22.23"></script>
+  <script src="/static/js/bottom_bar_ux.js?v=110.22.23" defer></script>
+  <script src="/static/js/main.js?v=110.22.23" defer></script>
 </body>
 </html>

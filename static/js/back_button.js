@@ -15,7 +15,10 @@
       if (!btn) return;
       btn.setAttribute("data-role", "global-negative");
       btn.setAttribute("aria-label", "Salir del sistema / Cerrar capa");
-      if (btn.getAttribute("data-brain-bind") !== "1") {
+      var brainOk =
+        btn.getAttribute("data-brain-bind") === "1" &&
+        typeof window.__salomonTap !== "undefined";
+      if (!brainOk) {
         btn.addEventListener(
           "click",
           (e) => {
