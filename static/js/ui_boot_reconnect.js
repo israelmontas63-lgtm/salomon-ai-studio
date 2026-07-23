@@ -250,8 +250,37 @@
     });
   }
 
+  function installImmersiveWatchdog() {
+    if (window.__salomonImmersiveWatch) return;
+    window.__salomonImmersiveWatch = true;
+    function clearIfCameraDead() {
+      try {
+        var body = document.body;
+        if (!body || !body.classList.contains("vision-immersive")) return;
+        var camAlive =
+          window.SalomonCamera &&
+          window.SalomonCamera.isActive &&
+          window.SalomonCamera.isActive();
+        if (!camAlive) {
+          body.classList.remove(
+            "vision-immersive",
+            "vision-mode-active",
+            "camera-ui-elevated"
+          );
+          body.removeAttribute("data-vision");
+          log("watchdog: limpió vision-immersive (cámara inactiva)");
+        }
+      } catch (_) {}
+    }
+    setInterval(clearIfCameraDead, 2800);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") clearIfCameraDead();
+    });
+  }
+
   function boot() {
     installGlobalErrorNet();
+    installImmersiveWatchdog();
     forzarReconexionBotones().then(function () {
       /* Re-limpia overlays a T+500ms solo si la cámara no está viva */
       setTimeout(function () {

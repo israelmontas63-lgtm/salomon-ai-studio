@@ -120,6 +120,15 @@ body.control-layer-open #btn-settings {
   transform: scale(0.98);
 }
 
+.control-layer__hint {
+  margin: 12px 0 0;
+  padding: 0 2px;
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(192, 192, 192, 0.72);
+}
+
 .control-tool:disabled {
   opacity: 0.6;
   cursor: wait;

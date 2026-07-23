@@ -15,6 +15,13 @@
       description: "Carpeta de chats recientes y conversaciones guardadas",
     },
     {
+      id: "install",
+      label: "Instalar app",
+      action: "promptInstall",
+      primary: false,
+      description: "Instalar Salomón como aplicación (PWA)",
+    },
+    {
       id: "update",
       label: "Actualización",
       action: "hotPatch",
@@ -258,9 +265,15 @@
         list.appendChild(li);
       });
 
+      const hint = document.createElement("p");
+      hint.className = "control-layer__hint";
+      hint.textContent =
+        "iPhone/iPad: Compartir → Añadir a pantalla de inicio";
+
       sheet.appendChild(title);
       sheet.appendChild(meta);
       sheet.appendChild(list);
+      sheet.appendChild(hint);
       layer.appendChild(sheet);
 
       // Clic en backdrop cierra (sin tocar otras capas)
@@ -300,6 +313,44 @@
         this.close();
         if (window.SalomonChatDrawer && window.SalomonChatDrawer.openDrawer) {
           window.SalomonChatDrawer.openDrawer();
+        }
+        return;
+      }
+      if (tool.action === "promptInstall") {
+        var pwa = window.SalomonPWA;
+        var promptFn =
+          (pwa && typeof pwa.promptInstall === "function" && pwa.promptInstall) ||
+          (typeof window.__SalomonPromptInstall === "function" &&
+            window.__SalomonPromptInstall);
+        if (promptFn) {
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Instalando…";
+          }
+          Promise.resolve(promptFn.call(pwa || window))
+            .then(function (res) {
+              if (!btn) return;
+              btn.disabled = false;
+              if (res && res.ok) {
+                btn.textContent = "Instalada";
+              } else if (res && res.reason === "already_installed") {
+                btn.textContent = "Ya instalada";
+              } else if (res && res.reason === "no_prompt") {
+                btn.textContent = "Usa el menú del navegador";
+                btn.disabled = false;
+                setTimeout(function () {
+                  btn.textContent = tool.label;
+                }, 2800);
+              } else {
+                btn.textContent = tool.label;
+              }
+            })
+            .catch(function () {
+              if (btn) {
+                btn.disabled = false;
+                btn.textContent = tool.label;
+              }
+            });
         }
         return;
       }

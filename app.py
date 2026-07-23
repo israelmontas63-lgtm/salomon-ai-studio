@@ -3833,10 +3833,28 @@ def bca_indicator_js() -> FileResponse:
     return _archivo_studio("bca-indicator.js", "application/javascript")
 
 
-@app.get("/manifest.json")
-@app.get("/manifest.webmanifest")
+def _pwa_cache_name() -> str:
+    """Nombre real de CACHE en static/js/service-worker.js (sin mentir al cliente)."""
+    import re
+
+    sw = BASE_DIR / "static" / "js" / "service-worker.js"
+    try:
+        if sw.is_file():
+            m = re.search(
+                r"""const\s+CACHE\s*=\s*["']([^"']+)["']""",
+                sw.read_text(encoding="utf-8"),
+            )
+            if m:
+                return m.group(1)
+    except Exception:
+        pass
+    return "salomon-premium-v98"
+
+
+@app.api_route("/manifest.json", methods=["GET", "HEAD"])
+@app.api_route("/manifest.webmanifest", methods=["GET", "HEAD"])
 def manifest_json() -> FileResponse:
-    """PWA manifest Premium (static/) con fallback studio."""
+    """PWA manifest Premium (static/) con fallback studio. HEAD = mismos headers."""
     premium = BASE_DIR / "static" / "manifest.json"
     if premium.is_file():
         return FileResponse(
@@ -4040,10 +4058,10 @@ def drawers_js() -> FileResponse:
     return _archivo_studio("drawers.js", "application/javascript")
 
 
-@app.get("/sw.js")
-@app.get("/service-worker.js")
+@app.api_route("/sw.js", methods=["GET", "HEAD"])
+@app.api_route("/service-worker.js", methods=["GET", "HEAD"])
 def service_worker_nativo() -> FileResponse:
-    """Service Worker Premium (static/js) — scope '/'."""
+    """Service Worker Premium (static/js) — scope '/'. HEAD = mismos headers."""
     premium = BASE_DIR / "static" / "js" / "service-worker.js"
     if premium.is_file():
         return FileResponse(
@@ -4073,21 +4091,25 @@ def reconexion_perifericos_js() -> FileResponse:
 
 @app.get("/api/pwa/estado")
 def api_pwa_estado() -> dict:
+    ver = _leer_version_json()
+    app_ver = str(ver.get("version") or "110.22.24")
+    cache_name = _pwa_cache_name()
     return {
-        "protocol": "EJECUCION_DESPLIEGUE_FINAL",
-        "version": "106.0.0",
+        "protocol": ver.get("protocol") or "BUTTON_BRAIN_BIND",
+        "version": app_ver,
+        "label": ver.get("label") or "",
         "active": True,
         "manifest": {
             "name": "Salomon AI",
             "short_name": "Salomon",
             "display": "standalone",
-            "theme_color": "#000000",
+            "theme_color": "#0A0A0A",
             "ascii_safe": True,
             "permissions": ["camera", "microphone"],
         },
         "service_worker": "/service-worker.js",
         "service_worker_legacy": "/sw.js",
-        "cache": "salomon-pwa-v105",
+        "cache": cache_name,
         "core_endpoints": [
             "/api/identidad",
             "/api/inmune",
@@ -4096,16 +4118,17 @@ def api_pwa_estado() -> dict:
             "/api/web/arquitecto",
             "/api/eficiencia",
         ],
-        "perifericos": "/reconexion-perifericos.js?v=105",
+        "perifericos": "/reconexion-perifericos.js?v=" + app_ver,
         "permissions_policy": "camera=(self), microphone=(self)",
         "installable": True,
         "owner": "Israel Monta - Salomon AI Studio",
         "external_fetch_passthrough": True,
-        "nucleo": "DESPLIEGUE_FINAL",
-        "espera_autorizacion_fisica": True,
-        "mensaje": "DESPLIEGUE EN CURSO. ESPERANDO ACTIVACIÓN FÍSICA",
+        "nucleo": "PWA_PREMIUM",
+        "espera_autorizacion_fisica": False,
+        "mensaje": "PWA lista — versión " + app_ver + " · cache " + cache_name,
         "instruccion_israel": (
-            "Abre la PWA, toca la pantalla y otorga permisos de micrófono y cámara."
+            "Abre Herramientas → Instalar app (Android/Chrome). "
+            "En iPhone/iPad: Compartir → Añadir a pantalla de inicio."
         ),
     }
 

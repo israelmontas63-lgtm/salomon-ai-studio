@@ -26,6 +26,9 @@
         document.body.classList.toggle("vision-mode-active", on);
         if (on) {
           document.body.classList.add("vision-immersive");
+        } else {
+          // OFF / IDLE / cualquier apagado: salir del modo inmersivo
+          document.body.classList.remove("vision-immersive", "vision-mode-active");
         }
       });
       window.SalomonVisionModeTrigger = this;

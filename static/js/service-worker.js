@@ -3,7 +3,7 @@
  * Cachea capas static/; HTML/API en red; mensajes de actualización.
  * Created by Israel Monta - Salomón AI Studio
  */
-const CACHE = "salomon-premium-v97";
+const CACHE = "salomon-premium-v98";
 
 function cacheMatchFlexible(req) {
   return caches.match(req).then(function (hit) {
@@ -83,14 +83,20 @@ function isApi(path) {
   return path.startsWith("/api/") || path === "/version.json";
 }
 
+function isManifest(path) {
+  return (
+    path === "/manifest.json" ||
+    path === "/manifest.webmanifest" ||
+    path === "/static/manifest.json"
+  );
+}
+
 function isStaticLayer(path) {
   return (
     path.startsWith("/static/css/") ||
     path.startsWith("/static/js/") ||
     path.startsWith("/static/assets/") ||
-    path.startsWith("/static/icons/") ||
-    path === "/static/manifest.json" ||
-    path === "/manifest.json"
+    path.startsWith("/static/icons/")
   );
 }
 
@@ -169,6 +175,22 @@ self.addEventListener("fetch", (event) => {
   // API + version: siempre red (detección de deploy)
   if (isApi(path)) {
     event.respondWith(fetch(req, { cache: "no-store" }));
+    return;
+  }
+
+  // Manifest: network-first (installability / icons frescos tras deploy)
+  if (isManifest(path)) {
+    event.respondWith(
+      fetch(req, { cache: "no-store" })
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => cacheMatchFlexible(req))
+    );
     return;
   }
 

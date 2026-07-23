@@ -108,18 +108,77 @@
       });
     },
     smart: function () {
+      // API pública — NUNCA el.click() (recursión con onclick=__salomonTap.smart)
       ensureSmart().then(function () {
-        var el = document.getElementById("smart-button");
-        if (el) {
-          try {
-            el.click();
-          } catch (_) {}
+        var sb = window.SalomonSmartButton;
+        if (!sb) return;
+        try {
+          // Si el gesto pointer acaba de manejar el toque, no duplicar
+          if (Date.now() < (sb._ignoreClickUntil || 0)) return;
+          if (typeof sb._isActiveMode === "function" && sb._isActiveMode()) {
+            if (typeof sb.neutralize === "function") {
+              sb.neutralize("brain_bind_tap");
+              return;
+            }
+          }
+          if (typeof sb.toggleMic === "function") {
+            sb.toggleMic();
+            return;
+          }
+          if (typeof sb.onClick === "function") {
+            sb.onClick({
+              preventDefault: function () {},
+              stopPropagation: function () {},
+              detail: 0,
+            });
+          }
+        } catch (err) {
+          console.warn("[SalomonBind] smart invoke failed", err);
         }
       }).catch(function (err) {
         console.warn("[SalomonBind] smart load failed", err);
       });
     },
   };
+
+  /** Listeners bubble de refuerzo (sin stopPropagation) para ids críticos */
+  function attachBubbleFallbacks() {
+    if (window.__salomonBrainBubble) return;
+    window.__salomonBrainBubble = true;
+    var map = {
+      "btn-cam": "cam",
+      "btn-aa": "aa",
+      "btn-settings": "settings",
+      "btn-nav-back": "back",
+      "btn-dock-flip": "flip",
+      "smart-button": "smart",
+    };
+    Object.keys(map).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var fn = map[id];
+      el.addEventListener(
+        "click",
+        function () {
+          if (!window.__salomonTap || !window.__salomonTap[fn]) return;
+          // Con data-brain-bind el onclick HTML ya dispara; bubble solo si falta
+          if (el.getAttribute("data-brain-bind") === "1") return;
+          window.__salomonTap[fn]();
+        },
+        false
+      );
+    });
+  }
+
+  function bootBubble() {
+    attachBubbleFallbacks();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootBubble, { once: true });
+  } else {
+    bootBubble();
+  }
 
   console.info("[SalomonBind] __salomonTap listo (cam/aa/settings/back/flip/smart)");
 })();

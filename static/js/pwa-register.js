@@ -1,16 +1,96 @@
 /**
- * Salomón AI — Registro Service Worker (instalabilidad PWA).
+ * Salomón AI — Registro Service Worker + instalabilidad PWA.
  * updateViaCache:none + SKIP_WAITING agresivo para hot-update inmediato.
+ * Captura beforeinstallprompt → window.SalomonPWA.promptInstall().
  * Created by Israel Monta - Salomón AI Studio
  */
 (function () {
+  var deferredPrompt = null;
+  var canInstall = false;
+
+  // Bump con cada release de CACHE en service-worker.js (v98 ↔ app 110.22.24)
+  var SW_URL = "/service-worker.js?v=98";
+
+  function isStandalone() {
+    return (
+      (window.matchMedia &&
+        window.matchMedia("(display-mode: standalone)").matches) ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function syncInstallFlags() {
+    canInstall = !!deferredPrompt && !isStandalone();
+    try {
+      document.documentElement.setAttribute(
+        "data-pwa-installable",
+        canInstall ? "1" : "0"
+      );
+      if (isStandalone()) {
+        document.documentElement.setAttribute("data-pwa-standalone", "1");
+      }
+    } catch (_) {}
+    if (window.SalomonPWA) {
+      window.SalomonPWA.canInstall = canInstall;
+      window.SalomonPWA.deferredPrompt = deferredPrompt;
+    }
+  }
+
+  function promptInstall() {
+    if (!deferredPrompt) {
+      return Promise.resolve({
+        ok: false,
+        reason: isStandalone() ? "already_installed" : "no_prompt",
+      });
+    }
+    var ev = deferredPrompt;
+    deferredPrompt = null;
+    syncInstallFlags();
+    ev.prompt();
+    return ev.userChoice
+      .then(function (choice) {
+        return {
+          ok: choice.outcome === "accepted",
+          outcome: choice.outcome,
+        };
+      })
+      .catch(function () {
+        return { ok: false, reason: "prompt_error" };
+      });
+  }
+
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    syncInstallFlags();
+    window.dispatchEvent(
+      new CustomEvent("salomon:pwa-installable", { detail: { canInstall: true } })
+    );
+  });
+
+  window.addEventListener("appinstalled", function () {
+    deferredPrompt = null;
+    syncInstallFlags();
+    try {
+      document.documentElement.setAttribute("data-pwa-installed", "1");
+    } catch (_) {}
+  });
+
+  window.SalomonPWA = {
+    SW_URL: SW_URL,
+    canInstall: false,
+    deferredPrompt: null,
+    promptInstall: promptInstall,
+    isStandalone: isStandalone,
+  };
+  // Alias legacy / hot-patch callers
+  window.__SalomonPromptInstall = promptInstall;
+  syncInstallFlags();
+
   if (!("serviceWorker" in navigator)) {
     console.warn("[SalomonPWA] serviceWorker no soportado en este navegador");
     return;
   }
-
-  // Bump con cada release de CACHE en service-worker.js (v97 ↔ app 110.22.23)
-  var SW_URL = "/service-worker.js?v=97";
 
   function registerSw() {
     navigator.serviceWorker

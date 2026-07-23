@@ -193,6 +193,7 @@
       applying = true;
       window.__salomon_awaiting_sw_claim = true;
       this.hideToast();
+      var purgeOk = false;
       try {
         const remote = await this.fetchBuild();
         if (remote) localStorage.setItem(STORAGE_KEY, remote);
@@ -200,6 +201,10 @@
         if (window.caches && caches.keys) {
           const keys = await caches.keys();
           await Promise.all(keys.map((k) => caches.delete(k)));
+          const left = await caches.keys();
+          purgeOk = !left.length;
+        } else {
+          purgeOk = true;
         }
 
         if (navigator.serviceWorker) {
@@ -258,7 +263,28 @@
             )
           )
         );
-      } catch (_) {}
+      } catch (_) {
+        purgeOk = false;
+      }
+
+      // Nuclear seguro: solo si el purge de caches falló / quedó basura
+      if (!purgeOk && navigator.serviceWorker) {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+          if (window.caches && caches.keys) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+          }
+          var swUrl =
+            (window.SalomonPWA && window.SalomonPWA.SW_URL) ||
+            "/service-worker.js?v=98";
+          await navigator.serviceWorker.register(swUrl, {
+            scope: "/",
+            updateViaCache: "none",
+          });
+        } catch (_) {}
+      }
 
       // Una sola recarga (CACHES_CLEARED / controllerchange pueden llegar después)
       if (!window.__salomon_sw_refreshing) {

@@ -263,6 +263,9 @@
     },
 
     async closeCamera() {
+      try {
+        document.body.classList.remove("vision-immersive", "vision-mode-active");
+      } catch (_) {}
       this._emit(States.OFF);
       requestAnimationFrame(() => {
         if (this.camWrap) this.camWrap.classList.remove("is-active");

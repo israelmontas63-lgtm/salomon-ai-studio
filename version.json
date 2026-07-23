@@ -1,10 +1,10 @@
 {
-  "timestamp_iso": "2026-07-23T01:05:00Z",
-  "timestamp": 1753232700,
-  "version": "110.22.23",
+  "timestamp_iso": "2026-07-23T01:35:00Z",
+  "timestamp": 1753234500,
+  "version": "110.22.24",
   "channel": "main",
-  "label": "audit-8-layers-ui-unlock",
+  "label": "pwa-install-immersive-fix",
   "stability": "STABLE_PRODUCTION_READY",
   "protocol": "BUTTON_BRAIN_BIND",
-  "notes": "v110.22.23 — Audit 8 layers: no vision lock-on-engage, AI watchdog+fetch timeouts, brain-bind fallback listeners, reconnect without sticky cssText, SW v97 flexible offline match, HotPatch includes bind scripts."
+  "notes": "v110.22.24 — PWA installability (beforeinstallprompt + Instalar app), SW salomon-premium-v98, /api/pwa/estado honest version/cache, immersive stuck fix (vision OFF clears classes + mid-session watchdog), smart-button brain-bind without click recursion."
 }
